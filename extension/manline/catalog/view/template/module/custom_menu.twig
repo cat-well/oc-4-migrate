@@ -1,0 +1,34 @@
+{# OC2/legacy-compatible menu module output #}
+{% if head %}
+  <div class="box-heading">{{ head }}</div>
+{% endif %}
+
+<ul class="main_nav nav_menu">
+  {% for category in custom_menu %}
+    <li class="catalog_list">
+      <a href="{{ category.link }}">{{ category.name }}</a>
+
+      {% if category.sub_menu and category.sub_menu|length %}
+        <ul class="children_w list_menu ul_count{{ category.column }}">
+          {% for sub in category.sub_menu %}
+            <li class="col-md-{{ sub.column }}">
+              {% if sub.link %}
+                <a href="{{ sub.link }}"><span>{{ sub.name }}</span></a>
+              {% else %}
+                <span><span>{{ sub.name }}</span></span>
+              {% endif %}
+
+              {% if sub.sub_menu and sub.sub_menu|length %}
+                <ul>
+                  {% for child in sub.sub_menu %}
+                    <li><a href="{{ child.link }}">{{ child.name }}</a></li>
+                  {% endfor %}
+                </ul>
+              {% endif %}
+            </li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+    </li>
+  {% endfor %}
+</ul>

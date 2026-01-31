@@ -1,0 +1,162 @@
+{{ header }}{{ column_left }}
+<div id="content">
+  <div class="page-header">
+    <div class="container-fluid">
+      <div class="float-end">
+        <button type="submit" form="form-module" data-bs-toggle="tooltip" title="{{ button_save }}" class="btn btn-primary"><i class="fa-solid fa-save"></i></button>
+        <a href="{{ back }}" data-bs-toggle="tooltip" title="{{ button_back }}" class="btn btn-light"><i class="fa-solid fa-reply"></i></a>
+      </div>
+      <h1>{{ heading_title }}</h1>
+      <ol class="breadcrumb">
+        {% for breadcrumb in breadcrumbs %}
+          <li class="breadcrumb-item"><a href="{{ breadcrumb.href }}">{{ breadcrumb.text }}</a></li>
+        {% endfor %}
+      </ol>
+    </div>
+  </div>
+
+  <div class="container-fluid">
+    {% if error_warning %}
+      <div class="alert alert-danger"><i class="fa-solid fa-circle-exclamation"></i> {{ error_warning }}</div>
+    {% endif %}
+    {% if success %}
+      <div class="alert alert-success"><i class="fa-solid fa-circle-check"></i> {{ success }}</div>
+    {% endif %}
+
+    <div class="card">
+      <div class="card-header"><i class="fa-solid fa-bars"></i> {{ heading_title }}</div>
+      <div class="card-body">
+
+        <ul class="nav nav-tabs" id="customMenuTabs" role="tablist">
+          <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="tab-items" data-bs-toggle="tab" data-bs-target="#pane-items" type="button" role="tab">{{ text_menu_items }}</button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="tab-module" data-bs-toggle="tab" data-bs-target="#pane-module" type="button" role="tab">{{ text_module_settings }}</button>
+          </li>
+        </ul>
+
+        <div class="tab-content pt-3">
+          <div class="tab-pane fade show active" id="pane-items" role="tabpanel">
+            <div class="d-flex justify-content-end mb-3">
+              <a href="{{ insert }}" class="btn btn-primary"><i class="fa-solid fa-plus"></i> {{ button_add }}</a>
+              <button type="submit" form="form-items" class="btn btn-danger ms-2" onclick="return confirm('{{ text_confirm }}');"><i class="fa-solid fa-trash"></i> {{ button_delete }}</button>
+            </div>
+
+            <form id="form-items" action="{{ delete }}" method="post" data-oc-toggle="ajax">
+              <div class="table-responsive">
+                <table class="table table-bordered table-hover">
+                  <thead>
+                    <tr>
+                      <td style="width:1px" class="text-center"><input type="checkbox" onclick="document.querySelectorAll('#form-items input[name=\'selected[]\']').forEach(el => el.checked = this.checked);"></td>
+                      <td class="text-start">{{ entry_title }}</td>
+                      <td class="text-start" style="max-width: 420px;">{{ entry_link }}</td>
+                      <td class="text-end" style="width: 110px;">{{ entry_sort_order }}</td>
+                      <td class="text-end" style="width: 120px;">{{ entry_status }}</td>
+                      <td class="text-end" style="width: 120px;">{{ column_action|default('Action') }}</td>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% if custom_menus %}
+                      {% for item in custom_menus %}
+                        <tr>
+                          <td class="text-center"><input type="checkbox" name="selected[]" value="{{ item.menu_id }}"></td>
+                          <td class="text-start">{{ item.name }}</td>
+                          <td class="text-start" style="word-break: break-all">{{ item.link }}</td>
+                          <td class="text-end">{{ item.sort_order }}</td>
+                          <td class="text-end">{{ item.status ? text_enabled : text_disabled }}</td>
+                          <td class="text-end"><a href="{{ item.edit }}" class="btn btn-sm btn-primary"><i class="fa-solid fa-pen"></i></a></td>
+                        </tr>
+                      {% endfor %}
+                    {% else %}
+                      <tr><td class="text-center" colspan="6">{{ text_no_results }}</td></tr>
+                    {% endif %}
+                  </tbody>
+                </table>
+              </div>
+            </form>
+
+            <div class="row">
+              <div class="col-sm-6 text-start">{{ pagination }}</div>
+            </div>
+          </div>
+
+          <div class="tab-pane fade" id="pane-module" role="tabpanel">
+            <form id="form-module" action="{{ save }}" method="post" data-oc-toggle="ajax">
+              <fieldset>
+                <legend>{{ text_module_settings }}</legend>
+
+                <div class="row mb-3">
+                  <label class="col-sm-2 col-form-label" for="input-name">{{ entry_name }}</label>
+                  <div class="col-sm-10">
+                    <input type="text" name="name" value="{{ name }}" placeholder="{{ entry_name }}" id="input-name" class="form-control"/>
+                    <div id="error-name" class="invalid-feedback"></div>
+                  </div>
+                </div>
+
+                <div class="row mb-3">
+                  <label class="col-sm-2 col-form-label">{{ entry_head }}</label>
+                  <div class="col-sm-10">
+                    {% for language in languages %}
+                      <div class="input-group mb-2">
+                        <span class="input-group-text"><img src="language/{{ language.code }}/{{ language.code }}.png" alt="{{ language.name }}" title="{{ language.name }}"/></span>
+                        <input type="text" name="head[{{ language.code }}]" value="{{ head[language.code] ?? '' }}" class="form-control"/>
+                      </div>
+                    {% endfor %}
+                  </div>
+                </div>
+
+                <div class="row mb-3">
+                  <label class="col-sm-2 col-form-label" for="input-style">{{ entry_style }}</label>
+                  <div class="col-sm-10">
+                    <select name="style" id="input-style" class="form-select">
+                      <option value="0" {{ style ? '' : 'selected' }}>Template styles</option>
+                      <option value="1" {{ style ? 'selected' : '' }}>Module styles</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="row mb-3">
+                  <label class="col-sm-2 col-form-label">{{ entry_in_module }}</label>
+                  <div class="col-sm-10">
+                    <div class="border rounded p-2" style="max-height: 320px; overflow:auto;">
+                      {% for m in custom_menus_flat %}
+                        <div class="form-check">
+                          <input class="form-check-input" type="checkbox" name="in_module[]" value="{{ m.menu_id }}" id="in-module-{{ m.menu_id }}" {{ m.menu_id in in_module ? 'checked' : '' }}>
+                          <label class="form-check-label" for="in-module-{{ m.menu_id }}">{{ m.name }}</label>
+                        </div>
+                      {% endfor %}
+                    </div>
+                  </div>
+                </div>
+
+                <div class="row mb-3">
+                  <label class="col-sm-2 col-form-label" for="input-status">{{ entry_status }}</label>
+                  <div class="col-sm-10">
+                    <select name="status" id="input-status" class="form-select">
+                      <option value="1" {{ status ? 'selected' : '' }}>{{ text_enabled }}</option>
+                      <option value="0" {{ status ? '' : 'selected' }}>{{ text_disabled }}</option>
+                    </select>
+                  </div>
+                </div>
+
+                <input type="hidden" name="module_id" value="{{ module_id }}"/>
+              </fieldset>
+            </form>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+  // Activate tab by query (?tab=items|module)
+  const params = new URLSearchParams(window.location.search);
+  const tab = params.get('tab');
+  if (tab === 'module') {
+    const el = document.querySelector('#tab-module');
+    if (el) new bootstrap.Tab(el).show();
+  }
+</script>
+{{ footer }}
