@@ -16,6 +16,21 @@ class Menu extends \Opencart\System\Engine\Controller {
 	public function index(): string {
 		$this->load->language('common/menu');
 
+		// Manline store uses a legacy CustomMenu module (editable from admin in OC1.4).
+		// If its tables exist, render the menu from them for 1:1 parity.
+		$data['custom_menu'] = [];
+
+		try {
+			$exists = $this->db->query("SHOW TABLES LIKE '" . DB_PREFIX . "custom_menu'");
+			if (!empty($exists->rows)) {
+				$this->load->model('extension/manline/module/custom_menu');
+				$data['custom_menu'] = $this->model_extension_manline_module_custom_menu->getCustomMenu();
+			}
+		} catch (\Throwable $e) {
+			// ignore and fall back to standard OC menu
+		}
+
+		// Fallback: standard category menu
 		// Category
 		$this->load->model('catalog/category');
 

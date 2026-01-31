@@ -28,7 +28,9 @@
         </div>
 
         <div class="language_switch_f">
-          {{ language }}
+          <a href="{{ lang_switch_ua|default('#') }}">UA</a>
+          <span style="margin-left: 2px;margin-right: 2px;">|</span>
+          <a href="{{ lang_switch_ru|default('#') }}">RU</a>
         </div>
 
         <div class="footer_phone">

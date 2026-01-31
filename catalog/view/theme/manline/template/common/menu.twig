@@ -1,4 +1,40 @@
-{% if categories %}
+{# Manline menu
+   If custom_menu is provided (legacy module data), render OC1.4/OC2-compatible markup.
+   Else fall back to stock OC4 menu. #}
+
+{% if custom_menu and custom_menu|length %}
+  <ul class="main_nav nav_menu mob_hid">
+    {% for category in custom_menu %}
+      <li class="catalog_list">
+        <a href="{{ category.link }}">{{ category.name }}</a>
+
+        {% if category.sub_menu and category.sub_menu|length %}
+          <ul class="children_w list_menu ul_count{{ category.column }}">
+            {% for sub in category.sub_menu %}
+              <li class="col-md-{{ sub.column }}">
+                {% if sub.link %}
+                  <a href="{{ sub.link }}"><span>{{ sub.name }}</span></a>
+                {% else %}
+                  <span><span>{{ sub.name }}</span></span>
+                {% endif %}
+
+                {% if sub.sub_menu and sub.sub_menu|length %}
+                  <ul>
+                    {% for child in sub.sub_menu %}
+                      <li><a href="{{ child.link }}">{{ child.name }}</a></li>
+                    {% endfor %}
+                  </ul>
+                {% endif %}
+              </li>
+            {% endfor %}
+          </ul>
+        {% endif %}
+      </li>
+    {% endfor %}
+  </ul>
+
+  <div class="clearfix"></div>
+{% elseif categories %}
   <div class="container">
     <nav id="menu" class="navbar navbar-expand-lg bg-primary">
       <div id="category" class="d-block d-sm-block d-lg-none">{{ text_category }}</div>

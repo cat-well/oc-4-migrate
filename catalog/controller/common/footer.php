@@ -60,6 +60,15 @@ class Footer extends \Opencart\System\Engine\Controller {
 		$data['sitemap'] = $this->url->link('information/sitemap', 'language=' . $this->config->get('config_language'));
 		$data['manufacturer'] = $this->url->link('product/manufacturer', 'language=' . $this->config->get('config_language'));
 
+		// Manline theme: simple UA/RU switch (avoid bootstrap dropdown dependency)
+		$route = $this->request->get['route'] ?? 'common/home';
+		$params = $this->request->get;
+		unset($params['route'], $params['language'], $params['_route_']);
+		$query_ru = http_build_query(['language' => 'ru-ru'] + $params);
+		$query_ua = http_build_query(['language' => 'uk-ua'] + $params);
+		$data['lang_switch_ru'] = $this->url->link($route, $query_ru);
+		$data['lang_switch_ua'] = $this->url->link($route, $query_ua);
+
 		if ($this->config->get('config_affiliate_status')) {
 			$data['affiliate'] = $this->url->link('account/affiliate', 'language=' . $this->config->get('config_language') . (isset($this->session->data['customer_token']) ? '&customer_token=' . $this->session->data['customer_token'] : ''));
 		} else {
