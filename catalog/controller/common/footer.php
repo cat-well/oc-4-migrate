@@ -30,6 +30,16 @@ class Footer extends \Opencart\System\Engine\Controller {
 		// Information
 		$data['informations'] = [];
 
+		// Manline theme: explicit information links used in OC2 footer
+		$data['information_4'] = $this->url->link('information/information', 'language=' . $this->config->get('config_language') . '&information_id=4');
+		$data['information_9'] = $this->url->link('information/information', 'language=' . $this->config->get('config_language') . '&information_id=9');
+		$data['information_10'] = $this->url->link('information/information', 'language=' . $this->config->get('config_language') . '&information_id=10');
+		$data['information_16'] = $this->url->link('information/information', 'language=' . $this->config->get('config_language') . '&information_id=16');
+		$data['information_17'] = $this->url->link('information/information', 'language=' . $this->config->get('config_language') . '&information_id=17');
+		$data['information_19'] = $this->url->link('information/information', 'language=' . $this->config->get('config_language') . '&information_id=19');
+
+		$data['simplecheckout_url'] = $this->url->link('checkout/simplecheckout', 'language=' . $this->config->get('config_language'));
+
 		$this->load->model('catalog/information');
 
 		$results = $this->model_catalog_information->getInformations();

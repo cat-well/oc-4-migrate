@@ -1,98 +1,189 @@
+{# Manline OC4 theme — header 1:1 scaffold
+   Goal: preserve OC2 markup/classes so existing CSS/JS works.
+   (We will refine language switch + dynamic texts later.) #}
 <!DOCTYPE html>
 <html dir="{{ direction }}" lang="{{ lang }}">
 <head>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-2176J7CZKG"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-2176J7CZKG');
+  </script>
+
   <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <title>{{ title }}</title>
   <base href="{{ base }}"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+
+  {# TODO: replicate OC2 robots/noindex rules based on route, sort/limit/page #}
+
   {% if description %}
     <meta name="description" content="{{ description }}"/>
   {% endif %}
   {% if keywords %}
     <meta name="keywords" content="{{ keywords }}"/>
   {% endif %}
+
+  {# OpenGraph basics (OC2 had more fields; can be extended later) #}
+  <meta property="og:title" content="{{ title }}"/>
+  <meta property="og:type" content="website"/>
+
+  {% if icon %}
+    <link rel="icon" href="{{ icon }}" type="image/png">
+  {% endif %}
+
+  {# Core OpenCart assets (keep) #}
   <script src="{{ jquery }}" type="text/javascript"></script>
+  <script src="catalog/view/javascript/common.js" type="text/javascript"></script>
+
+  {# Legacy Manline CSS (1:1) #}
+  <link rel="stylesheet" href="catalog/view/theme/manline/stylesheet/stylesheet.css"/>
+  <link rel="stylesheet" href="catalog/view/theme/manline/stylesheet/slicknav.css"/>
+  <link rel="stylesheet" href="catalog/view/theme/manline/stylesheet/magnific-popup.css"/>
+  <link rel="stylesheet" href="catalog/view/theme/manline/stylesheet/tooltipster.bundle.css"/>
+  <link rel="stylesheet" href="catalog/view/theme/manline/stylesheet/bootstrap.css"/>
+  <link rel="stylesheet" href="catalog/view/theme/manline/stylesheet/fontawesome-all.min.css"/>
+
+  {# Keep OC4 stylesheet last so we can override selectively if needed #}
   <link href="{{ bootstrap }}" type="text/css" rel="stylesheet" media="screen"/>
   <link href="{{ icons }}" rel="stylesheet" type="text/css"/>
   <link href="{{ stylesheet }}" type="text/css" rel="stylesheet"/>
 
-  {# Manline theme scaffold: load legacy CSS assets (no JS yet) #}
-  <link href="catalog/view/theme/manline/stylesheet/stylesheet.css" type="text/css" rel="stylesheet"/>
-
-  <script src="catalog/view/javascript/common.js" type="text/javascript"></script>
-  {% if icon %}
-    <link rel="icon" href="{{ icon }}" type="image/png">
-  {% endif %}
   {% for style in styles %}
     <link href="{{ style.href }}" type="text/css" rel="{{ style.rel }}" media="{{ style.media }}"/>
-  {% endfor %}
-  {% for script in scripts %}
-    <script src="{{ script.href }}" type="text/javascript"></script>
   {% endfor %}
   {% for link in links %}
     <link href="{{ link.href }}" rel="{{ link.rel }}"/>
   {% endfor %}
+
+  {# Legacy Manline JS (1:1) #}
+  <script src="catalog/view/theme/manline/js/common.js" type="text/javascript"></script>
+  <script src="catalog/view/theme/manline/js/polt_menu.js" type="text/javascript"></script>
+  <script src="catalog/view/theme/manline/js/jquery.cookie.js"></script>
+  <script src="catalog/view/theme/manline/js/jquery.magnific-popup.min.js"></script>
+  <script src="catalog/view/theme/manline/js/jquery.elevateZoom-3.0.8.min.js"></script>
+  <script src="catalog/view/theme/manline/js/tooltipster.bundle.js"></script>
+  <script src="catalog/view/theme/manline/js/slick.min.js"></script>
+  <script src="catalog/view/theme/manline/js/jquery.sticky.js"></script>
+  <script src="catalog/view/theme/manline/js/jquery.slicknav.min.js"></script>
+  <script src="/send/send.js"></script>
+  <script src="catalog/view/theme/manline/js/main.js?v=3.4"></script>
+
+  {# Analytics (kept; OC4 modules may also inject analytics below) #}
+  <script type="text/javascript">
+    (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+      (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+      m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+    })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+    (function(ga){
+      var r = new RegExp("[\\?&]client_uuid=([^&#]*)"),p = r.exec(location.search);
+      if(p === null){ci=undefined;}else{ci=decodeURIComponent(p[1].replace(/\+/g, " "));}
+      ga('create', 'UA-51724077-1', {'clientId':ci});
+      ga('require', 'displayfeatures');
+      ga('send', 'pageview');
+    })(ga);
+  </script>
+
+  <!-- search -->
+  <script type="application/ld+json">
+    {
+      "@context": "http://schema.org",
+      "@type": "WebSite",
+      "url": "https://manline.com.ua",
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": "https://manline.com.ua/search/?search={search_term_string}",
+        "query-input": "required name=search_term_string"
+      }
+    }
+  </script>
+  <!-- search -->
+
   {% for analytic in analytics %}
     {{ analytic }}
   {% endfor %}
+
+  {% for script in scripts %}
+    <script src="{{ script.href }}" type="text/javascript"></script>
+  {% endfor %}
 </head>
 <body>
-<div id="container">
-  <div id="alert"></div>
-  <nav id="top">
-    <div class="container">
-      <div class="row">
-        <div class="col-4">
-          <ul class="list-inline">
-            <li class="list-inline-item me-3">{{ currency }}</li>
-            <li class="list-inline-item">{{ language }}</li>
-          </ul>
-        </div>
-        <div class="col text-end">
-          <ul class="list-inline">
-            <li class="list-inline-item"><a href="{{ contact }}"><i class="fa-solid fa-phone"></i> <span class="d-none d-lg-inline">{{ telephone }}</span></a></li>
-            <li class="list-inline-item">
-              <div class="dropdown">
-                <a href="#" class="dropdown-toggle" data-bs-toggle="dropdown"><i class="fa-solid fa-user"></i> <span class="d-none d-lg-inline">{{ text_account }}</span> <i class="fa-solid fa-caret-down"></i></a>
-                <ul class="dropdown-menu dropdown-menu-right">
-                  {% if not logged %}
-                    <li><a href="{{ register }}" class="dropdown-item">{{ text_register }}</a></li>
-                    <li><a href="{{ login }}" class="dropdown-item">{{ text_login }}</a></li>
-                  {% else %}
-                    <li><a href="{{ account }}" class="dropdown-item">{{ text_account }}</a></li>
-                    <li><a href="{{ order }}" class="dropdown-item">{{ text_order }}</a></li>
-                    <li><a href="{{ transaction }}" class="dropdown-item">{{ text_transaction }}</a></li>
-                    <li><a href="{{ download }}" class="dropdown-item">{{ text_download }}</a></li>
-                    <li><a href="{{ logout }}" class="dropdown-item">{{ text_logout }}</a></li>
-                  {% endif %}
-                </ul>
-              </div>
-            </li>
-            <li class="list-inline-item"><a href="{{ wishlist }}" id="wishlist-total" title="{{ text_wishlist }}"><i class="fa-solid fa-heart"></i> <span class="d-none d-lg-inline">{{ text_wishlist }}</span></a></li>
-            <li class="list-inline-item"><a href="{{ shopping_cart }}" title="{{ text_shopping_cart }}"><i class="fa-solid fa-cart-shopping"></i> <span class="d-none d-lg-inline">{{ text_shopping_cart }}</span></a></li>
-            <li class="list-inline-item"><a href="{{ checkout }}" title="{{ text_checkout }}"><i class="fa-solid fa-share"></i> <span class="d-none d-lg-inline">{{ text_checkout }}</span></a></li>
-          </ul>
-        </div>
-      </div>
+<!-- Google Tag Manager -->
+<noscript><iframe src="//www.googletagmanager.com/ns.html?id=GTM-53L8XX" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+  new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+  j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+  '//www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','GTM-53L8XX');</script>
+<!-- End Google Tag Manager -->
+
+<div class="head_top">
+  <div class="container">
+    <div class="top_descr mob_hid">{{ text_top_desc|default('') }}</div>
+    <div class="top_nav">
+      <ul>
+        {# TODO: restore OC2 /ua/ language switch behavior once OC4 SEO language URLs are aligned #}
+        <li class="bn language_switch">
+          {{ language }}
+        </li>
+        <li><a href="{{ info_help|default('#') }}"><img src="/catalog/view/theme/manline/image/tm1.png" class="tm_img" alt=""/>{{ text_menu_1|default('Помощь') }}</a></li>
+        <li><a href="{{ info_exchange|default('#') }}"><img src="/catalog/view/theme/manline/image/tm2.png" class="tm_img" alt=""/>{{ text_menu_2|default('Обмен/возврат') }}</a></li>
+        <li><a href="{{ info_size|default('#') }}"><img src="/catalog/view/theme/manline/image/tm3.png" class="tm_img" alt=""/>{{ text_menu_3|default('Размер') }}</a></li>
+        <li><a href="{{ info_contacts|default('#') }}"><img src="/catalog/view/theme/manline/image/tm4.png" class="tm_img" alt=""/>{{ text_menu_4|default('Контакты') }}</a></li>
+      </ul>
     </div>
-  </nav>
-  <header>
-    <div class="container">
-      <div class="row">
-        <div class="col-md-3 col-lg-4">
-          <div id="logo">
-            {% if logo %}
-              <a href="{{ home }}"><img src="{{ logo }}" title="{{ name }}" alt="{{ name }}" class="img-fluid"/></a>
-            {% else %}
-              <h1><a href="{{ home }}">{{ name }}</a></h1>
-            {% endif %}
-          </div>
-        </div>
-        <div class="col-md-5">{{ search }}</div>
-        <div id="cart" class="col-md-4 col-lg-3 mb-2">{{ cart }}</div>
+  </div>
+</div>
+
+<div class="container header" id="header">
+  <div id="logo">
+    {% if logo %}
+      <a href="{{ home }}"><img src="{{ logo }}" title="{{ name }}" alt="{{ name }}"/></a>
+    {% else %}
+      <a href="{{ home }}">{{ name }}</a>
+    {% endif %}
+  </div>
+
+  <div class="search_w mob_hid">
+    {{ search }}
+  </div>
+
+  {{ cart }}
+
+  <div class="phone_h">
+    <div class="select_phone_w">
+      <div class="phone_pop show-list" style="display: none;">
+        <ul class="drop_list">
+          <li><span class="phone_pop_a first_phone_pop_a" data-phone-num="(068) 503 05 05">(068) 503 05 05</span></li>
+          <li><span class="phone_pop_a" data-phone-num="(063) 641 56 99">(063) 641 56 99 <img src="/catalog/view/theme/manline/image/viber.svg" alt="" width="15" height="15"></span></li>
+        </ul>
       </div>
+      <div class="phone_self">
+        <div class="phone_self_arr"></div>
+        <div class="phone_self_dash">(068) 503 05 05</div>
+      </div>
+      <div class="clearfix"></div>
     </div>
-  </header>
-  <main>
+    <span data-tooltip-content="#tooltip_content" class="call_c">{{ text_graph_1|default('') }}</span>
+    <div class="none">
+      <span id="tooltip_content">
+        <div class="bold mb-5">{{ text_graph_2|default('') }}</div>
+        {{ text_graph_3|default('') }}
+        <br>
+        {{ text_graph_4|default('') }}
+      </span>
+    </div>
+  </div>
+</div>
+
+<div class="main_nav_w">
+  <div class="container">
+    <!--dg_nav_menu_start-->
     {{ menu }}
+  </div>
+</div>
+
+<main>

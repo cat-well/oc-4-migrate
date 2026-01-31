@@ -67,6 +67,12 @@ class Header extends \Opencart\System\Engine\Controller {
 
 		$this->load->language('common/header');
 
+		// Manline theme: quick links used in OC2 header top bar
+		$data['info_help'] = $this->url->link('information/information', 'language=' . $this->config->get('config_language') . '&information_id=7');
+		$data['info_exchange'] = $this->url->link('information/information', 'language=' . $this->config->get('config_language') . '&information_id=8');
+		$data['info_size'] = $this->url->link('information/information', 'language=' . $this->config->get('config_language') . '&information_id=9');
+		$data['info_contacts'] = $this->url->link('information/information', 'language=' . $this->config->get('config_language') . '&information_id=14');
+
 		// Wishlist
 		if ($this->customer->isLogged()) {
 			$this->load->model('account/wishlist');
