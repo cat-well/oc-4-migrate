@@ -1,4 +1,8 @@
-{# OC2/legacy-compatible menu module output #}
+{# Manline mega menu (ported 1:1 from legacy header.tpl)
+   - column splitting by category.column
+   - third-level items with name == 'product' render product cards
+#}
+
 {% if head %}
   <div class="box-heading">{{ head }}</div>
 {% endif %}
@@ -9,23 +13,66 @@
       <a href="{{ category.link }}">{{ category.name }}</a>
 
       {% if category.sub_menu and category.sub_menu|length %}
-        <ul class="children_w list_menu ul_count{{ category.column }}">
-          {% for sub in category.sub_menu %}
-            <li class="col-md-{{ sub.column }}">
-              {% if sub.link %}
-                <a href="{{ sub.link }}"><span>{{ sub.name }}</span></a>
-              {% else %}
-                <span><span>{{ sub.name }}</span></span>
-              {% endif %}
+        {% set total = category.sub_menu|length %}
+        {% set cols = category.column ? category.column : 1 %}
+        {% set batch = (total / cols)|round(0, 'ceil') %}
 
-              {% if sub.sub_menu and sub.sub_menu|length %}
-                <ul>
-                  {% for child in sub.sub_menu %}
-                    <li><a href="{{ child.link }}">{{ child.name }}</a></li>
-                  {% endfor %}
-                </ul>
+        <ul class="children_w list_menu ul_count{{ cols }}">
+          {# split lvl2 items into columns #}
+          {% for col in category.sub_menu|batch(batch) %}
+            {% for lvl2 in col %}
+              {# legacy: skip lvl2 named 'product' (products are expected on lvl3) #}
+              {% if lvl2.name != 'product' %}
+                <li class="col-md-{{ lvl2.column }}">
+                  {% if lvl2.link %}
+                    <a href="{{ lvl2.link }}"><span>{{ lvl2.name }}</span></a>
+                  {% else %}
+                    <span><span>{{ lvl2.name }}</span></span>
+                  {% endif %}
+
+                  {% if lvl2.sub_menu and lvl2.sub_menu|length %}
+                    <ul>
+                      {% for lvl3 in lvl2.sub_menu %}
+                        {% if lvl3.name == 'product' and lvl3.product %}
+                          <li class="product_menu_polt col-md-{{ lvl3.column }}">
+                            <div class="product_w noimgs">
+                              <div class="product_in">
+                                <div class="prod_info">
+                                  <a class="prod_image" href="{{ lvl3.product.href }}">
+                                    <img src="{{ lvl3.product.image }}" title="{{ lvl3.product.name }}" alt="{{ lvl3.product.name }}" />
+                                  </a>
+                                  <div class="prod_name_w">
+                                    <a class="prod_name" href="{{ lvl3.product.href }}">{{ lvl3.product.name_short }}</a>
+                                  </div>
+                                  <div class="prod_price">
+                                    {% if lvl3.product.price %}
+                                      {% if not lvl3.product.special %}
+                                        {{ lvl3.product.price|number_format(0, '.', '') }} грн.
+                                      {% else %}
+                                        <span class="price-old">{{ lvl3.product.price|number_format(0, '.', '') }} грн.</span>
+                                        <span class="price-new">{{ lvl3.product.special|number_format(0, '.', '') }} грн.</span>
+                                      {% endif %}
+                                    {% endif %}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </li>
+                        {% else %}
+                          <li>
+                            {% if lvl3.link %}
+                              <a href="{{ lvl3.link }}">{{ lvl3.name }}</a>
+                            {% else %}
+                              <span>{{ lvl3.name }}</span>
+                            {% endif %}
+                          </li>
+                        {% endif %}
+                      {% endfor %}
+                    </ul>
+                  {% endif %}
+                </li>
               {% endif %}
-            </li>
+            {% endfor %}
           {% endfor %}
         </ul>
       {% endif %}
