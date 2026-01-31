@@ -13,7 +13,7 @@ namespace Opencart\Catalog\Model\Extension\Manline\Module;
  * - parent_id = <menu_id> → second level
  * - parent_id = <menu_id> (of second level) → third level
  */
-class Custommenu extends \Opencart\System\Engine\Model {
+class CustomMenu extends \Opencart\System\Engine\Model {
 	public function getCustomMenu(): array {
 		$this->load->model('tool/image');
 
