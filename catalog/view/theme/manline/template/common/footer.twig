@@ -3,12 +3,12 @@
 {# Manline theme scaffold: footer first (static texts for now, we’ll i18n later) #}
 <div class="subscribe mt-70">
   <div class="container">
-    <div class="sub1">Будь в курсе новинок</div>
-    <div class="sub2">Подпишись на рассылку</div>
+    <div class="sub1">Давайте дружить</div>
+    <div class="sub2">Подписывайтесь на наш блог и узнавайте первыми об акциях и обновлениях</div>
     <div class="sub3">
       <form class="contactform" method="post" action="">
         <div class="success_polt"></div>
-        <input type="email" class="sub_inp" name="mail_polt[]" value="" placeholder="Ваш e-mail" required>
+        <input type="email" class="sub_inp" name="mail_polt[]" value="" placeholder="Ваш Email" required>
         <input type="hidden" name="zakaz_polt[]" value="Подписка">
         <input type="hidden" class="site_page_polt" size="50" name="site_page_polt[]" value="">
         <input type="hidden" name="message_polt[]" value="Спасибо за подписку">
@@ -51,23 +51,83 @@
       <div class="col-xs-12 col-md-3 smhid">
         <div class="f_title">Категории</div>
         <ul class="cat_list">
-          <li><a href="{{ base }}muzhskie-trusy/">Чоловічі труси</a></li>
-          <li><a href="{{ base }}plyazhnaya-odezhda/">Чоловічі плавки</a></li>
+          <li><a href="{{ base }}muzhskie-trusy/">Трусы</a></li>
+          <li><a href="{{ base }}plyazhnaya-odezhda/">Плавки</a></li>
           <li><a href="{{ base }}noski/">Носки</a></li>
-          <li><a href="{{ base }}termobele/">Термобілизна</a></li>
+          <li><a href="{{ base }}termobele/">Термобелье</a></li>
         </ul>
       </div>
 
       <div class="col-xs-12 col-md-4 smhid">
         <div class="f_title">Меню</div>
         <ul class="cat_list">
+          {# In old theme these were specific information_id links. For now show all informations. #}
           {% for information in informations %}
             <li><a href="{{ information.href }}">{{ information.title }}</a></li>
           {% endfor %}
-          <li><a href="{{ manufacturer }}">{{ text_manufacturer }}</a></li>
+        </ul>
+        <ul class="cat_list cat_list2">
+          <li><a href="{{ manufacturer }}">Производители</a></li>
         </ul>
       </div>
     </div>
+
+    {# Placeholder for the big "TOP" block seen in the old footer.
+       We'll make it dynamic later (modules / queries). #}
+    <div class="footers_block">
+      <div class="row">
+        <div class="col-xs-12">
+          <div class="f_title" style="margin-top: 40px;">ТОП Категории</div>
+        </div>
+      </div>
+      <div class="row" style="margin-top: 10px;">
+        <div class="col-xs-12 col-md-3">
+          <ul class="cat_list">
+            <li><a href="#">Майки супремен</a></li>
+            <li><a href="#">Носки мужские короткие</a></li>
+            <li><a href="#">Термобельё из шерсти</a></li>
+            <li><a href="#">Длинная майка мужская</a></li>
+            <li><a href="#">Термокостюм мужской</a></li>
+          </ul>
+        </div>
+        <div class="col-xs-12 col-md-3">
+          <div class="f_title">Города</div>
+          <ul class="cat_list">
+            <li><a href="#">Киев</a></li>
+            <li><a href="#">Харьков</a></li>
+            <li><a href="#">Одесса</a></li>
+            <li><a href="#">Днепр</a></li>
+          </ul>
+        </div>
+        <div class="col-xs-12 col-md-2">
+          <div class="f_title">ТОП Теги</div>
+          <ul class="cat_list">
+            <li><a href="#">Футболка знімал</a></li>
+            <li><a href="#">Майки для спорта мужские</a></li>
+            <li><a href="#">Термобельё мальчику</a></li>
+            <li><a href="#">Подарочный набор носков</a></li>
+          </ul>
+        </div>
+        <div class="col-xs-12 col-md-2">
+          <div class="f_title">ТОП Товары</div>
+          <ul class="cat_list">
+            <li><a href="#">Набор трусов</a></li>
+            <li><a href="#">Футболка с глубоким вырезом</a></li>
+            <li><a href="#">Мужские термобелье трусы</a></li>
+            <li><a href="#">Пляжная одежда мужская</a></li>
+          </ul>
+        </div>
+        <div class="col-xs-12 col-md-2">
+          <div class="f_title">Предложения</div>
+          <ul class="cat_list">
+            <li><a href="#">Футболки супремен</a></li>
+            <li><a href="#">Плавки пляжные</a></li>
+            <li><a href="#">Боксеры atlantic</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <!--/footers_block-->
   </div>
 </div>
 
