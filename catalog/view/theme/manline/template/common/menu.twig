@@ -23,7 +23,34 @@
                 {% if sub.sub_menu and sub.sub_menu|length %}
                   <ul>
                     {% for child in sub.sub_menu %}
-                      <li><a href="{{ child.link }}">{{ child.name }}</a></li>
+                      {% if child.name == 'product' and child.product %}
+                        <li class="product_menu_polt col-md-{{ child.column }}">
+                          <div class="product_w noimgs">
+                            <div class="product_in">
+                              <div class="prod_info">
+                                <a class="prod_image" href="{{ child.product.href }}">
+                                  <img src="{{ child.product.image }}" title="{{ child.product.name }}" alt="{{ child.product.name }}" />
+                                </a>
+                                <div class="prod_name_w">
+                                  <a class="prod_name" href="{{ child.product.href }}">{{ child.product.name_short }}</a>
+                                </div>
+                                <div class="prod_price">
+                                  {% if child.product.price %}
+                                    {% if not child.product.special %}
+                                      {{ child.product.price|number_format(0, '.', '') }} грн.
+                                    {% else %}
+                                      <span class="price-old">{{ child.product.price|number_format(0, '.', '') }} грн.</span>
+                                      <span class="price-new">{{ child.product.special|number_format(0, '.', '') }} грн.</span>
+                                    {% endif %}
+                                  {% endif %}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </li>
+                      {% else %}
+                        <li><a href="{{ child.link }}">{{ child.name }}</a></li>
+                      {% endif %}
                     {% endfor %}
                   </ul>
                 {% endif %}

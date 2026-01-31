@@ -35,12 +35,51 @@ class Menu extends \Opencart\System\Engine\Controller {
 		}
 
 		// Fallback: if module is not bound/disabled, render full menu from legacy tables.
+		// Also attach product tiles (3rd-level items with name == 'product' and link = product_id),
+		// like in the legacy header.tpl.
 		if (!$data['custom_menu_module']) {
 			try {
 				$exists = $this->db->query("SHOW TABLES LIKE '" . DB_PREFIX . "custom_menu'");
 				if (!empty($exists->rows)) {
 					$this->load->model('extension/manline/module/custom_menu');
+					$this->load->model('catalog/product');
+					$this->load->model('tool/image');
+
 					$data['custom_menu'] = $this->model_extension_manline_module_custom_menu->getCustomMenu();
+
+					// attach product cards
+					$w = (int)$this->config->get('config_image_product_width');
+					$h = (int)$this->config->get('config_image_product_height');
+					if (!$w) { $w = 250; }
+					if (!$h) { $h = 250; }
+
+					foreach ($data['custom_menu'] as &$lvl1) {
+						if (empty($lvl1['sub_menu']) || !is_array($lvl1['sub_menu'])) continue;
+						foreach ($lvl1['sub_menu'] as &$lvl2) {
+							if (empty($lvl2['sub_menu']) || !is_array($lvl2['sub_menu'])) continue;
+							foreach ($lvl2['sub_menu'] as &$lvl3) {
+								if (($lvl3['name'] ?? '') !== 'product') continue;
+								$product_id = (int)($lvl3['link'] ?? 0);
+								if (!$product_id) continue;
+								$product = $this->model_catalog_product->getProduct($product_id);
+								if (!$product) continue;
+
+								$img = $product['image'] ? $this->model_tool_image->resize($product['image'], $w, $h) : $this->model_tool_image->resize('no_image.png', $w, $h);
+								$href = $this->url->link('product/product', 'language=' . $this->config->get('config_language') . '&product_id=' . $product_id);
+
+								$lvl3['product'] = [
+									'product_id' => $product_id,
+									'name'       => $product['name'],
+									'name_short' => oc_substr($product['name'], 0, 30) . (oc_strlen($product['name']) > 30 ? '...' : ''),
+									'image'      => $img,
+									'href'       => $href,
+									'price'      => (float)$product['price'],
+									'special'    => (float)$product['special'],
+								];
+							}
+						}
+					}
+					unset($lvl1, $lvl2, $lvl3);
 				}
 			} catch (\Throwable $e) {
 				// ignore and fall back to standard OC menu
