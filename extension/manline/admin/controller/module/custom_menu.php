@@ -7,6 +7,16 @@ namespace Opencart\Admin\Controller\Extension\Manline\Module;
 class CustomMenu extends \Opencart\System\Engine\Controller {
 	private array $error = [];
 
+	public function install(): void {
+		$this->load->model('user/user_group');
+		$this->model_user_user_group->addPermission($this->user->getGroupId(), 'access', 'extension/manline/module/custom_menu');
+		$this->model_user_user_group->addPermission($this->user->getGroupId(), 'modify', 'extension/manline/module/custom_menu');
+	}
+
+	public function uninstall(): void {
+		// no-op
+	}
+
 	public function index(): void {
 		$this->load->language('extension/manline/module/custom_menu');
 
