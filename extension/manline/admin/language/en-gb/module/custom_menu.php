@@ -25,6 +25,7 @@ $_['entry_parent_id']  = 'Parent';
 $_['entry_column']     = 'Columns';
 $_['entry_image']      = 'Image';
 $_['entry_sort_order'] = 'Sort Order';
+$_['entry_use_as_header'] = 'Use this module instance in header (main menu)';
 
 // Help
 $_['help_column']      = 'Number of columns in dropdown for top-level items.';

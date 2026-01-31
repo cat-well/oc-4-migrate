@@ -61,6 +61,11 @@ class CustomMenu extends \Opencart\System\Engine\Controller {
 		$data['style'] = $module_info['style'] ?? 0;
 		$data['in_module'] = $module_info['in_module'] ?? [];
 
+		// Header binding (explicit module_id selection)
+		$this->load->model('setting/setting');
+		$header_module_id = (int)$this->model_setting_setting->getValue('manline_header_custom_menu_module_id');
+		$data['use_as_header'] = $data['module_id'] && $header_module_id === $data['module_id'];
+
 		// Languages
 		$this->load->model('localisation/language');
 		$data['languages'] = $this->model_localisation_language->getLanguages();
@@ -131,12 +136,13 @@ class CustomMenu extends \Opencart\System\Engine\Controller {
 		}
 
 		$required = [
-			'module_id' => 0,
-			'name'      => '',
-			'status'    => 0,
-			'style'     => 0,
-			'in_module' => [],
-			'head'      => []
+			'module_id'      => 0,
+			'name'           => '',
+			'status'         => 0,
+			'style'          => 0,
+			'in_module'      => [],
+			'head'           => [],
+			'use_as_header'  => 0
 		];
 
 		$post_info = $this->request->post + $required;
@@ -153,6 +159,23 @@ class CustomMenu extends \Opencart\System\Engine\Controller {
 			} else {
 				$this->model_setting_module->editModule((int)$this->request->get['module_id'], $post_info);
 				$json['module_id'] = (int)$this->request->get['module_id'];
+			}
+
+			// Persist header binding
+			$this->load->model('setting/setting');
+			$current = $this->model_setting_setting->getSetting('manline');
+			$selected_id = (int)$json['module_id'];
+			$current_id = (int)$this->model_setting_setting->getValue('manline_header_custom_menu_module_id');
+
+			if (!empty($post_info['use_as_header'])) {
+				$current['manline_header_custom_menu_module_id'] = $selected_id;
+				$this->model_setting_setting->editSetting('manline', $current);
+			} else {
+				// If user unchecks it on the currently-bound instance, clear binding
+				if ($current_id === $selected_id) {
+					$current['manline_header_custom_menu_module_id'] = 0;
+					$this->model_setting_setting->editSetting('manline', $current);
+				}
 			}
 
 			$json['success'] = $this->language->get('text_success');

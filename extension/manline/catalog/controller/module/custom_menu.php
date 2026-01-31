@@ -23,6 +23,7 @@ class CustomMenu extends \Opencart\System\Engine\Controller {
 		}
 
 		$data['style'] = (int)($setting['style'] ?? 0);
+		$data['in_header'] = !empty($setting['in_header']);
 		$in_module = $setting['in_module'] ?? [];
 		$in_module = is_array($in_module) ? array_map('intval', $in_module) : [];
 

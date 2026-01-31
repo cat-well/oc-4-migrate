@@ -3,7 +3,7 @@
   <div class="box-heading">{{ head }}</div>
 {% endif %}
 
-<ul class="main_nav nav_menu">
+<ul class="main_nav nav_menu{{ in_header ? ' mob_hid' : '' }}">
   {% for category in custom_menu %}
     <li class="catalog_list">
       <a href="{{ category.link }}">{{ category.name }}</a>

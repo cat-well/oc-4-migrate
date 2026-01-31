@@ -140,6 +140,16 @@
                   </div>
                 </div>
 
+                <div class="row mb-3">
+                  <label class="col-sm-2 col-form-label" for="input-use-as-header">{{ entry_use_as_header }}</label>
+                  <div class="col-sm-10">
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" name="use_as_header" value="1" id="input-use-as-header" {{ use_as_header ? 'checked' : '' }}>
+                    </div>
+                    <div class="form-text">Привязка хранится в настройке manline_header_custom_menu_module_id.</div>
+                  </div>
+                </div>
+
                 <input type="hidden" name="module_id" value="{{ module_id }}"/>
               </fieldset>
             </form>

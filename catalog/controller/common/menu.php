@@ -16,18 +16,35 @@ class Menu extends \Opencart\System\Engine\Controller {
 	public function index(): string {
 		$this->load->language('common/menu');
 
-		// Manline store uses a legacy CustomMenu module (editable from admin in OC1.4).
-		// If its tables exist, render the menu from them for 1:1 parity.
+		// Manline store uses a legacy CustomMenu module (editable from admin).
+		// Header menu should use a specific module instance (selected in admin),
+		// so we can control which items are displayed via in_module[].
+		$data['custom_menu_module'] = '';
 		$data['custom_menu'] = [];
 
-		try {
-			$exists = $this->db->query("SHOW TABLES LIKE '" . DB_PREFIX . "custom_menu'");
-			if (!empty($exists->rows)) {
-				$this->load->model('extension/manline/module/custom_menu');
-				$data['custom_menu'] = $this->model_extension_manline_module_custom_menu->getCustomMenu();
+		$header_module_id = (int)$this->config->get('manline_header_custom_menu_module_id');
+
+		if ($header_module_id) {
+			$this->load->model('setting/module');
+			$module_info = $this->model_setting_module->getModule($header_module_id);
+
+			if (!empty($module_info) && !empty($module_info['status'])) {
+				$module_info['in_header'] = 1;
+				$data['custom_menu_module'] = $this->load->controller('extension/manline/module/custom_menu', $module_info);
 			}
-		} catch (\Throwable $e) {
-			// ignore and fall back to standard OC menu
+		}
+
+		// Fallback: if module is not bound/disabled, render full menu from legacy tables.
+		if (!$data['custom_menu_module']) {
+			try {
+				$exists = $this->db->query("SHOW TABLES LIKE '" . DB_PREFIX . "custom_menu'");
+				if (!empty($exists->rows)) {
+					$this->load->model('extension/manline/module/custom_menu');
+					$data['custom_menu'] = $this->model_extension_manline_module_custom_menu->getCustomMenu();
+				}
+			} catch (\Throwable $e) {
+				// ignore and fall back to standard OC menu
+			}
 		}
 
 		// Fallback: standard category menu

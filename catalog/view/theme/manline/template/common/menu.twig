@@ -2,7 +2,9 @@
    If custom_menu is provided (legacy module data), render OC1.4/OC2-compatible markup.
    Else fall back to stock OC4 menu. #}
 
-{% if custom_menu and custom_menu|length %}
+{% if custom_menu_module %}
+  {{ custom_menu_module }}
+{% elseif custom_menu and custom_menu|length %}
   <ul class="main_nav nav_menu mob_hid">
     {% for category in custom_menu %}
       <li class="catalog_list">
