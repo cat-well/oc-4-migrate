@@ -1,0 +1,185 @@
+.slicknav_menu .slicknav_icon {
+    float: none;
+    margin: 0.188em 0 0 0.438em;
+    display: inline-block;
+}
+
+.slicknav_menu .slicknav_no-text {
+    margin: 0
+}
+
+.slicknav_menu .slicknav_icon-bar {
+    display: block;
+    width: 1.125em;
+    height: 2px;
+    -webkit-border-radius: 1px;
+    -moz-border-radius: 1px;
+    border-radius: 1px;
+}
+
+.slicknav_btn .slicknav_icon-bar + .slicknav_icon-bar {
+    margin-top: 0.188em
+}
+
+.slicknav_nav {
+    clear: both
+}
+
+.slicknav_nav ul,
+.slicknav_nav li {
+    display: block
+}
+
+.slicknav_nav .slicknav_arrow {
+    font-size: 0.8em;
+    margin: 0 0 0 0.4em;
+}
+
+.slicknav_nav .slicknav_item {
+    cursor: pointer;
+}
+
+.slicknav_nav .slicknav_row {
+    display: block;
+}
+
+.slicknav_nav a {
+    display: block
+}
+
+.slicknav_nav .slicknav_item a,
+.slicknav_nav .slicknav_parent-link a {
+    display: inline
+}
+
+.slicknav_brand {
+    float: left
+}
+
+.slicknav_menu:before,
+.slicknav_menu:after {
+    content: " ";
+    display: table;
+}
+
+.slicknav_menu:after {
+    clear: both
+}
+
+.slicknav_menu {
+    *zoom: 1
+}
+
+.slicknav_nav {
+    z-index: 10;
+    background: #fed700 none repeat scroll 0 0;
+    color: #333;
+    font-size: 0.875em;
+    left: 0;
+    margin: -1px 0 0 0 !important;
+    padding: 0;
+    position: absolute;
+    text-align: left;
+    top: 100%;
+    width: 100%;
+}
+
+.slicknav_menu * {
+    box-sizing: border-box;
+}
+
+.slicknav_btn {
+    border-radius: 10px;
+    border: 2px solid #333e48;
+    margin: 0 !important;
+    text-decoration: none;
+    display: inline-block !important;
+    max-width: 500px;
+    width: 100%;
+    padding: 15px !important;
+    background: #fff;
+    text-align: center !important;
+}
+
+.slicknav_menu .slicknav_menutxt {
+    font-weight: 500;
+    text-shadow: none;
+    display: inline-block;
+}
+
+.slicknav_menu .slicknav_icon-bar {
+    background-color: #333e48;
+}
+
+.slicknav_menu {
+    background: none repeat scroll 0 0 rgba(0, 0, 0, 0);
+    padding: 5px 15px;
+    text-align: center;
+    position: relative;
+}
+
+.slicknav_nav, .slicknav_nav ul {
+    list-style: none;
+    overflow: hidden;
+}
+
+.slicknav_nav ul {
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+.slicknav_nav a, .slicknav_nav span {
+    color: #333;
+    padding: 20px 15px !important;
+    text-decoration: none;
+    border-bottom: 1px solid rgb(214, 181, 0);
+}
+
+.slicknav_nav li:last-child a, .slicknav_nav li:last-child span {
+    border-bottom: none !important;
+}
+
+.slicknav_nav .slicknav_item a, .slicknav_nav .slicknav_parent-link a {
+    margin: 0;
+    padding: 0;
+}
+
+.slicknav_nav a:hover,
+.slicknav_nav .slicknav_row:hover,
+.slicknav_nav .slicknav_row:hover a,
+.slicknav_nav .slicknav_row:hover span,
+.slicknav_nav .active,
+.slicknav_nav .active span,
+.slicknav_nav a.active,
+.slicknav_nav a:hover a,
+.slicknav_nav a.active a,
+.slicknav_nav a:hover span,
+.slicknav_nav a.active span {
+    background: none repeat scroll 0 0 #e7c400;
+}
+
+.slicknav_nav .slicknav_txtnode {
+    margin-left: 15px;
+}
+
+.slicknav_brand {
+    color: #fff;
+    font-size: 18px;
+    line-height: 30px;
+    padding: 7px 12px;
+    height: 44px;
+}
+
+.slicknav_btn.slicknav_open {
+    background: none repeat scroll 0 0 #fff;
+    color: #333 !important;
+}
+
+.slicknav_open span, .slicknav_open span span {
+    color: #333 !important;
+}
+
+.slicknav_menu .slicknav_open .slicknav_icon-bar {
+    background-color: #333;
+    box-shadow: none;
+}

@@ -1,0 +1,176 @@
+#filterpro_box {
+	position: relative;
+}
+#filterpro_box .box-content {
+    padding: 0px;
+}
+#filterpro_box a, #filterpro_box a:visited {
+    color: #D14747;
+}
+#filterpro_box .option_box {
+    border-top:1px solid #fff;border-bottom: 1px solid #dedede;
+}
+#filterpro_box .option_box.sliding .option_name { background: none; }
+#filterpro_box .option_box.sliding .option_name.hided { background: none; }
+#filterpro_box .option_box .option_name {
+	color: #000;
+	padding:14px 15px;
+	cursor:pointer;
+	background: url(../image/up-arrg.png) #eaeaea no-repeat right 10px;
+    vertical-align: top;
+    display: table-cell;
+    width: 120px;
+    border-right: 11px solid #eaeaea;
+}
+#filterpro_box .option_box .option_name.pricing, 
+#filterpro_box .option_box .option_name.pricing.hided {
+	background: none;
+}
+#filterpro_box .option_box .option_name.hided {
+	background: url(../image/down-arrg.png) #eaeaea no-repeat right center;
+}
+
+#filterpro_box .option_box table{
+	margin-bottom: 5px;
+    margin-top: 5px;
+    width: 100%;
+}
+#filterpro_box input[type="text"] {
+	color:#666;
+}
+#filterpro_box .price_limit {
+    border:1px solid #38b0e3;
+    color: #38B0E3;
+    font-weight:300;
+    width: 28px;
+    text-align: center;
+    margin: 0px 6px;
+    background: #f8f8f8;
+    border-radius: 2px;
+}
+#filterpro_box .ui-widget-header {
+    background: #38b0e3;
+    border: 0 none;
+    color: #FFFFFF;
+    font-weight: bold;
+}
+#filterpro_box .ui-state-hover, #filterpro_box .ui-state-focus, #filterpro_box .ui-state-active {
+    border: 1px solid #38B0E3;
+    background: none repeat scroll 0 0 #d9f2fc;
+}
+#filterpro_box #slider-range {
+    margin: 17px 5px;
+    width: 148px
+}
+#filterpro_box .min_price_text{
+	color:#808080;
+}	
+#filterpro_box label{
+	color:#aaa;	
+}
+#filterpro_box .option_box table tr td, #filterpro ul.box-filter.option_box li ul.collapsible li {
+	padding-right: 0px;
+    position: relative;
+    vertical-align: middle;
+}
+#filterpro_box .option_box.sliding table tr td:last-child {
+	text-align:right;
+}
+
+#filterpro_box a.clear_filter {
+    border-bottom: thin dashed;
+    text-decoration: none;
+    position: absolute;
+    right: 13px;
+    top: 15px;
+    color: #fff;
+}
+#filterpro_box .ui-slider-horizontal {
+height: .4em !important;
+}
+#filterpro_box .ui-state-default, #filterpro_box .ui-widget-content .ui-state-default, #filterpro_box .ui-widget-header .ui-state-default {
+    background: url(../image/slider-handle.png) no-repeat !important;
+	
+    background-size: 100% 100% !Important;
+    border: 0 !important;
+    margin-top: -1px;
+    outline: none;
+    cursor: pointer !important;
+}
+#filterpro_box input[type='checkbox'] {
+	display: none;
+}
+
+#filterpro_box input[type='checkbox'] + label {
+    display: table-cell;
+    background: url(../image/checkboxes2.png) no-repeat;
+    padding: 1px 7px;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+#filterpro_box input[type='checkbox'] + label +label {
+    padding-left: 5px;
+    display: table-cell;
+}
+
+#filterpro_box input[type='checkbox']:checked + label {
+	background-position: -14px 0;
+}	
+#filterpro_box input[type='checkbox']:disabled + label {
+	background-position: -28px 0;
+}
+#filterpro_box .sliding .option_name {
+    display: inline-block;
+	
+    width: 76px;
+}
+#filterpro_box .sliding .collapsibles {
+    display: inline-block;
+	
+    width: 109px;
+    vertical-align: middle;
+    margin-top: -17px;
+}
+
+#filterpro .option_box .collapsible input[type="checkbox"].option_value:disabled + img {
+    opacity: 0.2;
+
+}
+#filterpro .option_box .collapsible img.selected {
+    border: 1px solid #5F5F5F;
+    margin: -1px;
+}
+.label-name {
+    margin-right: 5px;
+    color: #6a6a6a;
+}
+#max_price {text-align: right;}
+#attribute_value_130 {background: #000;}
+.box-heading-text {margin-right: 80px;}
+.option_box .collapsible {display: table-cell;padding: 0 0 0 10px; }
+.option_box .collapsible tr {display: inline-block;padding:0 11px 0 0;width: 140px;vertical-align: top}
+.price_slider, .price-filter, #slider-range {display: inline-block;vertical-align: middle;}
+#filterpro_box .box-heading-filter {-webkit-border-radius:4px 4px 0 0;-moz-border-radius:4px 4px 0 0;-khtml-border-radius:4px 4px 0 0;border-radius:4px 4px 0 0;border:1px solid #dbdee1;background:#38b0e3;padding:13px 10px;font-size:17px;color:#fff}
+.table-price {display: inline-block;vertical-align: middle;}
+
+#checklist .collapsible .value { display: inline-block;margin: 10px 10px 10px 0;color: grey;}
+#checklist .option_box .option_name { background: none repeat scroll 0 0 #eaeaea;}
+/*#checklist .text {color: orange}*/
+#checklist .close {color: #57a8dd; cursor: pointer;}
+
+@media screen and (max-width: 768px){
+.filterpro{font-size: 14px;}    
+.price_slider, .price-filter, #slider-range, #filterpro_box .option_box .option_name {display: block!important;width:auto;text-align: center;}
+#filterpro_box #slider-range {margin: 17px auto;width: 80%;}
+.price_slider {text-align: center;}
+#filterpro_box .ui-slider-horizontal {height: .7em !important;}
+#filterpro_box .ui-state-default, #filterpro_box .ui-widget-content .ui-state-default, #filterpro_box .ui-widget-header .ui-state-default {height: 16px;width: 16px;margin-top: 0;cursor: pointer; border-radius: 10px;box-shadow: inset 0 0 3px rgba(0, 0, 0, 0.3);background: #fff!important;border: 1px solid #ccc!important;}
+#filterpro_box input[type='checkbox'] + label {background: url(../image/checkboxes3.png) no-repeat;padding: 12px 11px;-webkit-touch-callout: none;-webkit-user-select: none;-khtml-user-select: none;-moz-user-select: none;-ms-user-select: none;user-select: none;}
+#filterpro_box input[type='checkbox']:checked + label {background-position: -23px 0;}   
+#filterpro_box input[type='checkbox']:disabled + label {background-position: -46px 0;}
+#filterpro_box input[type='checkbox'] + label +label {vertical-align: middle;}
+}

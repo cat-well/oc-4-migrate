@@ -1,0 +1,457 @@
+#filterpro_box .box-content {
+    padding:0;
+}
+#filterpro .option_box {
+    border-radius: 0;
+    display: block;
+    margin: 0 auto 20px;
+    vertical-align: top;
+    width: 100%;
+}
+#filterpro .price_limit {
+    color: #333e48;
+}
+#filterpro #slider-range {
+    margin-right: 15px;
+    margin-top: 15px;
+}
+#filterpro .ui-widget-header {
+    background: none repeat scroll 0 0 #38B0E3;
+    border: 0 none;
+    color: #FFFFFF;
+    font-weight: bold;
+}
+
+#filterpro select {
+    width: 126px;
+}
+
+#filterpro .ui-state-hover, #filterpro .ui-state-focus, #filterpro .ui-state-active {
+    border: 1px solid #38B0E3;
+    background: none repeat scroll 0 0 #d9f2fc;
+}
+
+#filterpro .price_slider {
+    height: auto;
+    padding: 0;
+    margin: 0 auto 30px;
+}
+#filterpro .price_slider  input {
+    width: 65px;
+    min-width: 65px;
+    background: none;
+}
+
+#filterpro .option_values {
+    padding-top: 5px;
+}
+#filterpro .option_name, #filterpro .attribute_group_name {
+    background: rgba(0, 0, 0, 0) none repeat scroll 0 0;
+    border-bottom: 1px solid #dadada;
+    cursor: pointer;
+    font-size: 17px;
+    font-weight: 500;
+    margin: 0 auto 15px;
+    padding: 0 0 10px;
+    position: relative;
+}
+#filterpro .option_name:after, #filterpro .attribute_group_name:after {
+    background: #fed700 none repeat scroll 0 0;
+    bottom: -1px;
+    content: "";
+    display: block;
+    height: 3px;
+    position: absolute;
+    width: 20%;
+}
+#filterpro .attribute_group_name{
+    padding-left: 0;
+}
+
+#filterpro_box .clear_filter {
+    border-bottom: 1px dashed;
+    text-decoration: none;
+}
+.clear_filter_w {
+    margin: 0 auto 15px;
+}
+#filterpro img {
+    cursor: pointer;
+}
+#filterpro img.selected {
+    border: 1px solid #fed700;
+}
+#column-left + #column-right + #content .product-grid > div.loadmask {
+    width: 100%;
+}
+#filterpro input {
+    margin: 0;
+    padding: 0;
+}
+#filterpro table {
+    margin-bottom: 5px;
+    width: 100%;
+}
+#filterpro .attribute-tooltip.selected, .attribute-group-tooltip.selected, .option-tooltip.selected {
+    border: 2px solid transparent !important;
+}
+
+#filterpro .box-filter span{
+    font-weight: normal;
+}
+#filterpro_box .option_box tr > td:first-child input {
+    border: medium none !important;
+    cursor: pointer;
+    height: 100%;
+    opacity: 0;
+    padding: 0 !important;
+    position: absolute;
+    vertical-align: middle;
+    width: 100%;
+}
+#filterpro_box tr > td:first-child div {
+    border: 1px solid #ddd;
+    border-radius: 3px;
+    cursor: pointer;
+    float: left;
+    height: 15px;
+    margin: 3px 7px 0 0 !important;
+    overflow: hidden;
+    padding: 0 !important;
+    position: relative;
+    vertical-align: middle;
+    width: 15px;
+}
+#filterpro_box tr > td div.checked {
+    background: #fed700 none repeat scroll 0 0;
+    border: 1px solid #fed700;
+}
+#filterpro_box tr.disabled {
+    color: #bbb;
+}
+#filterpro_box tr.disabled > td:first-child div {
+    border: 1px solid #ededed;
+}
+#filterpro_box input:disabled {
+    cursor: not-allowed !important;
+}
+#filterpro_box input:disabled + div {
+    border: 1px solid #f5f5f5 !important;
+}
+#filterpro label {
+    color: #333e48;
+    display: block;
+    font-size: 14px;
+    font-weight: normal;
+    margin: 0;
+}
+
+#filterpro_box.box {
+    padding: 0;
+}
+.clear_filter {
+    color: #666;
+    font-size: 14px;
+}
+.value .close {
+    background: #14b207 none repeat scroll 0 0;
+    border-radius: 50%;
+    color: #fff;
+    cursor: pointer;
+    display: table-cell;
+    font-family: monospace;
+    font-size: 9px;
+    font-style: normal;
+    height: 15px;
+    line-height: 0;
+    padding: 0 0 1px !important;
+    text-align: center;
+    text-decoration: none;
+    vertical-align: middle;
+    width: 15px;
+}
+.value .text {
+    float: left;
+    margin: -3px 5px 3px 0;
+}
+.value {
+    color: #666;
+    font-size: 14px;
+    overflow: hidden;
+}
+#checklist .option_name {
+    margin: 0 auto 10px;
+    font-size: 18px;
+    font-weight: 500;
+    margin: 0 auto 10px;
+}
+#checklist {
+    margin: 0 auto 15px;
+}
+
+#showmore > a {
+    font-size: 18px;
+    font-weight: normal;
+    color: #111;
+    padding: 15px 50px;
+    border: 1px solid #fed700;
+    border-radius: 5px;
+    display: inline-block;
+    cursor: pointer;
+}
+#showmore > a:hover {
+    background: #fed700;
+}
+#showmore img {
+    transition: all 0.6s;
+    width: 27px;
+    vertical-align: middle;
+    float: left;
+    margin: 0 15px 4px 0;
+}
+#showmore > a:hover img {
+    transform: rotate(360deg);
+}
+#showmore span {
+    display: inline-block;
+}
+#showmore {
+    padding: 0;
+    text-align: center;
+    margin: 30px auto 0;
+}
+.label-value {
+    color: #999;
+    font-weight: normal;
+    margin: 0 0 0 2px;
+}
+.label-value:before {
+    content: "(";
+}
+.label-value:after {
+    content: ")";
+}
+.option60 .collapsible img {
+    border: 1px solid transparent;
+    border-radius: 50%;
+    box-shadow: 0 0 2px rgba(0, 0, 0, 0.2);
+    width: 100%;
+}
+.option60 .collapsible {
+    margin: 0 -5px;
+}
+.imgth_w {
+    border-radius: 50%;
+    float: left;
+    height: 28px;
+    margin: 0 5px 7px;
+    position: relative;
+    width: 28px;
+}
+.imgth_w.selected::after {
+    background: #fff none repeat scroll 0 0;
+    border: 1px solid #fed700;
+    border-radius: 50%;
+    box-shadow: 0 0 2px rgba(0, 0, 0, 0.2);
+    content: "";
+    display: block;
+    height: 10px;
+    left: 0;
+    margin: -5px auto 0;
+    position: absolute;
+    right: 0;
+    top: 50%;
+    width: 10px;
+}
+.option69 .td_inner, .option69 .td_inner, .option69 .label-value,
+.option68 .td_inner, .option68 .td_inner, .option68 .label-value,
+.option54 .td_inner, .option54 .td_inner, .option54 .label-value
+{
+    display: none;
+}
+.option69 label:last-child, .option68 label:last-child,
+.option54 label:last-child
+{
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    display: block !important;
+    margin: 0 auto 8px !important;
+    padding: 5px !important;
+    text-align: center;
+    width: 100%;
+    cursor: pointer;
+}
+.option69 .checked label:last-child,
+.option68 .checked label:last-child,
+.option54 .checked label:last-child
+{
+    border: 1px solid #fed700;
+    font-weight: bold !important;
+}
+.option69 tr, .option68 tr, .option54 tr {
+    float: left;
+    text-align: center;
+    width: 25%;
+}
+.option69 td, .option68 td, .option54 td {
+    padding: 0 4px !important;
+}
+.option_box td {
+    display: block;
+    margin: 0 auto 7px;
+    padding: 0;
+}
+.option69 .collapsible, .option68 .collapsible, .option54 .collapsible {
+    margin: 0 -4px;
+}
+.show_once {
+    background: rgba(0, 0, 0, 0) url("../image/show_once.png") no-repeat scroll center top / 130px auto;
+    color: #5aa1e3;
+    cursor: pointer;
+    display: block;
+    font-size: 25px;
+    margin: 50px 0 0;
+    padding-top: 125px;
+    text-align: center;
+}
+#filterpro .option_name::before, #filterpro .attribute_group_name::before {
+    background: rgba(0, 0, 0, 0) url("../image/arr_filter.png") no-repeat scroll right center / 13px auto;
+    content: "";
+    display: block;
+    height: 7px;
+    margin: 0;
+    opacity: 0.5;
+    position: absolute;
+    right: 0;
+    top: 12px;
+    transition: all 0.4s ease 0s;
+    width: 13px;
+}
+#filterpro .option_name.hided:before, #filterpro .attribute_group_name.hided:before {
+    transform: rotate(180deg);
+}
+#checklist .option_name, .box-heading.box-heading-filter {
+    display: none;
+}
+.mfp-content #filterpro label {
+    font-size: 18px;
+}
+.mfp-content .option_box.option60 {
+    margin: 0 auto !important;
+}
+.mfp-content #filterpro_box tr > td:first-child div {
+    height: 30px;
+    margin: -2px 7px 0 0 !important;
+    width: 30px;
+}
+.mfp-content .option_box td {
+    margin: 0 auto 17px;
+}
+.mfp-content #filterpro .option_name, .mfp-content #filterpro .attribute_group_name {
+    margin: 0 auto 20px;
+}
+.mfp-content .imgth_w {
+    height: 60px;
+    margin: 0 15px 15px;
+    width: 60px;
+}
+.mfp-content .option60 .collapsible {
+    margin: 0 -15px;
+}
+.mfp-content .imgth_w.selected:after {
+    height: 20px;
+    margin: -10px auto 0;
+    width: 20px;
+}
+.mfp-content #filterpro .option_name, .mfp-content #filterpro .attribute_group_name {
+    background: rgba(0, 0, 0, 0) none repeat scroll 0 0;
+    border-bottom: 1px solid #dadada;
+    cursor: pointer;
+    font-size: 20px;
+    font-weight: 500;
+    margin: 0 auto 30px;
+    padding: 0 0 10px;
+    position: relative;
+}
+.mfp-content .btn.close_filter {
+    float: right;
+    font-size: 25px;
+    padding: 15px 0;
+    width: 50%;
+    text-align: center;
+}
+.mfp-content #filterpro_box .clear_filter {
+    font-size: 20px;
+    margin: 10px 0 0 0;
+    display: inline-block;
+}
+div#filter_box_w {
+    padding: 18px 0 0;
+}
+.mfp-content div#filter_box_w {
+    padding: 45px 20px;
+}
+#filterpro_box .price_slider input {
+    width: 40% !important;
+}
+
+#filterpro_box .price_slider label {
+    display: inline !important;
+    font-size: 14px;
+    font-weight: normal;
+    margin: 0 15px 0 17px;
+    text-align: center;
+}
+#filterpro_box .price_limit {
+    background: #e1e1e1 none repeat scroll 0 0!important;
+    border: medium none;
+    border-radius: 50px;
+    margin: 0!important;
+    max-width: 60px;
+    padding: 3px 5px 5px;
+    text-align: center;
+    width: 100%;
+}
+#filterpro_box .ui-slider.ui-slider-horizontal.ui-widget.ui-widget-content.ui-corner-all {
+    background: #ddd none repeat scroll 0 0;
+    border: medium none!important;
+    height: 4px;
+}
+#filterpro_box .ui-widget-header {
+    background: #fbb41d none repeat scroll 0 0;
+    border: medium none!important;
+    color: #fff;
+    font-weight: bold;
+    height: 4px;
+}
+#filterpro_box .ui-slider .ui-slider-handle {
+    background: #333;
+    border: medium none;
+    border-radius: 50%;
+    cursor: pointer;
+    display: block;
+    height: 15px;
+    margin: 0;
+    width: 15px;
+}
+#filterpro_box .ui-slider .ui-slider-handle:hover {
+    background: #000 !important;
+}
+#filterpro_box .ui-widget-header {
+    background: #fbb41d none repeat scroll 0 0;
+    border: medium none!important;
+    color: #fff;
+    font-weight: bold;
+    height: 4px;
+}
+.price_slider td {
+    padding: 0;
+    width: auto;
+    display: inline-block;
+}
+.price_slider td:last-child label {
+    margin: 0 0 0 10px !important;
+}
+#checklist {
+    display: none;
+}
