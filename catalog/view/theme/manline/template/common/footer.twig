@@ -1,60 +1,88 @@
 </main>
-<footer>
+
+{# Manline theme scaffold: footer first (static texts for now, we’ll i18n later) #}
+<div class="subscribe mt-70">
+  <div class="container">
+    <div class="sub1">Будь в курсе новинок</div>
+    <div class="sub2">Подпишись на рассылку</div>
+    <div class="sub3">
+      <form class="contactform" method="post" action="">
+        <div class="success_polt"></div>
+        <input type="email" class="sub_inp" name="mail_polt[]" value="" placeholder="Ваш e-mail" required>
+        <input type="hidden" name="zakaz_polt[]" value="Подписка">
+        <input type="hidden" class="site_page_polt" size="50" name="site_page_polt[]" value="">
+        <input type="hidden" name="message_polt[]" value="Спасибо за подписку">
+        <input type="submit" class="btn submit button" name="submit_polt" value="Подписаться">
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="footer">
   <div class="container">
     <div class="row">
-      {% if informations or blog %}
-        <div class="col-sm-3">
-          <h5>{{ text_information }}</h5>
-          <ul class="list-unstyled">
-            {% if blog %}
-              <li><a href="{{ blog }}">{{ text_blog }}</a></li>
-            {% endif %}
-            {% for information in informations %}
-              <li><a href="{{ information.href }}">{{ information.title }}</a></li>
-            {% endfor %}
-          </ul>
+      <div class="col-xs-12 col-md-5">
+        <div class="logo_f">
+          <img alt="" src="catalog/view/theme/manline/image/logo.png">
         </div>
-      {% endif %}
-      <div class="col-sm-3">
-        <h5>{{ text_service }}</h5>
-        <ul class="list-unstyled">
-          <li><a href="{{ contact }}">{{ text_contact }}</a></li>
-          <li><a href="{{ return }}">{{ text_return }}</a></li>
-          {% if gdpr %}
-            <li><a href="{{ gdpr }}">{{ text_gdpr }}</a></li>
-          {% endif %}
-          <li><a href="{{ sitemap }}">{{ text_sitemap }}</a></li>
+
+        {# Language switch in old theme was custom (/ua/). For now rely on OpenCart language dropdown in header. #}
+
+        <div class="footer_phone">
+          <div class="fp_t">Нужна консультация?</div>
+          <div class="fp_p">(068) 503 05 05, (063) 641 56 99 (только Viber)</div>
+        </div>
+
+        <div class="f_loc">
+          <div class="loc_t">Контактная информация</div>
+          <div class="f_loc_text">Киев, Украина</div>
+        </div>
+
+        <div class="soc">
+          <a href="https://www.facebook.com/manline.com.ua/" target="_blank" rel="nofollow">
+            <img src="catalog/view/theme/manline/image/fb.png" alt="Facebook"/>
+          </a>
+          <a href="https://www.instagram.com/manline.kiev/" target="_blank" rel="nofollow">
+            <img src="catalog/view/theme/manline/image/inst.png" alt="Instagram"/>
+          </a>
+        </div>
+      </div>
+
+      <div class="col-xs-12 col-md-3 smhid">
+        <div class="f_title">Категории</div>
+        <ul class="cat_list">
+          <li><a href="{{ base }}muzhskie-trusy/">Чоловічі труси</a></li>
+          <li><a href="{{ base }}plyazhnaya-odezhda/">Чоловічі плавки</a></li>
+          <li><a href="{{ base }}noski/">Носки</a></li>
+          <li><a href="{{ base }}termobele/">Термобілизна</a></li>
         </ul>
       </div>
-      <div class="col-sm-3">
-        <h5>{{ text_extra }}</h5>
-        <ul class="list-unstyled">
+
+      <div class="col-xs-12 col-md-4 smhid">
+        <div class="f_title">Меню</div>
+        <ul class="cat_list">
+          {% for information in informations %}
+            <li><a href="{{ information.href }}">{{ information.title }}</a></li>
+          {% endfor %}
           <li><a href="{{ manufacturer }}">{{ text_manufacturer }}</a></li>
-          {% if affiliate %}
-            <li><a href="{{ affiliate }}">{{ text_affiliate }}</a></li>
-          {% endif %}
-          <li><a href="{{ special }}">{{ text_special }}</a></li>
-        </ul>
-      </div>
-      <div class="col-sm-3">
-        <h5>{{ text_account }}</h5>
-        <ul class="list-unstyled">
-          <li><a href="{{ account }}">{{ text_account }}</a></li>
-          <li><a href="{{ order }}">{{ text_order }}</a></li>
-          <li><a href="{{ wishlist }}">{{ text_wishlist }}</a></li>
-          <li><a href="{{ newsletter }}">{{ text_newsletter }}</a></li>
         </ul>
       </div>
     </div>
-    <hr>
-    <p>{{ powered }}</p>
-    <!--
-OpenCart is open source software and you are free to remove the powered by OpenCart if you want, but its generally accepted practise to make a small donation.
-Please donate via PayPal to donate@opencart.com
-//-->
   </div>
-</footer>
 </div>
+
+<div class="footer_bot">
+  <div class="container">
+    <div class="copy_left">
+      <span>2010-2026 © Магазин Manline</span> - Все права защищены | Создание продающих сайтов
+      <a target="_blank" rel="nofollow" href="https://poltor.com/sozdanie-prodayushchikh-sajtov.html">poltor.com</a>
+    </div>
+    <div class="copy_right"><img src="catalog/view/theme/manline/image/cards.png" alt=""/></div>
+  </div>
+</div>
+
+</div>
+
 {{ cookie }}
 <script src="{{ bootstrap }}" type="text/javascript"></script>
 {% for script in scripts %}
