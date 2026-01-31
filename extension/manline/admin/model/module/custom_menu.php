@@ -1,7 +1,7 @@
 <?php
 namespace Opencart\Admin\Model\Extension\Manline\Module;
 
-class CustomMenu extends \Opencart\System\Engine\Model {
+class Custommenu extends \Opencart\System\Engine\Model {
 	public function getCustomMenuItems(array $data = []): array {
 		$language_id = (int)$this->config->get('config_language_id');
 

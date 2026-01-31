@@ -1,7 +1,7 @@
 <?php
 namespace Opencart\Catalog\Controller\Extension\Manline\Module;
 
-class CustomMenu extends \Opencart\System\Engine\Controller {
+class Custommenu extends \Opencart\System\Engine\Controller {
 	/**
 	 * Render module output.
 	 *

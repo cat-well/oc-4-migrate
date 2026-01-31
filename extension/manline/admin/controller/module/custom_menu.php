@@ -4,7 +4,7 @@ namespace Opencart\Admin\Controller\Extension\Manline\Module;
 /**
  * Custom Menu (Manline) — OC4 port with 1:1 admin UX (items + module settings)
  */
-class CustomMenu extends \Opencart\System\Engine\Controller {
+class Custommenu extends \Opencart\System\Engine\Controller {
 	private array $error = [];
 
 	public function install(): void {
