@@ -7074,3 +7074,13 @@ ul.nav_menu > li:hover div {
 #product-category .subcat_href_w {
   display: none !important;
 }
+
+/* Temporarily hide the default OC4 category list module in the left column (we need filter there) */
+#product-category #column-left .list-group {
+  display: none !important;
+}
+
+/* Prevent horizontal scroll/reflow when hover popup extends outside card */
+#product-category {
+  overflow-x: hidden;
+}
