@@ -24,8 +24,10 @@
         <img src="{{ thumb }}" data-default="{{ thumb }}" title="{{ name }}" alt="{{ name }}" loading="lazy"/>
       </a>
 
-      {# Button markup exactly like OC2 theme (CSS expects this) #}
-      <button class="button" id="button-cart" type="submit"><a href="{{ href }}">{{ is_ua ? 'Купити' : 'Купить' }}</a></button>
+      {# Button markup: keep OC2 look & hover (CSS targets #button-cart) #}
+      <button class="button" id="button-cart" type="submit">
+        <a href="{{ href }}" style="display:block;color:inherit">{{ is_ua ? 'Купити' : 'Купить' }}</a>
+      </button>
 
       <div class="prod_name_w">
         <a class="prod_name" href="{{ href }}">{{ name }}</a>

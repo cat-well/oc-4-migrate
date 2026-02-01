@@ -488,6 +488,13 @@ table {
     color: #fff
 }
 
+/* Ensure the link inside the product tile button inherits hover color (OC4 markup uses <a> inside <button>) */
+#button-cart a,
+#button-cart:hover a {
+    color: inherit !important;
+    text-decoration: none;
+}
+
 .phone_self_arr {
     background: url(../image/phone_self.png) right center/8px auto no-repeat rgba(0, 0, 0, 0);
     height: 6px;
