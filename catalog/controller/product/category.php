@@ -243,6 +243,22 @@ class Category extends \Opencart\System\Engine\Controller {
 					$image = 'placeholder.png';
 				}
 
+				// Additional images (for hover mini-gallery like OC2 theme)
+				$images = [];
+
+				foreach ($this->model_catalog_product->getImages((int)$result['product_id']) as $product_image) {
+					if (!empty($product_image['image']) && is_file(DIR_IMAGE . html_entity_decode($product_image['image'], ENT_QUOTES, 'UTF-8'))) {
+						$images[] = [
+							'thumb' => $this->model_tool_image->resize($product_image['image'], 50, 50),
+							'popup' => $this->model_tool_image->resize($product_image['image'], $this->config->get('config_image_product_width'), $this->config->get('config_image_product_height'))
+						];
+					}
+
+					if (count($images) >= 4) {
+						break;
+					}
+				}
+
 				if ($this->customer->isLogged() || !$this->config->get('config_customer_price')) {
 					$price = $this->currency->format($this->tax->calculate($result['price'], $result['tax_class_id'], $this->config->get('config_tax')), $this->session->data['currency']);
 				} else {
@@ -264,6 +280,7 @@ class Category extends \Opencart\System\Engine\Controller {
 				$product_data = [
 					'description' => $description,
 					'thumb'       => $this->model_tool_image->resize($image, $this->config->get('config_image_product_width'), $this->config->get('config_image_product_height')),
+					'images'      => $images,
 					'price'       => $price,
 					'special'     => $special,
 					'tax'         => $tax,

@@ -2596,6 +2596,13 @@ div#filter_box_w {
     padding: 0 0 0 17px;
 }
 
+.prod_stock.no_stock {
+    background: none;
+    padding-left: 0;
+    color: #d40000;
+    font-weight: 600;
+}
+
 .prod_price {
     float: left;
     font-size: 17px;
@@ -6991,4 +6998,32 @@ ul.nav_menu > li:hover div {
 
 #filterpro .label-name a{
     color: #333e48;
+}
+
+/* Category breadcrumbs (OC2-like) */
+.breadcrumb_w {
+  font-size: 14px;
+  color: #7e7e7e;
+  margin: 10px 0 20px;
+}
+.breadcrumb_w a {
+  color: #7e7e7e;
+  text-decoration: none;
+}
+.breadcrumb_w a:hover {
+  text-decoration: underline;
+}
+.breadcrumb_w .sep {
+  margin: 0 6px;
+  color: #b5b5b5;
+}
+.breadcrumb_w .current {
+  background: #f1f1f1;
+  border-radius: 3px;
+  padding: 4px 8px;
+  color: #333;
+}
+
+.cat_seo_text {
+  margin-top: 20px;
 }
