@@ -3,25 +3,29 @@
 
 <div class="col-xs-6 col-sm-4 col-md-3 product_w">
   <div class="product_in">
+
+    {# Mini-gallery: OC2 shows it on hover, aligned to the left side of the expanded card #}
+    {% if images is defined and images is not empty %}
+      <div class="p_dop_photo">
+        {% for img in images %}
+          <div class="p_dop_photo_h {% if loop.first %}active{% endif %}" data-href="{{ img.popup }}">
+            <img src="{{ img.thumb }}" alt="{{ name }}" loading="lazy"/>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+
     <div class="prod_info">
       <a class="prod_image" href="{{ href }}">
         {% if is_new is defined and is_new %}
           <div class="new">Новинка</div>
         {% endif %}
 
-        <img
-          src="{{ thumb }}"
-          data-default="{{ thumb }}"
-          alt="{{ name }}"
-          title="{{ name }}"
-          class="prod-main-img"
-          loading="lazy"
-        />
+        <img src="{{ thumb }}" data-default="{{ thumb }}" title="{{ name }}" alt="{{ name }}" loading="lazy"/>
       </a>
 
-      <button class="button" type="button">
-        <a href="{{ href }}">{{ is_ua ? 'Купити' : 'Купить' }}</a>
-      </button>
+      {# Button markup exactly like OC2 theme (CSS expects this) #}
+      <button class="button" id="button-cart" type="submit"><a href="{{ href }}">{{ is_ua ? 'Купити' : 'Купить' }}</a></button>
 
       <div class="prod_name_w">
         <a class="prod_name" href="{{ href }}">{{ name }}</a>
@@ -53,15 +57,5 @@
         {% endif %}
       </div>
     </div>
-
-    {% if images is defined and images is not empty %}
-      <div class="p_dop_photo">
-        {% for img in images %}
-          <div class="p_dop_photo_h{% if loop.first %} active{% endif %}" data-href="{{ img.popup }}" data-popup="{{ img.popup }}">
-            <img src="{{ img.thumb }}" alt="{{ name }}" loading="lazy"/>
-          </div>
-        {% endfor %}
-      </div>
-    {% endif %}
   </div>
 </div>

@@ -90,7 +90,7 @@
 </div>
 
 <script>
-  // Hover mini-gallery (left thumbnails -> swap main image)
+  // OC2-like mini-gallery behavior: hovering a thumbnail replaces the main image.
   document.addEventListener('mouseover', function (e) {
     const thumb = e.target.closest('.p_dop_photo_h');
     if (!thumb) return;
@@ -98,15 +98,16 @@
     const product = thumb.closest('.product_w');
     if (!product) return;
 
-    const mainImg = product.querySelector('img.prod-main-img');
+    const mainImg = product.querySelector('.prod_image img');
     if (!mainImg) return;
 
-    const popup = thumb.getAttribute('data-popup');
-    if (popup) {
-      mainImg.src = popup;
+    const href = thumb.getAttribute('data-href');
+    if (href) {
+      mainImg.src = href;
     }
 
-    product.querySelectorAll('.p_dop_photo_h.active').forEach(el => el.classList.remove('active'));
+    // active class (note: OC2 markup uses a space before 'active')
+    product.querySelectorAll('.p_dop_photo_h').forEach(el => el.classList.remove('active'));
     thumb.classList.add('active');
   });
 
@@ -115,15 +116,14 @@
     const product = e.target.closest && e.target.closest('.product_w');
     if (!product) return;
 
-    // If we are still inside the same product card, ignore
     if (e.relatedTarget && product.contains(e.relatedTarget)) return;
 
-    const mainImg = product.querySelector('img.prod-main-img');
+    const mainImg = product.querySelector('.prod_image img');
     if (mainImg && mainImg.dataset.default) {
       mainImg.src = mainImg.dataset.default;
     }
 
-    product.querySelectorAll('.p_dop_photo_h.active').forEach(el => el.classList.remove('active'));
+    product.querySelectorAll('.p_dop_photo_h').forEach(el => el.classList.remove('active'));
     const first = product.querySelector('.p_dop_photo_h');
     if (first) first.classList.add('active');
   });
