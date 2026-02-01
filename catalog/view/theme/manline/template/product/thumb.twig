@@ -1,66 +1,67 @@
-{# Manline OC2-like product tile + hover mini-gallery #}
-<div class="product_w{% if images is empty %} noimgs{% endif %}">
+{# Manline OC2-like product tile (listing) + hover mini-gallery #}
+{% set is_ua = (lang_code is defined) and (lang_code in ['uk-ua','ua']) %}
+
+<div class="col-xs-6 col-sm-4 col-md-3 product_w">
   <div class="product_in">
+    <div class="prod_info">
+      <a class="prod_image" href="{{ href }}">
+        {% if is_new is defined and is_new %}
+          <div class="new">Новинка</div>
+        {% endif %}
 
-    {% if images is not empty %}
-      <div class="p_dop_photo" aria-hidden="true">
-        {% for img in images %}
-          <div class="p_dop_photo_h{% if loop.first %} active{% endif %}" data-popup="{{ img.popup }}">
-            <img src="{{ img.thumb }}" alt="{{ name }}" loading="lazy"/>
-          </div>
-        {% endfor %}
-      </div>
-    {% endif %}
-
-    <div class="prod_image">
-      <a href="{{ href }}" class="prod_image_val">
         <img
           src="{{ thumb }}"
           data-default="{{ thumb }}"
           alt="{{ name }}"
           title="{{ name }}"
-          class="res_img prod-main-img"
+          class="prod-main-img"
           loading="lazy"
         />
       </a>
-    </div>
 
-    <div class="prod_info">
+      <button class="button" type="button">
+        <a href="{{ href }}">{{ is_ua ? 'Купити' : 'Купить' }}</a>
+      </button>
+
       <div class="prod_name_w">
         <a class="prod_name" href="{{ href }}">{{ name }}</a>
       </div>
 
-      <div class="hover_tovar">
-        {% if model %}
-          <div><span class="hov_text">Код товару:</span> {{ model }}</div>
-        {% endif %}
-      </div>
-
-      <div class="prod_price">
-        {% if price %}
-          {% if not special %}
-            {{ price }}
-          {% else %}
-            <span class="price-old">{{ price }}</span>
-            <span class="price-new">{{ special }}</span>
-          {% endif %}
-        {% endif %}
-      </div>
-
       {% if quantity is defined and quantity > 0 %}
-        <div class="prod_stock">Є в наявності</div>
+        <div class="prod_stock">{{ is_ua ? 'Є в наявності' : 'Есть в наличии' }}</div>
       {% else %}
-        <div class="prod_stock no_stock">Немає в наявності</div>
+        <div style="color: #ff0000">{{ is_ua ? 'Немає в наявності' : 'Нет в наличии' }}</div>
       {% endif %}
 
-      <form method="post" data-oc-toggle="ajax" data-oc-load="{{ cart }}" data-oc-target="#cart" class="mt-2">
-        <button type="submit" class="button-cart" formaction="{{ cart_add }}" title="{{ button_cart }}">
-          <span>{{ button_cart }}</span>
-        </button>
-        <input type="hidden" name="product_id" value="{{ product_id }}"/>
-        <input type="hidden" name="quantity" value="{{ minimum }}"/>
-      </form>
+      {% if price %}
+        <div class="prod_price">
+          {% if not special %}
+            {{ is_ua ? 'Ціна: ' : 'Цена: ' }}{{ price }}
+          {% else %}
+            <span>{{ is_ua ? 'Ціна' : 'Цена' }}: </span><span class="price-old">{{ price }}</span> <span class="price-new">{{ special }}</span>
+          {% endif %}
+        </div>
+      {% endif %}
 
+      <div class="hover_tovar">
+        {% if model %}
+          <div class="hover_t_b"><span class="hov_text">{{ is_ua ? 'Код товару:' : 'Код товара:' }}</span> <span class="hot_text">{{ model }}</span></div>
+        {% endif %}
+
+        {% if product_polt_options is defined and product_polt_options %}
+          <div class="hover_t_b"><span class="hov_text">{{ is_ua ? 'Розміри в наявності:' : 'Размеры в наличии:' }}</span> <span class="hot_text">{{ product_polt_options }}</span></div>
+        {% endif %}
+      </div>
     </div>
+
+    {% if images is defined and images is not empty %}
+      <div class="p_dop_photo">
+        {% for img in images %}
+          <div class="p_dop_photo_h{% if loop.first %} active{% endif %}" data-href="{{ img.popup }}" data-popup="{{ img.popup }}">
+            <img src="{{ img.thumb }}" alt="{{ name }}" loading="lazy"/>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
   </div>
 </div>

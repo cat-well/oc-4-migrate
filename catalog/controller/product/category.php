@@ -277,7 +277,18 @@ class Category extends \Opencart\System\Engine\Controller {
 					$tax = false;
 				}
 
+				// OC2-like "Новинка" badge: treat products added within last 60 days as new
+				$is_new = false;
+				if (!empty($result['date_added'])) {
+					$date_added_ts = strtotime((string)$result['date_added']);
+					if ($date_added_ts && (time() - $date_added_ts) <= (60 * 24 * 60 * 60)) {
+						$is_new = true;
+					}
+				}
+
 				$product_data = [
+					'lang_code'   => $this->config->get('config_language'),
+					'is_new'      => $is_new,
 					'description' => $description,
 					'thumb'       => $this->model_tool_image->resize($image, $this->config->get('config_image_product_width'), $this->config->get('config_image_product_height')),
 					'images'      => $images,
