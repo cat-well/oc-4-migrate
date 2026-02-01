@@ -7027,3 +7027,13 @@ ul.nav_menu > li:hover div {
 .cat_seo_text {
   margin-top: 20px;
 }
+
+/* Category grid helpers (avoid bootstrap row flex conflicts) */
+#product-list.product-grid {
+  display: flex;
+  flex-wrap: wrap;
+}
+#product-list.product-grid > .wrap-product-item {
+  padding-left: 15px;
+  padding-right: 15px;
+}

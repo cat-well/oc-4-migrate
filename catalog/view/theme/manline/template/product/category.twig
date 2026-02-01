@@ -16,12 +16,18 @@
 
   <div class="row">
 
-    {# Left filter column (module output) #}
-    <div class="col-md-3" id="column-left">
-      {{ column_left }}
-    </div>
+    {{ column_left }}
 
-    <div id="content" class="col-md-9">
+    {# Content width depending on side columns #}
+    {% if column_left and column_right %}
+      {% set class = 'col-md-6' %}
+    {% elseif column_left or column_right %}
+      {% set class = 'col-md-9' %}
+    {% else %}
+      {% set class = 'col-12' %}
+    {% endif %}
+
+    <div id="content" class="{{ class }}">
       {{ content_top }}
 
       <div class="title"><h1>{{ heading_title }}</h1></div>
@@ -47,7 +53,7 @@
           </div>
         </div>
 
-        <div class="row product-grid" id="product-list">
+        <div class="product-grid" id="product-list">
           {% for product in products %}
             <div class="wrap-product-item col-sm-6 col-md-3">{{ product }}</div>
           {% endfor %}
@@ -73,7 +79,7 @@
       {{ content_bottom }}
     </div>
 
-    <div class="col-md-0" id="column-right">{{ column_right }}</div>
+    {{ column_right }}
   </div>
 </div>
 

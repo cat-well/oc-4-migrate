@@ -1,21 +1,23 @@
-<ul class="pagination">
+<div class="pagination">
   {% if first %}
-    <li class="page-item"><a href="{{ first }}" class="page-link">|&lt;</a></li>
+    <a href="{{ first }}">|&lt;</a>
   {% endif %}
   {% if prev %}
-    <li class="page-item"><a href="{{ prev }}" class="page-link">&lt;</a></li>
+    <a href="{{ prev }}">&lt;</a>
   {% endif %}
+
   {% for link in links %}
     {% if link.page == page %}
-      <li class="page-item active"><span class="page-link">{{ link.page }}</span></li>
+      <b>{{ link.page }}</b>
     {% else %}
-      <li class="page-item"><a href="{{ link.href }}" class="page-link">{{ link.page }}</a></li>
+      <a href="{{ link.href }}">{{ link.page }}</a>
     {% endif %}
   {% endfor %}
+
   {% if next %}
-    <li class="page-item"><a href="{{ next }}" class="page-link">&gt;</a></li>
+    <a href="{{ next }}">&gt;</a>
   {% endif %}
   {% if last %}
-    <li class="page-item"><a href="{{ last }}" class="page-link">&gt;|</a></li>
+    <a href="{{ last }}">&gt;|</a>
   {% endif %}
-</ul>
+</div>
