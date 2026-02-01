@@ -2658,14 +2658,25 @@ div#filter_box_w {
 }
 
 @media (min-width: 992px) {
+    /* On hover we must not reflow the grid; use absolute overlay inside the card */
+    .product_w {
+        position: relative;
+        overflow: visible;
+    }
+
     .product_w:hover .product_in {
         background-color: #fff;
         box-shadow: 0 0 13px 0 rgba(0, 0, 0, 0.4);
         height: auto;
-        margin-left: -75px;
         overflow: visible;
-        padding-left: 75px;
         z-index: 99;
+
+        position: absolute;
+        top: 0;
+        left: -75px;
+        width: calc(100% + 75px);
+        margin-left: 0;
+        padding-left: 75px;
     }
 }
 
@@ -7057,4 +7068,9 @@ ul.nav_menu > li:hover div {
     flex: 0 0 100%;
     max-width: 100%;
   }
+}
+
+/* Category page: hide extra category-links strip (comes from a module output, not part of 1:1) */
+#product-category .subcat_href_w {
+  display: none !important;
 }
