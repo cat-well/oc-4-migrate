@@ -107,6 +107,8 @@ class Header extends \Opencart\System\Engine\Controller {
 		$data['language'] = $this->load->controller('common/language');
 		$data['currency'] = $this->load->controller('common/currency');
 
+		$data['current_language'] = $this->config->get('config_language');
+
 		// Manline theme: simple UA/RU switch (OC2-like), avoids bootstrap dropdown dependency.
 		$route = $this->request->get['route'] ?? 'common/home';
 		$params = $this->request->get;

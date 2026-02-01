@@ -1,59 +1,82 @@
-<div class="dropdown d-grid">
-  <button type="button" data-bs-toggle="dropdown" class="btn btn-lg btn-dark d-block dropdown-toggle"><i class="fa-solid fa-cart-shopping"></i> {{ text_items }}</button>
-  <ul class="dropdown-menu dropdown-menu-end p-2">
+{# Manline mini-cart (ported from legacy template/module/cart.tpl) #}
+<div id="cart" class="cart-popup">
+  <div class="heading">
+    <a href="{{ checkout }}" class="cart_href" title="{{ heading_title|default('Корзина') }}">
+      <span aria-hidden="true" class="glyphicon glyphicon-shopping-cart"></span>
+      <span id="cart-total">{{ text_items }}</span>
+    </a>
+  </div>
+
+  <div class="content white-popup mfp-with-anim">
+    <button class="mfp-close" type="button" title="Close (Esc)">×</button>
+
     {% if products %}
-      <li>
-        <table class="table table-striped mb-2">
+      <div class="mini-cart-info">
+        <div class="items">
           {% for product in products %}
-            <tr>
-              <td class="text-center w-25">{% if product.thumb %}<a href="{{ product.href }}"><img src="{{ product.thumb }}" alt="{{ product.name }}" title="{{ product.name }}" class="img-thumbnail"/></a>{% endif %}</td>
-              <td><a href="{{ product.href }}">{{ product.name }}</a>
-                <ul class="list-unstyled mb-0">
-                  <li>
-                    <small> - {{ text_model }}: {{ product.model }}</small>
-                  </li>
-                  {% for option in product.option %}
-                    <li>
-                      <small> - {{ option.name }}: {{ option.value }}</small>
-                    </li>
-                  {% endfor %}
-                  {% if product.subscription %}
-                    <li>
-                      <small> - {{ text_subscription }}: {{ product.subscription }}</small>
-                    </li>
+            <div class="items-inner">
+              <div class="cart-item-image">
+                <a href="{{ product.href }}">
+                  {% if product.thumb %}
+                    <img src="{{ product.thumb }}" alt="{{ product.name }}" title="{{ product.name }}" />
                   {% endif %}
-                  {% if product.reward %}
-                    <li>
-                      <small> - {{ text_points }}: {{ product.reward }}</small>
-                    </li>
+                </a>
+              </div>
+
+              <div class="cart-item-info">
+                <div class="cart-item-title">
+                  <a href="{{ product.href }}">{{ product.name }}</a>
+                  {% if product.option %}
+                    {% for option in product.option %}
+                      <div class="cart_options">{{ option.name }} {{ option.value }}</div>
+                    {% endfor %}
                   {% endif %}
-                </ul>
-              </td>
-              <td class="text-end text-nowrap">x {{ product.quantity }}</td>
-              <td class="text-end">{{ product.total }}</td>
-              <td class="text-end">
-                <form action="{{ remove }}" method="post" data-oc-toggle="ajax" data-oc-load="{{ list }}" data-oc-target="#cart">
-                  <input type="hidden" name="key" value="{{ product.cart_id }}">
-                  <button type="submit" data-bs-toggle="tooltip" title="{{ button_remove }}" class="btn btn-danger"><i class="fa-solid fa-circle-xmark"></i></button>
-                </form>
-              </td>
-            </tr>
+                </div>
+
+                <div class="cart-item-price">
+                  <span class="pl_min">
+                    <img class="pm_cart" src='catalog/view/theme/manline/image/minus.png' onclick='poltoQntUpdate("{{ product.key }}", {{ product.quantity - 1 }})'>
+                    <span class="cart_quantity">{{ product.quantity }}</span>
+                    <img class="pm_cart" src='catalog/view/theme/manline/image/plus.png' onclick='poltoQntUpdate("{{ product.key }}", {{ product.quantity + 1 }})'>
+                  </span>
+                  <span class="money">{{ product.total }}</span>
+                </div>
+              </div>
+
+              <img class="cart-close" src="catalog/view/theme/manline/image/remove-small.png" alt="{{ button_remove|default('Удалить') }}" title="{{ button_remove|default('Удалить') }}" onclick="$('#cart').load('{{ list }} #cart > *');" />
+            </div>
           {% endfor %}
-        </table>
-        <div>
-          <table class="table table-sm table-bordered mb-2">
-            {% for total in totals %}
-              <tr>
-                <td class="text-end"><strong>{{ total.title }}</strong></td>
-                <td class="text-end">{{ total.text }}</td>
-              </tr>
-            {% endfor %}
-          </table>
-          <p class="text-end"><a href="{{ cart }}"><strong><i class="fa-solid fa-cart-shopping"></i> {{ text_cart }}</strong></a>&nbsp;&nbsp;&nbsp;<a href="{{ checkout }}"><strong><i class="fa-solid fa-share"></i> {{ text_checkout }}</strong></a></p>
         </div>
-      </li>
+      </div>
+
+      <div class="mini-cart-total subtotal">
+        {% for total in totals %}
+          {% if total.code == 'total' %}
+            <div class="total_w itogo">
+              <span class="price_all_text">{{ total.title }}</span>
+              <span class="cart-item-total-price"><span class="money">{{ total.text }}</span></span>
+            </div>
+          {% endif %}
+        {% endfor %}
+      </div>
+
+      <div class="center">
+        <div class="checkout action">
+          <a href="#" class="gost">Продолжить покупки</a>
+          <a class="button btn" href="{{ checkout }}">Оформить заказ</a>
+        </div>
+      </div>
     {% else %}
-      <li class="text-center p-4">{{ text_no_results }}</li>
+      <div class="empty">{{ text_empty|default('Ваша корзина пуста!') }}</div>
     {% endif %}
-  </ul>
+  </div>
+
+  <a class="mob_btn" href="{{ checkout }}"></a>
 </div>
+
+<script type="text/javascript">
+function poltoQntUpdate(key, quantity) {
+  // Minimal stub: refresh cart block (full legacy behavior can be added later)
+  $('#cart').load('{{ list }} #cart > *');
+}
+</script>
