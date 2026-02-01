@@ -6,126 +6,126 @@
 
 @font-face {
     font-family: 'Exo 2';
-    src: local('catalog/view/theme/manline/fonts/Exo 2 Thin'), local('catalog/view/theme/manline/fonts/Exo2-Thin'), url(catalog/view/theme/manline/fonts/exo2thin.woff2) format('woff2'), url(catalog/view/theme/manline/fonts/exo2thin.woff) format('woff'), url(catalog/view/theme/manline/fonts/exo2thin.ttf) format('truetype');
+    src: local('catalog/view/theme/manline/fonts/Exo 2 Thin'), local('catalog/view/theme/manline/fonts/Exo2-Thin'), url(../fonts/exo2thin.woff2) format('woff2'), url(../fonts/exo2thin.woff) format('woff'), url(../fonts/exo2thin.ttf) format('truetype');
     font-weight: 100;
     font-style: normal
 }
 
 @font-face {
     font-family: 'Exo 2';
-    src: local('catalog/view/theme/manline/fonts/Exo 2 Thin Italic'), local('catalog/view/theme/manline/fonts/Exo2-ThinItalic'), url(catalog/view/theme/manline/fonts/exo2thinitalic.woff2) format('woff2'), url(catalog/view/theme/manline/fonts/exo2thinitalic.woff) format('woff'), url(catalog/view/theme/manline/fonts/exo2thinitalic.ttf) format('truetype');
+    src: local('catalog/view/theme/manline/fonts/Exo 2 Thin Italic'), local('catalog/view/theme/manline/fonts/Exo2-ThinItalic'), url(../fonts/exo2thinitalic.woff2) format('woff2'), url(../fonts/exo2thinitalic.woff) format('woff'), url(../fonts/exo2thinitalic.ttf) format('truetype');
     font-weight: 100;
     font-style: italic
 }
 
 @font-face {
     font-family: 'Exo 2';
-    src: local('catalog/view/theme/manline/fonts/Exo 2 Extra Light'), local('catalog/view/theme/manline/fonts/Exo2-ExtraLight'), url(catalog/view/theme/manline/fonts/exo2extralight.woff2) format('woff2'), url(catalog/view/theme/manline/fonts/exo2extralight.woff) format('woff'), url(catalog/view/theme/manline/fonts/exo2extralight.ttf) format('truetype');
+    src: local('catalog/view/theme/manline/fonts/Exo 2 Extra Light'), local('catalog/view/theme/manline/fonts/Exo2-ExtraLight'), url(../fonts/exo2extralight.woff2) format('woff2'), url(../fonts/exo2extralight.woff) format('woff'), url(../fonts/exo2extralight.ttf) format('truetype');
     font-weight: 200;
     font-style: normal
 }
 
 @font-face {
     font-family: 'Exo 2';
-    src: local('catalog/view/theme/manline/fonts/Exo 2 Extra Light Italic'), local('catalog/view/theme/manline/fonts/Exo2-ExtraLightItalic'), url(catalog/view/theme/manline/fonts/exo2extralightitalic.woff2) format('woff2'), url(catalog/view/theme/manline/fonts/exo2extralightitalic.woff) format('woff'), url(catalog/view/theme/manline/fonts/exo2extralightitalic.ttf) format('truetype');
+    src: local('catalog/view/theme/manline/fonts/Exo 2 Extra Light Italic'), local('catalog/view/theme/manline/fonts/Exo2-ExtraLightItalic'), url(../fonts/exo2extralightitalic.woff2) format('woff2'), url(../fonts/exo2extralightitalic.woff) format('woff'), url(../fonts/exo2extralightitalic.ttf) format('truetype');
     font-weight: 200;
     font-style: italic
 }
 
 @font-face {
     font-family: 'Exo 2';
-    src: local('catalog/view/theme/manline/fonts/Exo 2 Light'), local('catalog/view/theme/manline/fonts/Exo2-Light'), url(catalog/view/theme/manline/fonts/exo2light.woff2) format('woff2'), url(catalog/view/theme/manline/fonts/exo2light.woff) format('woff'), url(catalog/view/theme/manline/fonts/exo2light.ttf) format('truetype');
+    src: local('catalog/view/theme/manline/fonts/Exo 2 Light'), local('catalog/view/theme/manline/fonts/Exo2-Light'), url(../fonts/exo2light.woff2) format('woff2'), url(../fonts/exo2light.woff) format('woff'), url(../fonts/exo2light.ttf) format('truetype');
     font-weight: 300;
     font-style: normal
 }
 
 @font-face {
     font-family: 'Exo 2';
-    src: local('catalog/view/theme/manline/fonts/Exo 2 Light Italic'), local('catalog/view/theme/manline/fonts/Exo2-LightItalic'), url(catalog/view/theme/manline/fonts/exo2lightitalic.woff2) format('woff2'), url(catalog/view/theme/manline/fonts/exo2lightitalic.woff) format('woff'), url(catalog/view/theme/manline/fonts/exo2lightitalic.ttf) format('truetype');
+    src: local('catalog/view/theme/manline/fonts/Exo 2 Light Italic'), local('catalog/view/theme/manline/fonts/Exo2-LightItalic'), url(../fonts/exo2lightitalic.woff2) format('woff2'), url(../fonts/exo2lightitalic.woff) format('woff'), url(../fonts/exo2lightitalic.ttf) format('truetype');
     font-weight: 300;
     font-style: italic
 }
 
 @font-face {
     font-family: 'Exo 2';
-    src: local('catalog/view/theme/manline/fonts/Exo 2'), local('catalog/view/theme/manline/fonts/Exo2-Regular'), url(catalog/view/theme/manline/fonts/exo2.woff2) format('woff2'), url(catalog/view/theme/manline/fonts/exo2.woff) format('woff'), url(catalog/view/theme/manline/fonts/exo2.ttf) format('truetype');
+    src: local('catalog/view/theme/manline/fonts/Exo 2'), local('catalog/view/theme/manline/fonts/Exo2-Regular'), url(../fonts/exo2.woff2) format('woff2'), url(../fonts/exo2.woff) format('woff'), url(../fonts/exo2.ttf) format('truetype');
     font-weight: 400;
     font-style: normal
 }
 
 @font-face {
     font-family: 'Exo 2';
-    src: local('catalog/view/theme/manline/fonts/Exo 2 Italic'), local('catalog/view/theme/manline/fonts/Exo2-Italic'), url(catalog/view/theme/manline/fonts/exo2italic.woff2) format('woff2'), url(catalog/view/theme/manline/fonts/exo2italic.woff) format('woff'), url(catalog/view/theme/manline/fonts/exo2italic.ttf) format('truetype');
+    src: local('catalog/view/theme/manline/fonts/Exo 2 Italic'), local('catalog/view/theme/manline/fonts/Exo2-Italic'), url(../fonts/exo2italic.woff2) format('woff2'), url(../fonts/exo2italic.woff) format('woff'), url(../fonts/exo2italic.ttf) format('truetype');
     font-weight: 400;
     font-style: italic
 }
 
 @font-face {
     font-family: 'Exo 2';
-    src: local('catalog/view/theme/manline/fonts/Exo 2 Medium'), local('catalog/view/theme/manline/fonts/Exo2-Medium'), url(catalog/view/theme/manline/fonts/exo2medium.woff2) format('woff2'), url(catalog/view/theme/manline/fonts/exo2medium.woff) format('woff'), url(catalog/view/theme/manline/fonts/exo2medium.ttf) format('truetype');
+    src: local('catalog/view/theme/manline/fonts/Exo 2 Medium'), local('catalog/view/theme/manline/fonts/Exo2-Medium'), url(../fonts/exo2medium.woff2) format('woff2'), url(../fonts/exo2medium.woff) format('woff'), url(../fonts/exo2medium.ttf) format('truetype');
     font-weight: 500;
     font-style: normal
 }
 
 @font-face {
     font-family: 'Exo 2';
-    src: local('catalog/view/theme/manline/fonts/Exo 2 Medium Italic'), local('catalog/view/theme/manline/fonts/Exo2-MediumItalic'), url(catalog/view/theme/manline/fonts/exo2mediumitalic.woff2) format('woff2'), url(catalog/view/theme/manline/fonts/exo2mediumitalic.woff) format('woff'), url(catalog/view/theme/manline/fonts/exo2mediumitalic.ttf) format('truetype');
+    src: local('catalog/view/theme/manline/fonts/Exo 2 Medium Italic'), local('catalog/view/theme/manline/fonts/Exo2-MediumItalic'), url(../fonts/exo2mediumitalic.woff2) format('woff2'), url(../fonts/exo2mediumitalic.woff) format('woff'), url(../fonts/exo2mediumitalic.ttf) format('truetype');
     font-weight: 500;
     font-style: italic
 }
 
 @font-face {
     font-family: 'Exo 2';
-    src: local('catalog/view/theme/manline/fonts/Exo 2 Semi Bold'), local('catalog/view/theme/manline/fonts/Exo2-SemiBold'), url(catalog/view/theme/manline/fonts/exo2semibold.woff2) format('woff2'), url(catalog/view/theme/manline/fonts/exo2semibold.woff) format('woff'), url(catalog/view/theme/manline/fonts/exo2semibold.ttf) format('truetype');
+    src: local('catalog/view/theme/manline/fonts/Exo 2 Semi Bold'), local('catalog/view/theme/manline/fonts/Exo2-SemiBold'), url(../fonts/exo2semibold.woff2) format('woff2'), url(../fonts/exo2semibold.woff) format('woff'), url(../fonts/exo2semibold.ttf) format('truetype');
     font-weight: 600;
     font-style: normal
 }
 
 @font-face {
     font-family: 'Exo 2';
-    src: local('catalog/view/theme/manline/fonts/Exo 2 Semi Bold Italic'), local('catalog/view/theme/manline/fonts/Exo2-SemiBoldItalic'), url(catalog/view/theme/manline/fonts/exo2semibolditalic.woff2) format('woff2'), url(catalog/view/theme/manline/fonts/exo2semibolditalic.woff) format('woff'), url(catalog/view/theme/manline/fonts/exo2semibolditalic.ttf) format('truetype');
+    src: local('catalog/view/theme/manline/fonts/Exo 2 Semi Bold Italic'), local('catalog/view/theme/manline/fonts/Exo2-SemiBoldItalic'), url(../fonts/exo2semibolditalic.woff2) format('woff2'), url(../fonts/exo2semibolditalic.woff) format('woff'), url(../fonts/exo2semibolditalic.ttf) format('truetype');
     font-weight: 600;
     font-style: italic
 }
 
 @font-face {
     font-family: 'Exo 2';
-    src: local('catalog/view/theme/manline/fonts/Exo 2 Bold'), local('catalog/view/theme/manline/fonts/Exo2-Bold'), url(catalog/view/theme/manline/fonts/exo2bold.woff2) format('woff2'), url(catalog/view/theme/manline/fonts/exo2bold.woff) format('woff'), url(catalog/view/theme/manline/fonts/exo2bold.ttf) format('truetype');
+    src: local('catalog/view/theme/manline/fonts/Exo 2 Bold'), local('catalog/view/theme/manline/fonts/Exo2-Bold'), url(../fonts/exo2bold.woff2) format('woff2'), url(../fonts/exo2bold.woff) format('woff'), url(../fonts/exo2bold.ttf) format('truetype');
     font-weight: 700;
     font-style: normal
 }
 
 @font-face {
     font-family: 'Exo 2';
-    src: local('catalog/view/theme/manline/fonts/Exo 2 Bold Italic'), local('catalog/view/theme/manline/fonts/Exo2-BoldItalic'), url(catalog/view/theme/manline/fonts/exo2bolditalic.woff2) format('woff2'), url(catalog/view/theme/manline/fonts/exo2bolditalic.woff) format('woff'), url(catalog/view/theme/manline/fonts/exo2bolditalic.ttf) format('truetype');
+    src: local('catalog/view/theme/manline/fonts/Exo 2 Bold Italic'), local('catalog/view/theme/manline/fonts/Exo2-BoldItalic'), url(../fonts/exo2bolditalic.woff2) format('woff2'), url(../fonts/exo2bolditalic.woff) format('woff'), url(../fonts/exo2bolditalic.ttf) format('truetype');
     font-weight: 700;
     font-style: italic
 }
 
 @font-face {
     font-family: 'Exo 2';
-    src: local('catalog/view/theme/manline/fonts/Exo 2 Extra Bold'), local('catalog/view/theme/manline/fonts/Exo2-ExtraBold'), url(catalog/view/theme/manline/fonts/exo2extrabold.woff2) format('woff2'), url(catalog/view/theme/manline/fonts/exo2extrabold.woff) format('woff'), url(catalog/view/theme/manline/fonts/exo2extrabold.ttf) format('truetype');
+    src: local('catalog/view/theme/manline/fonts/Exo 2 Extra Bold'), local('catalog/view/theme/manline/fonts/Exo2-ExtraBold'), url(../fonts/exo2extrabold.woff2) format('woff2'), url(../fonts/exo2extrabold.woff) format('woff'), url(../fonts/exo2extrabold.ttf) format('truetype');
     font-weight: 800;
     font-style: normal
 }
 
 @font-face {
     font-family: 'Exo 2';
-    src: local('catalog/view/theme/manline/fonts/Exo 2 Extra Bold Italic'), local('catalog/view/theme/manline/fonts/Exo2-ExtraBoldItalic'), url(catalog/view/theme/manline/fonts/exo2extrabolditalic.woff2) format('woff2'), url(catalog/view/theme/manline/fonts/exo2extrabolditalic.woff) format('woff'), url(catalog/view/theme/manline/fonts/exo2extrabolditalic.ttf) format('truetype');
+    src: local('catalog/view/theme/manline/fonts/Exo 2 Extra Bold Italic'), local('catalog/view/theme/manline/fonts/Exo2-ExtraBoldItalic'), url(../fonts/exo2extrabolditalic.woff2) format('woff2'), url(../fonts/exo2extrabolditalic.woff) format('woff'), url(../fonts/exo2extrabolditalic.ttf) format('truetype');
     font-weight: 800;
     font-style: italic
 }
 
 @font-face {
     font-family: 'Exo 2';
-    src: local('catalog/view/theme/manline/fonts/Exo 2 Black'), local('catalog/view/theme/manline/fonts/Exo2-Black'), url(catalog/view/theme/manline/fonts/exo2black.woff2) format('woff2'), url(catalog/view/theme/manline/fonts/exo2black.woff) format('woff'), url(catalog/view/theme/manline/fonts/exo2black.ttf) format('truetype');
+    src: local('catalog/view/theme/manline/fonts/Exo 2 Black'), local('catalog/view/theme/manline/fonts/Exo2-Black'), url(../fonts/exo2black.woff2) format('woff2'), url(../fonts/exo2black.woff) format('woff'), url(../fonts/exo2black.ttf) format('truetype');
     font-weight: 900;
     font-style: normal
 }
 
 @font-face {
     font-family: 'Exo 2';
-    src: local('catalog/view/theme/manline/fonts/Exo 2 Black Italic'), local('catalog/view/theme/manline/fonts/Exo2-BlackItalic'), url(catalog/view/theme/manline/fonts/exo2blackitalic.woff2) format('woff2'), url(catalog/view/theme/manline/fonts/exo2blackitalic.woff) format('woff'), url(catalog/view/theme/manline/fonts/exo2blackitalic.ttf) format('truetype');
+    src: local('catalog/view/theme/manline/fonts/Exo 2 Black Italic'), local('catalog/view/theme/manline/fonts/Exo2-BlackItalic'), url(../fonts/exo2blackitalic.woff2) format('woff2'), url(../fonts/exo2blackitalic.woff) format('woff'), url(../fonts/exo2blackitalic.ttf) format('truetype');
     font-weight: 900;
     font-style: italic
 }
@@ -387,7 +387,7 @@ table {
 }
 
 .top_nav li {
-    background: url(catalog/view/theme/manline/image/top_nav_sep.png) left 5px/1px auto no-repeat rgba(0, 0, 0, 0);
+    background: url(../image/top_nav_sep.png) left 5px/1px auto no-repeat rgba(0, 0, 0, 0);
     float: left;
     list-style: none;
     padding: 0 20px
@@ -432,7 +432,7 @@ table {
 }
 
 .button_search_inner {
-    background: url(catalog/view/theme/manline/image/button_search_inner.png) center 0/20px 40px no-repeat rgba(0, 0, 0, 0);
+    background: url(../image/button_search_inner.png) center 0/20px 40px no-repeat rgba(0, 0, 0, 0);
     height: 20px;
     left: 0;
     margin: -10px auto 0;
@@ -464,7 +464,7 @@ table {
 }
 
 .button-search:hover .button_search_inner {
-    background: url(catalog/view/theme/manline/image/button_search_inner.png) center -20px/20px 40px no-repeat rgba(0, 0, 0, 0)
+    background: url(../image/button_search_inner.png) center -20px/20px 40px no-repeat rgba(0, 0, 0, 0)
 }
 
 .btn, .more {
@@ -489,7 +489,7 @@ table {
 }
 
 .phone_self_arr {
-    background: url(catalog/view/theme/manline/image/phone_self.png) right center/8px auto no-repeat rgba(0, 0, 0, 0);
+    background: url(../image/phone_self.png) right center/8px auto no-repeat rgba(0, 0, 0, 0);
     height: 6px;
     vertical-align: middle;
     width: 12px
@@ -503,7 +503,7 @@ table {
 }
 
 .phone_h {
-    background: url(catalog/view/theme/manline/image/phone_h.png) left center/40px auto no-repeat rgba(0, 0, 0, 0);
+    background: url(../image/phone_h.png) left center/40px auto no-repeat rgba(0, 0, 0, 0);
     float: right;
     padding: 0 0 0 45px;
     text-align: right;
@@ -521,7 +521,7 @@ table {
 }
 
 .cart_href {
-    background: url(catalog/view/theme/manline/image/cart.png) left center/25px auto no-repeat rgba(0, 0, 0, 0);
+    background: url(../image/cart.png) left center/25px auto no-repeat rgba(0, 0, 0, 0);
     display: block;
     padding: 10px 0 10px 35px
 }
@@ -531,7 +531,7 @@ table {
 }
 
 .call_c {
-    background: url(catalog/view/theme/manline/image/pop_i.png) right 4px/10px auto no-repeat rgba(0, 0, 0, 0);
+    background: url(../image/pop_i.png) right 4px/10px auto no-repeat rgba(0, 0, 0, 0);
     color: #333e48;
     font-size: 12px;
     padding: 0 15px 0 0;
@@ -567,7 +567,7 @@ table {
 }
 
 .cart_total {
-    background: url(catalog/view/theme/manline/image/phone_self.png) right 11px/8px auto no-repeat rgba(0, 0, 0, 0);
+    background: url(../image/phone_self.png) right 11px/8px auto no-repeat rgba(0, 0, 0, 0);
     color: #333e48;
     font-size: 18px;
     font-weight: 700;
@@ -615,7 +615,7 @@ table {
 }
 
 .bg1 {
-    background: url(catalog/view/theme/manline/image/bg1.jpg) center center/cover no-repeat rgba(0, 0, 0, 0)
+    background: url(../image/bg1.jpg) center center/cover no-repeat rgba(0, 0, 0, 0)
 }
 
 .man {
@@ -1281,7 +1281,7 @@ table {
 }
 
 .show_once {
-    background: url(catalog/view/theme/manline/image/show_once.png) center top/130px auto no-repeat rgba(0, 0, 0, 0);
+    background: url(../image/show_once.png) center top/130px auto no-repeat rgba(0, 0, 0, 0);
     color: #5aa1e3;
     cursor: pointer;
     display: block;
@@ -1292,7 +1292,7 @@ table {
 }
 
 #filterpro .attribute_group_name::before, #filterpro .option_name::before {
-    background: url(catalog/view/theme/manline/image/arr_filter.png) right center/13px auto no-repeat rgba(0, 0, 0, 0);
+    background: url(../image/arr_filter.png) right center/13px auto no-repeat rgba(0, 0, 0, 0);
     content: "";
     display: block;
     height: 7px;
@@ -1477,7 +1477,7 @@ div#filter_box_w {
 }
 
 .text_separator {
-    background: url(catalog/view/theme/manline/image/text_separator.png) center center/5px auto no-repeat rgba(0, 0, 0, 0);
+    background: url(../image/text_separator.png) center center/5px auto no-repeat rgba(0, 0, 0, 0);
     height: 10px;
     margin: 16px 10px 0;
     width: 5px
@@ -4771,7 +4771,7 @@ span.phone_pop_a.active {
     bottom: 45px;
     right: 25px;
     display: none;
-    background: #fed700 url(catalog/view/theme/manline/image/scrollup.png) no-repeat center center/20px auto;
+    background: #fed700 url(../image/scrollup.png) no-repeat center center/20px auto;
     z-index: 999;
     line-height: 40px;
     text-align: center;
