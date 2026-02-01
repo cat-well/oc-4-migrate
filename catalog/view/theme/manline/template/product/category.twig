@@ -16,15 +16,20 @@
 
   <div class="row">
 
-    {{ column_left }}
-
-    {# Content width depending on side columns #}
-    {% if column_left and column_right %}
-      {% set class = 'col-md-6' %}
-    {% elseif column_left or column_right %}
-      {% set class = 'col-md-9' %}
+    {# Left column: OC2 had FilterPro here. In OC4 it's not migrated yet,
+       so we render a placeholder to preserve 1:1 layout width. #}
+    {% if column_left %}
+      {{ column_left }}
     {% else %}
-      {% set class = 'col-12' %}
+      <aside id="column-left" class="col-3 d-none d-md-block"></aside>
+    {% endif %}
+
+    {# Content width depending on side columns.
+       We always reserve the left column width (col-3 placeholder) to match OC2. #}
+    {% if column_right %}
+      {% set class = 'col-md-6' %}
+    {% else %}
+      {% set class = 'col-md-9' %}
     {% endif %}
 
     <div id="content" class="{{ class }}">
