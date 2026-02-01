@@ -60,17 +60,17 @@
       </div>
 
       <div class="col-xs-12 col-md-4 smhid">
-        <div class="f_title">Меню</div>
+        <div class="f_title">{{ text_footer_menu_title|default('Меню') }}</div>
         <ul class="cat_list">
-          <li><a href="{{ information_4|default('#') }}">{{ text_menu_5|default('') }}</a></li>
-          <li><a href="{{ information_16|default('#') }}">{{ text_menu_6|default('') }}</a></li>
-          <li><a href="{{ information_10|default('#') }}">{{ text_menu_7|default('') }}</a></li>
-          <li><a href="{{ info_help|default('#') }}">{{ text_menu_8|default('') }}</a></li>
+          <li><a href="{{ information_4|default('#') }}">{{ text_menu_5|default('О нас') }}</a></li>
+          <li><a href="{{ information_16|default('#') }}">{{ text_menu_6|default('Отзывы') }}</a></li>
+          <li><a href="{{ information_10|default('#') }}">{{ text_menu_7|default('Доставка/оплата') }}</a></li>
+          <li><a href="{{ information_7|default('#') }}">{{ text_menu_8|default('Отследить заказ') }}</a></li>
         </ul>
         <ul class="cat_list cat_list2">
-          <li><a href="{{ information_9|default('#') }}">{{ text_menu_9|default('') }}</a></li>
-          <li><a href="{{ information_17|default('#') }}">{{ text_menu_10|default('') }}</a></li>
-          <li><a href="{{ information_19|default('#') }}">{{ text_menu_11|default('') }}</a></li>
+          <li><a href="{{ information_9|default('#') }}">{{ text_menu_9|default('Помощь') }}</a></li>
+          <li><a href="{{ information_17|default('#') }}">{{ text_menu_10|default('Сотрудничество') }}</a></li>
+          <li><a href="{{ information_19|default('#') }}">{{ text_menu_11|default('Ищем моделей') }}</a></li>
           <li><a href="{{ manufacturer|default('#') }}">{{ text_menu_12|default('Производители') }}</a></li>
         </ul>
       </div>

@@ -15,6 +15,8 @@ class Footer extends \Opencart\System\Engine\Controller {
 	 */
 	public function index(): string {
 		$this->load->language('common/footer');
+		// Manline theme additions (subscribe/footer texts)
+		$this->load->language('extension/manline/common/footer');
 
 		// Article
 		$this->load->model('cms/article');
@@ -30,13 +32,14 @@ class Footer extends \Opencart\System\Engine\Controller {
 		// Information
 		$data['informations'] = [];
 
-		// Manline theme: explicit information links used in OC2 footer
-		$data['information_4'] = $this->url->link('information/information', 'language=' . $this->config->get('config_language') . '&information_id=4');
-		$data['information_9'] = $this->url->link('information/information', 'language=' . $this->config->get('config_language') . '&information_id=9');
-		$data['information_10'] = $this->url->link('information/information', 'language=' . $this->config->get('config_language') . '&information_id=10');
-		$data['information_16'] = $this->url->link('information/information', 'language=' . $this->config->get('config_language') . '&information_id=16');
-		$data['information_17'] = $this->url->link('information/information', 'language=' . $this->config->get('config_language') . '&information_id=17');
-		$data['information_19'] = $this->url->link('information/information', 'language=' . $this->config->get('config_language') . '&information_id=19');
+		// Manline theme: explicit information links used in footer
+		$data['information_4'] = $this->url->link('information/information', 'language=' . $this->config->get('config_language') . '&information_id=4'); // about
+		$data['information_7'] = $this->url->link('information/information', 'language=' . $this->config->get('config_language') . '&information_id=7'); // track
+		$data['information_9'] = $this->url->link('information/information', 'language=' . $this->config->get('config_language') . '&information_id=9'); // size (used as help)
+		$data['information_10'] = $this->url->link('information/information', 'language=' . $this->config->get('config_language') . '&information_id=10'); // delivery
+		$data['information_16'] = $this->url->link('information/information', 'language=' . $this->config->get('config_language') . '&information_id=16'); // reviews
+		$data['information_17'] = $this->url->link('information/information', 'language=' . $this->config->get('config_language') . '&information_id=17'); // cooperation
+		$data['information_19'] = $this->url->link('information/information', 'language=' . $this->config->get('config_language') . '&information_id=19'); // models
 
 		$data['simplecheckout_url'] = $this->url->link('checkout/simplecheckout', 'language=' . $this->config->get('config_language'));
 
