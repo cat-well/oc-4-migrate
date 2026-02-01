@@ -66,6 +66,8 @@ class Header extends \Opencart\System\Engine\Controller {
 		}
 
 		$this->load->language('common/header');
+		// Manline theme additions (top bar + work schedule tooltip)
+		$this->load->language('extension/manline/common/header');
 
 		// Manline theme: quick links used in OC2 header top bar
 		$data['info_help'] = $this->url->link('information/information', 'language=' . $this->config->get('config_language') . '&information_id=7');
