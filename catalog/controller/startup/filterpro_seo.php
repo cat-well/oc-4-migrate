@@ -89,7 +89,7 @@ class FilterproSeo extends \Opencart\System\Engine\Controller {
 			'description_html'  => html_entity_decode((string)($meta['description'] ?? ''), ENT_QUOTES, 'UTF-8'),
 		];
 
-		$this->registry->set('filterpro_seo', $meta_out);
+		$this->registry->set('filterpro_seo', (object)$meta_out);
 
 		return null;
 	}

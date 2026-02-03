@@ -148,3 +148,159 @@
 2026-01-30 14:39:06 - PHP Warning:  Undefined array key "host" in /Users/valentyn/Sites/opencart4/catalog/controller/startup/seo_url.php on line 77
 2026-01-30 14:39:06 - PHP Warning:  Undefined array key "scheme" in /Users/valentyn/Sites/opencart4/catalog/controller/startup/seo_url.php on line 71
 2026-01-30 14:39:06 - PHP Warning:  Undefined array key "host" in /Users/valentyn/Sites/opencart4/catalog/controller/startup/seo_url.php on line 77
+2026-02-03 20:15:37 - Error: Opencart\System\Engine\Registry::set(): Argument #2 ($value) must be of type object, array given, called in /Users/valentyn/Sites/opencart4/catalog/controller/startup/filterpro_seo.php on line 92
+File: /Users/valentyn/Sites/opencart4/system/engine/registry.php
+Line: 80
+
+Backtrace: 0
+File: /Users/valentyn/Sites/opencart4/catalog/controller/startup/filterpro_seo.php
+Line: 92
+Class: Opencart\System\Engine\Registry
+Function: set
+
+Backtrace: 1
+File: /Users/valentyn/Sites/opencart4/system/engine/action.php
+Line: 96
+Class: Opencart\Catalog\Controller\Startup\FilterproSeo
+Function: index
+
+Backtrace: 2
+File: /Users/valentyn/Sites/opencart4/system/framework.php
+Line: 208
+Class: Opencart\System\Engine\Action
+Function: execute
+
+Backtrace: 3
+File: /Users/valentyn/Sites/opencart4/index.php
+Line: 20
+Function: require_once
+2026-02-03 20:15:42 - Error: Opencart\System\Engine\Registry::set(): Argument #2 ($value) must be of type object, array given, called in /Users/valentyn/Sites/opencart4/catalog/controller/startup/filterpro_seo.php on line 92
+File: /Users/valentyn/Sites/opencart4/system/engine/registry.php
+Line: 80
+
+Backtrace: 0
+File: /Users/valentyn/Sites/opencart4/catalog/controller/startup/filterpro_seo.php
+Line: 92
+Class: Opencart\System\Engine\Registry
+Function: set
+
+Backtrace: 1
+File: /Users/valentyn/Sites/opencart4/system/engine/action.php
+Line: 96
+Class: Opencart\Catalog\Controller\Startup\FilterproSeo
+Function: index
+
+Backtrace: 2
+File: /Users/valentyn/Sites/opencart4/system/framework.php
+Line: 208
+Class: Opencart\System\Engine\Action
+Function: execute
+
+Backtrace: 3
+File: /Users/valentyn/Sites/opencart4/index.php
+Line: 20
+Function: require_once
+2026-02-03 20:15:47 - Error: Opencart\System\Engine\Registry::set(): Argument #2 ($value) must be of type object, array given, called in /Users/valentyn/Sites/opencart4/catalog/controller/startup/filterpro_seo.php on line 92
+File: /Users/valentyn/Sites/opencart4/system/engine/registry.php
+Line: 80
+
+Backtrace: 0
+File: /Users/valentyn/Sites/opencart4/catalog/controller/startup/filterpro_seo.php
+Line: 92
+Class: Opencart\System\Engine\Registry
+Function: set
+
+Backtrace: 1
+File: /Users/valentyn/Sites/opencart4/system/engine/action.php
+Line: 96
+Class: Opencart\Catalog\Controller\Startup\FilterproSeo
+Function: index
+
+Backtrace: 2
+File: /Users/valentyn/Sites/opencart4/system/framework.php
+Line: 208
+Class: Opencart\System\Engine\Action
+Function: execute
+
+Backtrace: 3
+File: /Users/valentyn/Sites/opencart4/index.php
+Line: 20
+Function: require_once
+2026-02-03 20:15:51 - Error: Opencart\System\Engine\Registry::set(): Argument #2 ($value) must be of type object, array given, called in /Users/valentyn/Sites/opencart4/catalog/controller/startup/filterpro_seo.php on line 92
+File: /Users/valentyn/Sites/opencart4/system/engine/registry.php
+Line: 80
+
+Backtrace: 0
+File: /Users/valentyn/Sites/opencart4/catalog/controller/startup/filterpro_seo.php
+Line: 92
+Class: Opencart\System\Engine\Registry
+Function: set
+
+Backtrace: 1
+File: /Users/valentyn/Sites/opencart4/system/engine/action.php
+Line: 96
+Class: Opencart\Catalog\Controller\Startup\FilterproSeo
+Function: index
+
+Backtrace: 2
+File: /Users/valentyn/Sites/opencart4/system/framework.php
+Line: 208
+Class: Opencart\System\Engine\Action
+Function: execute
+
+Backtrace: 3
+File: /Users/valentyn/Sites/opencart4/index.php
+Line: 20
+Function: require_once
+2026-02-03 20:15:58 - Error: Opencart\System\Engine\Registry::set(): Argument #2 ($value) must be of type object, array given, called in /Users/valentyn/Sites/opencart4/catalog/controller/startup/filterpro_seo.php on line 92
+File: /Users/valentyn/Sites/opencart4/system/engine/registry.php
+Line: 80
+
+Backtrace: 0
+File: /Users/valentyn/Sites/opencart4/catalog/controller/startup/filterpro_seo.php
+Line: 92
+Class: Opencart\System\Engine\Registry
+Function: set
+
+Backtrace: 1
+File: /Users/valentyn/Sites/opencart4/system/engine/action.php
+Line: 96
+Class: Opencart\Catalog\Controller\Startup\FilterproSeo
+Function: index
+
+Backtrace: 2
+File: /Users/valentyn/Sites/opencart4/system/framework.php
+Line: 208
+Class: Opencart\System\Engine\Action
+Function: execute
+
+Backtrace: 3
+File: /Users/valentyn/Sites/opencart4/index.php
+Line: 20
+Function: require_once
+2026-02-03 20:16:04 - Error: Opencart\System\Engine\Registry::set(): Argument #2 ($value) must be of type object, array given, called in /Users/valentyn/Sites/opencart4/catalog/controller/startup/filterpro_seo.php on line 92
+File: /Users/valentyn/Sites/opencart4/system/engine/registry.php
+Line: 80
+
+Backtrace: 0
+File: /Users/valentyn/Sites/opencart4/catalog/controller/startup/filterpro_seo.php
+Line: 92
+Class: Opencart\System\Engine\Registry
+Function: set
+
+Backtrace: 1
+File: /Users/valentyn/Sites/opencart4/system/engine/action.php
+Line: 96
+Class: Opencart\Catalog\Controller\Startup\FilterproSeo
+Function: index
+
+Backtrace: 2
+File: /Users/valentyn/Sites/opencart4/system/framework.php
+Line: 208
+Class: Opencart\System\Engine\Action
+Function: execute
+
+Backtrace: 3
+File: /Users/valentyn/Sites/opencart4/index.php
+Line: 20
+Function: require_once

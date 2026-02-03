@@ -61,23 +61,23 @@ class Category extends \Opencart\System\Engine\Controller {
 
 		if ($category_info) {
 			// FilterPro SEO landing overrides (legacy OC2 -> OC4)
-			$filterpro_seo = $this->registry->has('filterpro_seo') ? $this->registry->get('filterpro_seo') : [];
+			$filterpro_seo = $this->registry->has('filterpro_seo') ? $this->registry->get('filterpro_seo') : null;
 
-			if (is_array($filterpro_seo) && !empty($filterpro_seo['title'])) {
-				$this->document->setTitle($filterpro_seo['title']);
+			if (is_object($filterpro_seo) && !empty($filterpro_seo->title)) {
+				$this->document->setTitle($filterpro_seo->title);
 			} else {
 				$this->document->setTitle($category_info['meta_title']);
 			}
 
-			if (is_array($filterpro_seo) && !empty($filterpro_seo['meta_description'])) {
-				$this->document->setDescription($filterpro_seo['meta_description']);
+			if (is_object($filterpro_seo) && !empty($filterpro_seo->meta_description)) {
+				$this->document->setDescription($filterpro_seo->meta_description);
 			} else {
 				$this->document->setDescription($category_info['meta_description']);
 			}
 
 			// OC2 stored meta_keywords; OC4 uses meta_keyword
-			if (is_array($filterpro_seo) && !empty($filterpro_seo['meta_keywords'])) {
-				$this->document->setKeywords($filterpro_seo['meta_keywords']);
+			if (is_object($filterpro_seo) && !empty($filterpro_seo->meta_keywords)) {
+				$this->document->setKeywords($filterpro_seo->meta_keywords);
 			} else {
 				$this->document->setKeywords($category_info['meta_keyword']);
 			}
@@ -155,8 +155,8 @@ class Category extends \Opencart\System\Engine\Controller {
 			];
 
 			// H1 override from FilterPro landing
-			if (is_array($filterpro_seo) && !empty($filterpro_seo['h1'])) {
-				$data['heading_title'] = $filterpro_seo['h1'];
+			if (is_object($filterpro_seo) && !empty($filterpro_seo->h1)) {
+				$data['heading_title'] = $filterpro_seo->h1;
 			} else {
 				$data['heading_title'] = $category_info['name'];
 			}
@@ -173,8 +173,8 @@ class Category extends \Opencart\System\Engine\Controller {
 			}
 
 			// SEO text override from FilterPro landing
-			if (is_array($filterpro_seo) && !empty($filterpro_seo['description_html'])) {
-				$data['description'] = $filterpro_seo['description_html'];
+			if (is_object($filterpro_seo) && !empty($filterpro_seo->description_html)) {
+				$data['description'] = $filterpro_seo->description_html;
 			} else {
 				$data['description'] = html_entity_decode($category_info['description'], ENT_QUOTES, 'UTF-8');
 			}
