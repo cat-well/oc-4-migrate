@@ -22,6 +22,7 @@ $_['session_engine']     = 'db'; // db or file
 $_['action_pre_action']  = [
 	'startup/setting',
 	'startup/seo_url',
+	'startup/filterpro_seo',
 	'startup/session',
 	'startup/language',
 	'startup/customer',

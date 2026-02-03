@@ -60,9 +60,27 @@ class Category extends \Opencart\System\Engine\Controller {
 		$category_info = $this->model_catalog_category->getCategory($category_id);
 
 		if ($category_info) {
-			$this->document->setTitle($category_info['meta_title']);
-			$this->document->setDescription($category_info['meta_description']);
-			$this->document->setKeywords($category_info['meta_keyword']);
+			// FilterPro SEO landing overrides (legacy OC2 -> OC4)
+			$filterpro_seo = $this->registry->has('filterpro_seo') ? $this->registry->get('filterpro_seo') : [];
+
+			if (is_array($filterpro_seo) && !empty($filterpro_seo['title'])) {
+				$this->document->setTitle($filterpro_seo['title']);
+			} else {
+				$this->document->setTitle($category_info['meta_title']);
+			}
+
+			if (is_array($filterpro_seo) && !empty($filterpro_seo['meta_description'])) {
+				$this->document->setDescription($filterpro_seo['meta_description']);
+			} else {
+				$this->document->setDescription($category_info['meta_description']);
+			}
+
+			// OC2 stored meta_keywords; OC4 uses meta_keyword
+			if (is_array($filterpro_seo) && !empty($filterpro_seo['meta_keywords'])) {
+				$this->document->setKeywords($filterpro_seo['meta_keywords']);
+			} else {
+				$this->document->setKeywords($category_info['meta_keyword']);
+			}
 
 			$data['breadcrumbs'] = [];
 
@@ -136,7 +154,12 @@ class Category extends \Opencart\System\Engine\Controller {
 				'href' => $this->url->link('product/category', 'language=' . $this->config->get('config_language') . $url)
 			];
 
-			$data['heading_title'] = $category_info['name'];
+			// H1 override from FilterPro landing
+			if (is_array($filterpro_seo) && !empty($filterpro_seo['h1'])) {
+				$data['heading_title'] = $filterpro_seo['h1'];
+			} else {
+				$data['heading_title'] = $category_info['name'];
+			}
 
 			$data['text_compare'] = sprintf($this->language->get('text_compare'), isset($this->session->data['compare']) ? count($this->session->data['compare']) : 0);
 
@@ -149,7 +172,12 @@ class Category extends \Opencart\System\Engine\Controller {
 				$data['image'] = '';
 			}
 
-			$data['description'] = html_entity_decode($category_info['description'], ENT_QUOTES, 'UTF-8');
+			// SEO text override from FilterPro landing
+			if (is_array($filterpro_seo) && !empty($filterpro_seo['description_html'])) {
+				$data['description'] = $filterpro_seo['description_html'];
+			} else {
+				$data['description'] = html_entity_decode($category_info['description'], ENT_QUOTES, 'UTF-8');
+			}
 			$data['compare'] = $this->url->link('product/compare', 'language=' . $this->config->get('config_language'));
 
 			$url = '';
