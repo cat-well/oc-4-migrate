@@ -227,6 +227,24 @@ class Product extends \Opencart\System\Engine\Model {
 			}
 		}
 
+		// Option value filters (legacy FilterPro: option_value[<option_id>][]=<option_value_id>)
+		if (!empty($data['filter_option_value']) && is_array($data['filter_option_value'])) {
+			foreach ($data['filter_option_value'] as $option_id => $value_ids) {
+				$option_id = (int)$option_id;
+				if ($option_id <= 0 || !is_array($value_ids) || !$value_ids) continue;
+
+				$ids = [];
+				foreach ($value_ids as $vid) {
+					$vid = (int)$vid;
+					if ($vid > 0) $ids[] = $vid;
+				}
+				$ids = array_values(array_unique(array_filter($ids)));
+				if ($ids) {
+					$sql .= " AND EXISTS (SELECT 1 FROM `" . DB_PREFIX . "product_option_value` pov WHERE pov.product_id = p.product_id AND pov.option_id = '" . $option_id . "' AND pov.option_value_id IN (" . implode(',', $ids) . "))";
+				}
+			}
+		}
+
 		$sql .= " GROUP BY `p`.`product_id`";
 
 		// Price range filters (min_price/max_price) on effective price (special/discount/regular)
@@ -440,6 +458,24 @@ class Product extends \Opencart\System\Engine\Model {
 				}
 				if ($in) {
 					$sql .= " AND EXISTS (SELECT 1 FROM `" . DB_PREFIX . "product_attribute` pa WHERE pa.product_id = p.product_id AND pa.attribute_id = '" . $attribute_id . "' AND pa.language_id = '" . $lang_id . "' AND pa.text IN (" . implode(',', $in) . "))";
+				}
+			}
+		}
+
+		// Option value filters (legacy FilterPro: option_value[<option_id>][]=<option_value_id>)
+		if (!empty($data['filter_option_value']) && is_array($data['filter_option_value'])) {
+			foreach ($data['filter_option_value'] as $option_id => $value_ids) {
+				$option_id = (int)$option_id;
+				if ($option_id <= 0 || !is_array($value_ids) || !$value_ids) continue;
+
+				$ids = [];
+				foreach ($value_ids as $vid) {
+					$vid = (int)$vid;
+					if ($vid > 0) $ids[] = $vid;
+				}
+				$ids = array_values(array_unique(array_filter($ids)));
+				if ($ids) {
+					$sql .= " AND EXISTS (SELECT 1 FROM `" . DB_PREFIX . "product_option_value` pov WHERE pov.product_id = p.product_id AND pov.option_id = '" . $option_id . "' AND pov.option_value_id IN (" . implode(',', $ids) . "))";
 				}
 			}
 		}

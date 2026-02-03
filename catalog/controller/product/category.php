@@ -287,6 +287,30 @@ class Category extends \Opencart\System\Engine\Controller {
 				}
 			}
 
+			$option_value = [];
+			if (isset($this->request->get['option_value']) && is_array($this->request->get['option_value'])) {
+				foreach ($this->request->get['option_value'] as $option_id => $values) {
+					$option_id = (int)$option_id;
+					if ($option_id <= 0) continue;
+
+					$vals = [];
+					if (is_array($values)) {
+						foreach ($values as $v) {
+							$v = (int)$v;
+							if ($v > 0) $vals[] = $v;
+						}
+					} else {
+						$v = (int)$values;
+						if ($v > 0) $vals[] = $v;
+					}
+
+					$vals = array_values(array_unique($vals));
+					if ($vals) {
+						$option_value[$option_id] = $vals;
+					}
+				}
+			}
+
 			$filter_data = [
 				'filter_category_id'    => $category_id,
 				'filter_sub_category'   => false,
@@ -295,6 +319,7 @@ class Category extends \Opencart\System\Engine\Controller {
 				'filter_min_price'      => ($min_price !== null && $min_price > 0) ? $min_price : null,
 				'filter_max_price'      => ($max_price !== null && $max_price > 0) ? $max_price : null,
 				'filter_attribute_value' => $attribute_value,
+				'filter_option_value'    => $option_value,
 				'sort'                  => $sort,
 				'order'                 => $order,
 				'start'                 => ($page - 1) * $limit,
