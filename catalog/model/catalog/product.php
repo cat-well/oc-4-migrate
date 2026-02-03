@@ -194,11 +194,53 @@ class Product extends \Opencart\System\Engine\Model {
 			$sql .= ")";
 		}
 
-		if (!empty($data['filter_manufacturer_id'])) {
+		// Manufacturer filter (single or multiple)
+		if (!empty($data['filter_manufacturer_ids']) && is_array($data['filter_manufacturer_ids'])) {
+			$ids = [];
+			foreach ($data['filter_manufacturer_ids'] as $id) {
+				$ids[] = (int)$id;
+			}
+			$ids = array_values(array_unique(array_filter($ids)));
+			if ($ids) {
+				$sql .= " AND `p`.`manufacturer_id` IN (" . implode(',', $ids) . ")";
+			}
+		} elseif (!empty($data['filter_manufacturer_id'])) {
 			$sql .= " AND `p`.`manufacturer_id` = '" . (int)$data['filter_manufacturer_id'] . "'";
 		}
 
+		// Attribute value filters (legacy FilterPro: attribute_value[<id>][]=<text>)
+		if (!empty($data['filter_attribute_value']) && is_array($data['filter_attribute_value'])) {
+			$lang_id = (int)$this->config->get('config_language_id');
+			foreach ($data['filter_attribute_value'] as $attribute_id => $values) {
+				$attribute_id = (int)$attribute_id;
+				if ($attribute_id <= 0 || !is_array($values) || !$values) continue;
+
+				$in = [];
+				foreach ($values as $v) {
+					$v = trim((string)$v);
+					if ($v === '') continue;
+					$in[] = "'" . $this->db->escape($v) . "'";
+				}
+				if ($in) {
+					$sql .= " AND EXISTS (SELECT 1 FROM `" . DB_PREFIX . "product_attribute` pa WHERE pa.product_id = p.product_id AND pa.attribute_id = '" . $attribute_id . "' AND pa.language_id = '" . $lang_id . "' AND pa.text IN (" . implode(',', $in) . "))";
+				}
+			}
+		}
+
 		$sql .= " GROUP BY `p`.`product_id`";
+
+		// Price range filters (min_price/max_price) on effective price (special/discount/regular)
+		$price_expr = "(CASE WHEN `special` IS NOT NULL THEN `special` WHEN `discount` IS NOT NULL THEN `discount` ELSE `p`.`price` END)";
+		$having = [];
+		if (isset($data['filter_min_price']) && $data['filter_min_price'] !== null && (float)$data['filter_min_price'] > 0) {
+			$having[] = $price_expr . " >= " . (float)$data['filter_min_price'];
+		}
+		if (isset($data['filter_max_price']) && $data['filter_max_price'] !== null && (float)$data['filter_max_price'] > 0) {
+			$having[] = $price_expr . " <= " . (float)$data['filter_max_price'];
+		}
+		if ($having) {
+			$sql .= " HAVING " . implode(' AND ', $having);
+		}
 
 		$sort_data = [
 			'pd.name',
@@ -369,8 +411,46 @@ class Product extends \Opencart\System\Engine\Model {
 			$sql .= ")";
 		}
 
-		if (!empty($data['filter_manufacturer_id'])) {
+		// Manufacturer filter (single or multiple)
+		if (!empty($data['filter_manufacturer_ids']) && is_array($data['filter_manufacturer_ids'])) {
+			$ids = [];
+			foreach ($data['filter_manufacturer_ids'] as $id) {
+				$ids[] = (int)$id;
+			}
+			$ids = array_values(array_unique(array_filter($ids)));
+			if ($ids) {
+				$sql .= " AND `p`.`manufacturer_id` IN (" . implode(',', $ids) . ")";
+			}
+		} elseif (!empty($data['filter_manufacturer_id'])) {
 			$sql .= " AND `p`.`manufacturer_id` = '" . (int)$data['filter_manufacturer_id'] . "'";
+		}
+
+		// Attribute value filters (legacy FilterPro: attribute_value[<id>][]=<text>)
+		if (!empty($data['filter_attribute_value']) && is_array($data['filter_attribute_value'])) {
+			$lang_id = (int)$this->config->get('config_language_id');
+			foreach ($data['filter_attribute_value'] as $attribute_id => $values) {
+				$attribute_id = (int)$attribute_id;
+				if ($attribute_id <= 0 || !is_array($values) || !$values) continue;
+
+				$in = [];
+				foreach ($values as $v) {
+					$v = trim((string)$v);
+					if ($v === '') continue;
+					$in[] = "'" . $this->db->escape($v) . "'";
+				}
+				if ($in) {
+					$sql .= " AND EXISTS (SELECT 1 FROM `" . DB_PREFIX . "product_attribute` pa WHERE pa.product_id = p.product_id AND pa.attribute_id = '" . $attribute_id . "' AND pa.language_id = '" . $lang_id . "' AND pa.text IN (" . implode(',', $in) . "))";
+				}
+			}
+		}
+
+		// Price range filters (min_price/max_price)
+		// Note: total query does not join specials/discounts; use base product price for now.
+		if (isset($data['filter_min_price']) && $data['filter_min_price'] !== null && (float)$data['filter_min_price'] > 0) {
+			$sql .= " AND `p`.`price` >= " . (float)$data['filter_min_price'];
+		}
+		if (isset($data['filter_max_price']) && $data['filter_max_price'] !== null && (float)$data['filter_max_price'] > 0) {
+			$sql .= " AND `p`.`price` <= " . (float)$data['filter_max_price'];
 		}
 
 		$query = $this->db->query($sql);

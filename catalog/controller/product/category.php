@@ -246,14 +246,59 @@ class Category extends \Opencart\System\Engine\Controller {
 			// Product
 			$data['products'] = [];
 
+			// FilterPro landing params (injected by startup/filterpro_seo)
+			$manufacturer_ids = [];
+			if (isset($this->request->get['manufacturer'])) {
+				$m = $this->request->get['manufacturer'];
+				if (is_array($m)) {
+					foreach ($m as $id) {
+						$manufacturer_ids[] = (int)$id;
+					}
+				} elseif (is_string($m) && $m !== '') {
+					$manufacturer_ids[] = (int)$m;
+				}
+			}
+			$manufacturer_ids = array_values(array_unique(array_filter($manufacturer_ids)));
+
+			$min_price = isset($this->request->get['min_price']) ? (float)$this->request->get['min_price'] : null;
+			$max_price = isset($this->request->get['max_price']) ? (float)$this->request->get['max_price'] : null;
+
+			$attribute_value = [];
+			if (isset($this->request->get['attribute_value']) && is_array($this->request->get['attribute_value'])) {
+				foreach ($this->request->get['attribute_value'] as $attribute_id => $values) {
+					$attribute_id = (int)$attribute_id;
+					if ($attribute_id <= 0) continue;
+
+					$vals = [];
+					if (is_array($values)) {
+						foreach ($values as $v) {
+							$v = trim((string)$v);
+							if ($v !== '') $vals[] = $v;
+						}
+					} else {
+						$v = trim((string)$values);
+						if ($v !== '') $vals[] = $v;
+					}
+
+					$vals = array_values(array_unique($vals));
+					if ($vals) {
+						$attribute_value[$attribute_id] = $vals;
+					}
+				}
+			}
+
 			$filter_data = [
-				'filter_category_id'  => $category_id,
-				'filter_sub_category' => false,
-				'filter_filter'       => $filter,
-				'sort'                => $sort,
-				'order'               => $order,
-				'start'               => ($page - 1) * $limit,
-				'limit'               => $limit
+				'filter_category_id'    => $category_id,
+				'filter_sub_category'   => false,
+				'filter_filter'         => $filter,
+				'filter_manufacturer_ids' => $manufacturer_ids,
+				'filter_min_price'      => ($min_price !== null && $min_price > 0) ? $min_price : null,
+				'filter_max_price'      => ($max_price !== null && $max_price > 0) ? $max_price : null,
+				'filter_attribute_value' => $attribute_value,
+				'sort'                  => $sort,
+				'order'                 => $order,
+				'start'                 => ($page - 1) * $limit,
+				'limit'                 => $limit
 			];
 
 			$results = $this->model_catalog_product->getProducts($filter_data);
