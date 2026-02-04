@@ -180,14 +180,16 @@
       parts.push(k + '_' + vals.join(','));
     });
 
-    if (!parts.length) {
-      return baseUrl;
-    }
-
-    var url = String(basePath).replace(/\/+$/, '') + '/f/' + parts.join('/');
     var q = baseQuery ? baseQuery : '';
     if (qMin) q += (q ? '&' : '') + 'min_price=' + encodeURIComponent(qMin);
     if (qMax) q += (q ? '&' : '') + 'max_price=' + encodeURIComponent(qMax);
+
+    if (!parts.length) {
+      // price-only (or cleared) selection
+      return q ? (baseUrl + (baseUrl.indexOf('?') === -1 ? '?' : '&') + q) : baseUrl;
+    }
+
+    var url = String(basePath).replace(/\/+$/, '') + '/f/' + parts.join('/');
     if (q) url += '?' + q;
     return url;
   }
