@@ -92,17 +92,13 @@
 </div>
 
 <script>
-  // Multi-select apply: collect checked boxes and build /f/ URL
+  // Multi-select apply: collect selected values and build /f/ URL
   var fpRoot = document.getElementById('filterpro');
   var applyBtn = document.getElementById('fp-apply');
 
-  function buildUrlFromSelection() {
-    if (!fpRoot) return null;
-    var basePath = fpRoot.getAttribute('data-fp-base-path') || '';
-    var baseQuery = fpRoot.getAttribute('data-fp-base-query') || '';
-    var baseUrl = fpRoot.getAttribute('data-fp-base-url') || basePath;
-
+  function fpGetSelection() {
     var sel = {};
+    if (!fpRoot) return sel;
 
     // checkboxes
     fpRoot.querySelectorAll('input[type="checkbox"][data-fp-key][data-fp-val]').forEach(function(cb){
@@ -125,6 +121,26 @@
         sel[k].push(String(v));
       });
     });
+
+    // de-dup + sort
+    Object.keys(sel).forEach(function(k){
+      sel[k] = Array.from(new Set(sel[k].filter(Boolean))).sort();
+      if (!sel[k].length) delete sel[k];
+    });
+
+    return sel;
+  }
+
+  // expose for future AJAX implementation
+  window.fpGetSelection = fpGetSelection;
+
+  function buildUrlFromSelection() {
+    if (!fpRoot) return null;
+    var basePath = fpRoot.getAttribute('data-fp-base-path') || '';
+    var baseQuery = fpRoot.getAttribute('data-fp-base-query') || '';
+    var baseUrl = fpRoot.getAttribute('data-fp-base-url') || basePath;
+
+    var sel = fpGetSelection();
 
     var keys = Object.keys(sel).sort();
     var parts = [];
