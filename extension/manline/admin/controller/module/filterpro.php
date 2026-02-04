@@ -54,47 +54,45 @@ class FilterPro extends \Opencart\System\Engine\Controller {
 
 		// Default blocks (based on OC2 FilterPro UI)
 		$default_blocks = [
-			'price' => [
+			[
+				'key' => 'price',
 				'label' => $this->language->get('text_block_price'),
 				'display' => 'slider',
 				'expanded' => 1,
-				'tooltip' => ''
+				'sort_order' => 10,
+				'tooltip' => []
 			],
-			'standard' => [
-				'label' => $this->language->get('text_block_standard'),
-				'display' => 'checkbox',
-				'expanded' => 1,
-				'tooltip' => ''
-			],
-			'manufacturer' => [
+			[
+				'key' => 'manufacturer',
 				'label' => $this->language->get('text_block_manufacturer'),
 				'display' => 'checkbox',
 				'expanded' => 1,
-				'tooltip' => ''
+				'sort_order' => 20,
+				'tooltip' => []
 			],
-			'category' => [
-				'label' => $this->language->get('text_block_category'),
-				'display' => 'checkbox',
-				'expanded' => 1,
-				'tooltip' => ''
-			],
-			'size' => [
+			[
+				'key' => 'size',
 				'label' => $this->language->get('text_block_size'),
 				'display' => 'checkbox',
 				'expanded' => 1,
-				'tooltip' => ''
+				'sort_order' => 30,
+				'tooltip' => []
 			],
-			'color' => [
+			[
+				'key' => 'color',
 				'label' => $this->language->get('text_block_color'),
 				'display' => 'image',
 				'expanded' => 1,
-				'tooltip' => ''
+				'sort_order' => 40,
+				'tooltip' => []
 			],
-			'style' => [
+			[
+				'key' => 'style',
 				'label' => $this->language->get('text_block_style'),
 				'display' => 'checkbox',
 				'expanded' => 0,
-				'tooltip' => ''
+				'sort_order' => 50,
+				'tooltip' => []
 			],
 		];
 
@@ -106,7 +104,38 @@ class FilterPro extends \Opencart\System\Engine\Controller {
 			['value' => 'slider', 'text' => $this->language->get('text_display_slider')],
 		];
 
-		$data['blocks'] = $module_info['blocks'] ?? $default_blocks;
+		$blocks = $module_info['blocks'] ?? $default_blocks;
+
+		// Backward-compat: if blocks are stored as associative array, convert to list
+		if (is_array($blocks) && $blocks) {
+			$first_key = array_key_first($blocks);
+			if ($first_key !== null && !is_int($first_key)) {
+				$list = [];
+				$sort = 10;
+				foreach ($blocks as $k => $b) {
+					if (!is_array($b)) continue;
+					$list[] = [
+						'key' => (string)$k,
+						'label' => (string)($b['label'] ?? (string)$k),
+						'display' => (string)($b['display'] ?? 'checkbox'),
+						'expanded' => !empty($b['expanded']) ? 1 : 0,
+						'sort_order' => (int)($b['sort_order'] ?? $sort),
+						'tooltip' => (is_array($b['tooltip'] ?? null) ? $b['tooltip'] : [])
+					];
+					$sort += 10;
+				}
+				$blocks = $list;
+			}
+		}
+
+		// Ensure stable ordering
+		usort($blocks, static function ($a, $b) {
+			$sa = (int)($a['sort_order'] ?? 0);
+			$sb = (int)($b['sort_order'] ?? 0);
+			return $sa <=> $sb;
+		});
+
+		$data['blocks'] = $blocks;
 
 		// Languages
 		$this->load->model('localisation/language');
@@ -148,25 +177,37 @@ class FilterPro extends \Opencart\System\Engine\Controller {
 			$json['error']['name'] = $this->language->get('error_name');
 		}
 
-		// Normalize blocks
+		// Normalize blocks (store as ordered list)
 		$norm = [];
 		if (is_array($post_info['blocks'])) {
-			foreach ($post_info['blocks'] as $key => $b) {
-				$key = preg_replace('/[^a-z0-9_\-]/i', '', (string)$key);
+			foreach ($post_info['blocks'] as $i => $b) {
+				if (!is_array($b)) continue;
+				$key = (string)($b['key'] ?? $i);
+				$key = trim($key);
+				// allow keys like option:14 / attribute:23 / manufacturer / price etc.
+				$key = preg_replace('/[^a-z0-9_\-:]/i', '', $key);
 				if ($key === '') continue;
+
 				$tooltip = $b['tooltip'] ?? [];
 				if (!is_array($tooltip)) {
 					$tooltip = ['' => (string)$tooltip];
 				}
 
-				$norm[$key] = [
+				$norm[] = [
+					'key' => $key,
 					'label' => (string)($b['label'] ?? $key),
 					'display' => (string)($b['display'] ?? 'checkbox'),
 					'expanded' => !empty($b['expanded']) ? 1 : 0,
+					'sort_order' => (int)($b['sort_order'] ?? ($i * 10)),
 					'tooltip' => $tooltip
 				];
 			}
 		}
+
+		usort($norm, static function ($a, $b) {
+			return (int)($a['sort_order'] ?? 0) <=> (int)($b['sort_order'] ?? 0);
+		});
+
 		$post_info['blocks'] = $norm;
 
 		if (!$json) {

@@ -66,32 +66,54 @@
                 </tr>
               </thead>
               <tbody>
-                {% for key, b in blocks %}
-                  <tr>
+                {% for i, b in blocks %}
+                  <tr data-fp-row>
                     <td>
-                      <input type="text" class="form-control" name="blocks[{{ key }}][label]" value="{{ b.label }}"/>
-                      <input type="hidden" name="blocks[{{ key }}][key]" value="{{ key }}"/>
+                      <div class="row g-2">
+                        <div class="col-md-4">
+                          <input type="text" class="form-control" name="blocks[{{ i }}][key]" value="{{ b.key ?? '' }}" placeholder="key (e.g. price, manufacturer, option:14)"/>
+                        </div>
+                        <div class="col-md-8">
+                          <input type="text" class="form-control" name="blocks[{{ i }}][label]" value="{{ b.label }}" placeholder="{{ column_block }}"/>
+                        </div>
+                      </div>
                     </td>
                     <td>
-                      <select class="form-select" name="blocks[{{ key }}][display]">
+                      <select class="form-select" name="blocks[{{ i }}][display]">
                         {% for opt in display_options %}
                           <option value="{{ opt.value }}" {% if b.display == opt.value %}selected{% endif %}>{{ opt.text }}</option>
                         {% endfor %}
                       </select>
                     </td>
                     <td class="text-center">
-                      <input type="checkbox" class="form-check-input" name="blocks[{{ key }}][expanded]" value="1" {% if b.expanded %}checked{% endif %}/>
+                      <input type="checkbox" class="form-check-input" name="blocks[{{ i }}][expanded]" value="1" {% if b.expanded %}checked{% endif %}/>
+                      <div class="mt-2">
+                        <input type="number" class="form-control form-control-sm" name="blocks[{{ i }}][sort_order]" value="{{ b.sort_order ?? (i * 10) }}" placeholder="sort" />
+                      </div>
                     </td>
                     <td>
                       {% for language in languages %}
                         <div class="input-group mb-2">
                           <span class="input-group-text"><img src="language/{{ language.code }}/{{ language.code }}.png" alt="{{ language.name }}" title="{{ language.name }}"></span>
-                          <textarea class="form-control" name="blocks[{{ key }}][tooltip][{{ language.code }}]" rows="2">{{ b.tooltip[language.code] ?? '' }}</textarea>
+                          <textarea class="form-control" name="blocks[{{ i }}][tooltip][{{ language.code }}]" rows="2">{{ b.tooltip[language.code] ?? '' }}</textarea>
                         </div>
                       {% endfor %}
+
+                      <div class="text-end">
+                        <button type="button" class="btn btn-outline-danger btn-sm" data-fp-remove>Remove</button>
+                      </div>
                     </td>
                   </tr>
                 {% endfor %}
+
+                <tr>
+                  <td colspan="4">
+                    <button type="button" class="btn btn-outline-primary" id="fp-add-row">Add block</button>
+                    <div class="form-text mt-2">
+                      Keys supported: <code>price</code>, <code>manufacturer</code>, <code>option:&lt;id&gt;</code>, <code>attribute:&lt;id&gt;</code>. Legacy keys: <code>color</code>, <code>style</code>, <code>size</code>.
+                    </div>
+                  </td>
+                </tr>
               </tbody>
             </table>
           </div>
@@ -101,4 +123,78 @@
     </div>
   </div>
 </div>
+<script>
+  (function() {
+    var addBtn = document.getElementById('fp-add-row');
+    if (!addBtn) return;
+
+    function nextIndex() {
+      var rows = document.querySelectorAll('tr[data-fp-row]');
+      return rows.length;
+    }
+
+    function rowTemplate(i) {
+      // Note: tooltips are per-language
+      var languages = {{ languages|json_encode|raw }};
+      var tooltipHtml = '';
+      languages.forEach(function(lang) {
+        tooltipHtml +=
+          '<div class="input-group mb-2">' +
+            '<span class="input-group-text"><img src="language/' + lang.code + '/' + lang.code + '.png" alt="' + lang.name + '" title="' + lang.name + '"></span>' +
+            '<textarea class="form-control" name="blocks[' + i + '][tooltip][' + lang.code + ']" rows="2"></textarea>' +
+          '</div>';
+      });
+
+      return (
+        '<tr data-fp-row>' +
+          '<td>' +
+            '<div class="row g-2">' +
+              '<div class="col-md-4">' +
+                '<input type="text" class="form-control" name="blocks[' + i + '][key]" value="" placeholder="key (e.g. price, manufacturer, option:14)"/>' +
+              '</div>' +
+              '<div class="col-md-8">' +
+                '<input type="text" class="form-control" name="blocks[' + i + '][label]" value="" placeholder="{{ column_block }}"/>' +
+              '</div>' +
+            '</div>' +
+          '</td>' +
+          '<td>' +
+            '<select class="form-select" name="blocks[' + i + '][display]">' +
+              {% for opt in display_options %}
+                '<option value="{{ opt.value }}">{{ opt.text|e('js') }}</option>' +
+              {% endfor %}
+            '</select>' +
+          '</td>' +
+          '<td class="text-center">' +
+            '<input type="checkbox" class="form-check-input" name="blocks[' + i + '][expanded]" value="1" checked />' +
+            '<div class="mt-2">' +
+              '<input type="number" class="form-control form-control-sm" name="blocks[' + i + '][sort_order]" value="' + ((i + 1) * 10) + '" placeholder="sort" />' +
+            '</div>' +
+          '</td>' +
+          '<td>' +
+            tooltipHtml +
+            '<div class="text-end">' +
+              '<button type="button" class="btn btn-outline-danger btn-sm" data-fp-remove>Remove</button>' +
+            '</div>' +
+          '</td>' +
+        '</tr>'
+      );
+    }
+
+    addBtn.addEventListener('click', function() {
+      var i = nextIndex();
+      var tbody = addBtn.closest('tbody') || document.querySelector('table tbody');
+      // insert before the last row (which contains the Add button)
+      var addRow = document.getElementById('fp-add-row').closest('tr');
+      addRow.insertAdjacentHTML('beforebegin', rowTemplate(i));
+    });
+
+    document.addEventListener('click', function(e) {
+      var btn = e.target.closest && e.target.closest('[data-fp-remove]');
+      if (!btn) return;
+      var tr = btn.closest('tr');
+      if (tr) tr.remove();
+    });
+  })();
+</script>
+
 {{ footer }}

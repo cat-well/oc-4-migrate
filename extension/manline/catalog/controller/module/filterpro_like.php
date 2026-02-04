@@ -28,16 +28,57 @@ class FilterproLike extends \Opencart\System\Engine\Controller {
 		$data['is_ua'] = in_array($lang_code, ['uk-ua', 'ua'], true);
 
 		// Blocks config from admin module (FilterPro settings scaffold)
-		$blocks = [];
+		$blocks_list = [];
+		$blocks_map = [];
 		if (isset($setting['blocks']) && is_array($setting['blocks'])) {
-			$blocks = $setting['blocks'];
+			$raw = $setting['blocks'];
+
+			// If stored as associative array (old format), convert to list
+			$first_key = array_key_first($raw);
+			if ($first_key !== null && !is_int($first_key)) {
+				$sort = 10;
+				foreach ($raw as $k => $b) {
+					if (!is_array($b)) continue;
+					$blocks_list[] = [
+						'key' => (string)$k,
+						'label' => (string)($b['label'] ?? (string)$k),
+						'display' => (string)($b['display'] ?? 'checkbox'),
+						'expanded' => !empty($b['expanded']) ? 1 : 0,
+						'sort_order' => (int)($b['sort_order'] ?? $sort),
+						'tooltip' => (is_array($b['tooltip'] ?? null) ? $b['tooltip'] : [])
+					];
+					$sort += 10;
+				}
+			} else {
+				// New format: list of rows
+				foreach ($raw as $row) {
+					if (!is_array($row)) continue;
+					$k = (string)($row['key'] ?? '');
+					$k = trim($k);
+					if ($k === '') continue;
+					$blocks_list[] = $row;
+				}
+			}
 		}
 
-		$block_on = function (string $key, bool $default = true) use ($blocks): bool {
-			if (!isset($blocks[$key]) || !is_array($blocks[$key])) {
+		// Normalize to map for quick lookups
+		foreach ($blocks_list as $row) {
+			if (!is_array($row)) continue;
+			$k = (string)($row['key'] ?? '');
+			$k = trim($k);
+			if ($k === '') continue;
+			$blocks_map[$k] = $row;
+		}
+
+		usort($blocks_list, static function ($a, $b) {
+			return (int)($a['sort_order'] ?? 0) <=> (int)($b['sort_order'] ?? 0);
+		});
+
+		$block_on = function (string $key, bool $default = true) use ($blocks_map): bool {
+			if (!isset($blocks_map[$key]) || !is_array($blocks_map[$key])) {
 				return $default;
 			}
-			$display = (string)($blocks[$key]['display'] ?? '');
+			$display = (string)($blocks_map[$key]['display'] ?? '');
 			if ($display === 'hide') {
 				return false;
 			}
@@ -45,11 +86,11 @@ class FilterproLike extends \Opencart\System\Engine\Controller {
 		};
 
 		// Helper: get per-language tooltip
-		$get_tip = function (string $key) use ($blocks, $lang_code): string {
-			if (!isset($blocks[$key]) || !is_array($blocks[$key])) {
+		$get_tip = function (string $key) use ($blocks_map, $lang_code): string {
+			if (!isset($blocks_map[$key]) || !is_array($blocks_map[$key])) {
 				return '';
 			}
-			$tip = $blocks[$key]['tooltip'] ?? '';
+			$tip = $blocks_map[$key]['tooltip'] ?? '';
 			if (is_array($tip)) {
 				if (isset($tip[$lang_code])) return (string)$tip[$lang_code];
 				if (isset($tip['ru-ru'])) return (string)$tip['ru-ru'];
@@ -59,16 +100,16 @@ class FilterproLike extends \Opencart\System\Engine\Controller {
 			return (string)$tip;
 		};
 
-		$get_expanded = function (string $key, int $default = 1) use ($blocks): int {
-			if (!isset($blocks[$key]) || !is_array($blocks[$key])) {
+		$get_expanded = function (string $key, int $default = 1) use ($blocks_map): int {
+			if (!isset($blocks_map[$key]) || !is_array($blocks_map[$key])) {
 				return $default;
 			}
-			return !empty($blocks[$key]['expanded']) ? 1 : 0;
+			return !empty($blocks_map[$key]['expanded']) ? 1 : 0;
 		};
 
 		// Block meta derived from admin config (used later to build $data['blocks'])
-		$block_meta = function (string $key, string $default_label) use ($blocks, $get_tip, $get_expanded): array {
-			$cfg = (isset($blocks[$key]) && is_array($blocks[$key])) ? $blocks[$key] : [];
+		$block_meta = function (string $key, string $default_label) use ($blocks_map, $get_tip, $get_expanded): array {
+			$cfg = (isset($blocks_map[$key]) && is_array($blocks_map[$key])) ? $blocks_map[$key] : [];
 			return [
 				'key' => $key,
 				'label' => (string)($cfg['label'] ?? $default_label),
@@ -84,11 +125,11 @@ class FilterproLike extends \Opencart\System\Engine\Controller {
 		$data['show_style'] = $block_on('style', true);
 		$data['show_size'] = $block_on('size', false);
 
-		$get_display = function (string $key, string $default = 'checkbox') use ($blocks): string {
-			if (!isset($blocks[$key]) || !is_array($blocks[$key])) {
+		$get_display = function (string $key, string $default = 'checkbox') use ($blocks_map): string {
+			if (!isset($blocks_map[$key]) || !is_array($blocks_map[$key])) {
 				return $default;
 			}
-			$display = (string)($blocks[$key]['display'] ?? '');
+			$display = (string)($blocks_map[$key]['display'] ?? '');
 			return $display !== '' ? $display : $default;
 		};
 
@@ -489,13 +530,25 @@ class FilterproLike extends \Opencart\System\Engine\Controller {
 			];
 		}
 
+		// Helper: load slug for option/attribute
+		$get_option_slug = function (int $option_id) use ($language_id): string {
+			$q = $this->db->query("SELECT slug FROM `" . DB_PREFIX . "option_description` WHERE language_id='" . (int)$language_id . "' AND option_id='" . (int)$option_id . "' LIMIT 1");
+			return $q->num_rows ? (string)$q->row['slug'] : '';
+		};
+
+		$get_attribute_slug = function (int $attribute_id) use ($language_id): string {
+			$q = $this->db->query("SELECT slug FROM `" . DB_PREFIX . "attribute_description` WHERE language_id='" . (int)$language_id . "' AND attribute_id='" . (int)$attribute_id . "' LIMIT 1");
+			return $q->num_rows ? (string)$q->row['slug'] : '';
+		};
+
 		// Build ordered blocks list from admin config (avoid hardcoded template sections)
 		$data['blocks'] = [];
-		$blocks_cfg = (isset($setting['blocks']) && is_array($setting['blocks'])) ? $setting['blocks'] : [];
-		foreach ($blocks_cfg as $key => $cfg) {
-			$key = (string)$key;
-			if ($key === '' || !is_array($cfg)) continue;
-			$display = (string)($cfg['display'] ?? '');
+		foreach ($blocks_list as $row) {
+			if (!is_array($row)) continue;
+			$key = trim((string)($row['key'] ?? ''));
+			if ($key === '') continue;
+
+			$display = (string)($row['display'] ?? '');
 			if ($display === 'hide') continue;
 
 			if ($key === 'price' && $data['show_price']) {
@@ -576,6 +629,115 @@ class FilterproLike extends \Opencart\System\Engine\Controller {
 				}, $data['size_items']);
 				$data['blocks'][] = $meta;
 				continue;
+			}
+
+			// Dynamic option block: option:<id>
+			if (preg_match('/^option:(\d+)$/', $key, $mm)) {
+				$option_id = (int)$mm[1];
+				$opt_slug = $get_option_slug($option_id);
+				if ($opt_slug !== '') {
+					$items = [];
+					$q = $this->db->query(
+						"SELECT pov.option_value_id, ov.image, ovd.name, ovd.slug, COUNT(DISTINCT pov.product_id) total " .
+						"FROM `" . DB_PREFIX . "product_to_category` p2c " .
+						"JOIN `" . DB_PREFIX . "product` p ON p.product_id=p2c.product_id AND p.status='1' AND p.date_available<=NOW() " .
+						"JOIN `" . DB_PREFIX . "product_option_value` pov ON pov.product_id=p.product_id AND pov.option_id='" . (int)$option_id . "' " .
+						"JOIN `" . DB_PREFIX . "option_value` ov ON ov.option_value_id=pov.option_value_id " .
+						"JOIN `" . DB_PREFIX . "option_value_description` ovd ON ovd.option_value_id=pov.option_value_id AND ovd.option_id='" . (int)$option_id . "' AND ovd.language_id='" . (int)$language_id . "' " .
+						"WHERE p2c.category_id='" . (int)$category_id . "' AND ovd.slug != '' " .
+						"GROUP BY pov.option_value_id ORDER BY ovd.name"
+					);
+					foreach ($q->rows as $r) {
+						$slug = (string)$r['slug'];
+						$cur = $sel_slug;
+						$cur_vals = $cur[$opt_slug] ?? [];
+						$cur_vals = array_values(array_unique(array_filter(array_map('strval', (array)$cur_vals))));
+						$sel = in_array($slug, $cur_vals, true);
+
+						if ($sel) {
+							$cur_vals = array_values(array_filter($cur_vals, static fn($v) => $v !== $slug));
+						} else {
+							$cur_vals[] = $slug;
+							$cur_vals = array_values(array_unique($cur_vals));
+						}
+
+						if ($cur_vals) {
+							$cur[$opt_slug] = $cur_vals;
+						} else {
+							unset($cur[$opt_slug]);
+						}
+
+						$items[] = [
+							'label' => (string)$r['name'],
+							'total' => (int)$r['total'],
+							'selected' => $sel,
+							'url' => $build_url($cur),
+							'image' => (string)($r['image'] ?? ''),
+						];
+					}
+
+					if ($items) {
+						$meta = $block_meta($key, $key);
+						$meta['type'] = 'list';
+						$meta['display'] = $get_display($key, 'checkbox');
+						$meta['items'] = $items;
+						$data['blocks'][] = $meta;
+						continue;
+					}
+				}
+			}
+
+			// Dynamic attribute block: attribute:<id>
+			if (preg_match('/^attribute:(\d+)$/', $key, $mm)) {
+				$attribute_id = (int)$mm[1];
+				$attr_slug = $get_attribute_slug($attribute_id);
+				if ($attr_slug !== '') {
+					$items = [];
+					$q = $this->db->query(
+						"SELECT pa.slug, pa.text, COUNT(DISTINCT pa.product_id) total " .
+						"FROM `" . DB_PREFIX . "product_to_category` p2c " .
+						"JOIN `" . DB_PREFIX . "product` p ON p.product_id=p2c.product_id AND p.status='1' AND p.date_available<=NOW() " .
+						"JOIN `" . DB_PREFIX . "product_attribute` pa ON pa.product_id=p.product_id AND pa.attribute_id='" . (int)$attribute_id . "' AND pa.language_id='" . (int)$language_id . "' " .
+						"WHERE p2c.category_id='" . (int)$category_id . "' AND pa.slug != '' AND pa.text != '' " .
+						"GROUP BY pa.slug, pa.text ORDER BY pa.text"
+					);
+					foreach ($q->rows as $r) {
+						$slug = (string)$r['slug'];
+						$cur = $sel_slug;
+						$cur_vals = $cur[$attr_slug] ?? [];
+						$cur_vals = array_values(array_unique(array_filter(array_map('strval', (array)$cur_vals))));
+						$sel = in_array($slug, $cur_vals, true);
+
+						if ($sel) {
+							$cur_vals = array_values(array_filter($cur_vals, static fn($v) => $v !== $slug));
+						} else {
+							$cur_vals[] = $slug;
+							$cur_vals = array_values(array_unique($cur_vals));
+						}
+
+						if ($cur_vals) {
+							$cur[$attr_slug] = $cur_vals;
+						} else {
+							unset($cur[$attr_slug]);
+						}
+
+						$items[] = [
+							'label' => (string)$r['text'],
+							'total' => (int)$r['total'],
+							'selected' => $sel,
+							'url' => $build_url($cur),
+						];
+					}
+
+					if ($items) {
+						$meta = $block_meta($key, $key);
+						$meta['type'] = 'list';
+						$meta['display'] = $get_display($key, 'checkbox');
+						$meta['items'] = $items;
+						$data['blocks'][] = $meta;
+						continue;
+					}
+				}
 			}
 		}
 
