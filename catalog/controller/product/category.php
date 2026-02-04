@@ -520,57 +520,57 @@ class Category extends \Opencart\System\Engine\Controller {
 			$data['sorts'][] = [
 				'text'  => $this->language->get('text_default'),
 				'value' => 'p.sort_order-ASC',
-				'href'  => $this->url->link('product/category', 'language=' . $this->config->get('config_language') . '&sort=p.sort_order&order=ASC' . $url)
+				'href'  => $build_f_url($this->url->link('product/category', 'language=' . $this->config->get('config_language') . '&sort=p.sort_order&order=ASC' . $url))
 			];
 
 			$data['sorts'][] = [
 				'text'  => $this->language->get('text_name_asc'),
 				'value' => 'pd.name-ASC',
-				'href'  => $this->url->link('product/category', 'language=' . $this->config->get('config_language') . '&sort=pd.name&order=ASC' . $url)
+				'href'  => $build_f_url($this->url->link('product/category', 'language=' . $this->config->get('config_language') . '&sort=pd.name&order=ASC' . $url))
 			];
 
 			$data['sorts'][] = [
 				'text'  => $this->language->get('text_name_desc'),
 				'value' => 'pd.name-DESC',
-				'href'  => $this->url->link('product/category', 'language=' . $this->config->get('config_language') . '&sort=pd.name&order=DESC' . $url)
+				'href'  => $build_f_url($this->url->link('product/category', 'language=' . $this->config->get('config_language') . '&sort=pd.name&order=DESC' . $url))
 			];
 
 			$data['sorts'][] = [
 				'text'  => $this->language->get('text_price_asc'),
 				'value' => 'p.price-ASC',
-				'href'  => $this->url->link('product/category', 'language=' . $this->config->get('config_language') . '&sort=p.price&order=ASC' . $url)
+				'href'  => $build_f_url($this->url->link('product/category', 'language=' . $this->config->get('config_language') . '&sort=p.price&order=ASC' . $url))
 			];
 
 			$data['sorts'][] = [
 				'text'  => $this->language->get('text_price_desc'),
 				'value' => 'p.price-DESC',
-				'href'  => $this->url->link('product/category', 'language=' . $this->config->get('config_language') . '&sort=p.price&order=DESC' . $url)
+				'href'  => $build_f_url($this->url->link('product/category', 'language=' . $this->config->get('config_language') . '&sort=p.price&order=DESC' . $url))
 			];
 
 			if ($this->config->get('config_review_status')) {
 				$data['sorts'][] = [
 					'text'  => $this->language->get('text_rating_desc'),
 					'value' => 'rating-DESC',
-					'href'  => $this->url->link('product/category', 'language=' . $this->config->get('config_language') . '&sort=rating&order=DESC' . $url)
+					'href'  => $build_f_url($this->url->link('product/category', 'language=' . $this->config->get('config_language') . '&sort=rating&order=DESC' . $url))
 				];
 
 				$data['sorts'][] = [
 					'text'  => $this->language->get('text_rating_asc'),
 					'value' => 'rating-ASC',
-					'href'  => $this->url->link('product/category', 'language=' . $this->config->get('config_language') . '&sort=rating&order=ASC' . $url)
+					'href'  => $build_f_url($this->url->link('product/category', 'language=' . $this->config->get('config_language') . '&sort=rating&order=ASC' . $url))
 				];
 			}
 
 			$data['sorts'][] = [
 				'text'  => $this->language->get('text_model_asc'),
 				'value' => 'p.model-ASC',
-				'href'  => $this->url->link('product/category', 'language=' . $this->config->get('config_language') . '&sort=p.model&order=ASC' . $url)
+				'href'  => $build_f_url($this->url->link('product/category', 'language=' . $this->config->get('config_language') . '&sort=p.model&order=ASC' . $url))
 			];
 
 			$data['sorts'][] = [
 				'text'  => $this->language->get('text_model_desc'),
 				'value' => 'p.model-DESC',
-				'href'  => $this->url->link('product/category', 'language=' . $this->config->get('config_language') . '&sort=p.model&order=DESC' . $url)
+				'href'  => $build_f_url($this->url->link('product/category', 'language=' . $this->config->get('config_language') . '&sort=p.model&order=DESC' . $url))
 			];
 
 			$url = '';
@@ -601,7 +601,7 @@ class Category extends \Opencart\System\Engine\Controller {
 				$data['limits'][] = [
 					'text'  => $value,
 					'value' => $value,
-					'href'  => $this->url->link('product/category', 'language=' . $this->config->get('config_language') . $url . '&limit=' . $value)
+					'href'  => $build_f_url($this->url->link('product/category', 'language=' . $this->config->get('config_language') . $url . '&limit=' . $value))
 				];
 			}
 
