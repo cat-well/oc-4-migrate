@@ -558,7 +558,19 @@ class Category extends \Opencart\System\Engine\Controller {
 
 			$data['continue'] = $this->url->link('common/home', 'language=' . $this->config->get('config_language'));
 
-			$data['filterpro_like'] = $this->load->controller('extension/manline/module/filterpro_like', ['status' => 1]);
+			// Manline FilterPro (custom) — if a module instance is bound globally, use its settings
+			$filterpro_setting = ['status' => 1];
+			$this->load->model('setting/setting');
+			$filterpro_module_id = (int)$this->model_setting_setting->getValue('manline_filterpro_module_id');
+			if ($filterpro_module_id) {
+				$this->load->model('setting/module');
+				$module_info = $this->model_setting_module->getModule($filterpro_module_id);
+				if (is_array($module_info)) {
+					$filterpro_setting = $module_info;
+				}
+			}
+
+			$data['filterpro_like'] = $this->load->controller('extension/manline/module/filterpro_like', $filterpro_setting);
 			$data['column_left'] = $this->load->controller('common/column_left');
 
 			// Inject our filter block into the left column (even when other modules already render there)

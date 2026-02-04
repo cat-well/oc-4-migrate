@@ -1,0 +1,99 @@
+{{ header }}{{ column_left }}
+<div id="content">
+  <div class="page-header">
+    <div class="container-fluid">
+      <div class="float-end">
+        <button type="submit" form="form-filterpro" data-bs-toggle="tooltip" title="{{ button_save }}" class="btn btn-primary"><i class="fa-solid fa-floppy-disk"></i></button>
+        <a href="{{ back }}" data-bs-toggle="tooltip" title="{{ button_back }}" class="btn btn-light"><i class="fa-solid fa-reply"></i></a>
+      </div>
+      <h1>{{ heading_title }}</h1>
+      <ol class="breadcrumb">
+        {% for breadcrumb in breadcrumbs %}
+          <li class="breadcrumb-item"><a href="{{ breadcrumb.href }}">{{ breadcrumb.text }}</a></li>
+        {% endfor %}
+      </ol>
+    </div>
+  </div>
+
+  <div class="container-fluid">
+    <div class="card">
+      <div class="card-header"><i class="fa-solid fa-filter"></i> {{ text_edit }}</div>
+      <div class="card-body">
+        <form id="form-filterpro" action="{{ save }}" method="post" data-oc-toggle="ajax">
+          <div class="row mb-3 required">
+            <label for="input-name" class="col-sm-2 col-form-label">{{ entry_name }}</label>
+            <div class="col-sm-10">
+              <input type="text" name="name" value="{{ name }}" placeholder="{{ entry_name }}" id="input-name" class="form-control"/>
+              <div id="error-name" class="invalid-feedback"></div>
+            </div>
+          </div>
+
+          <div class="row mb-3">
+            <label for="input-status" class="col-sm-2 col-form-label">{{ entry_status }}</label>
+            <div class="col-sm-10">
+              <select name="status" id="input-status" class="form-select">
+                <option value="1" {% if status %}selected{% endif %}>{{ text_enabled }}</option>
+                <option value="0" {% if not status %}selected{% endif %}>{{ text_disabled }}</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="row mb-3">
+            <label class="col-sm-2 col-form-label">{{ entry_use_globally }}</label>
+            <div class="col-sm-10">
+              <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" name="use_globally" value="1" id="input-use-globally" {% if use_globally %}checked{% endif %} {% if not module_id %}disabled{% endif %}>
+                <label class="form-check-label" for="input-use-globally"></label>
+              </div>
+              {% if not module_id %}
+                <div class="form-text">{{ text_save_first|default('Save module first to enable global binding.') }}</div>
+              {% endif %}
+            </div>
+          </div>
+
+          <hr/>
+
+          <h3 class="mb-3">{{ text_blocks|default('Blocks') }}</h3>
+
+          <div class="table-responsive">
+            <table class="table table-bordered table-hover">
+              <thead>
+                <tr>
+                  <th>{{ column_block }}</th>
+                  <th style="width:180px">{{ column_display }}</th>
+                  <th style="width:120px">{{ column_expanded }}</th>
+                  <th>{{ column_tooltip }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for key, b in blocks %}
+                  <tr>
+                    <td>
+                      <input type="text" class="form-control" name="blocks[{{ key }}][label]" value="{{ b.label }}"/>
+                      <input type="hidden" name="blocks[{{ key }}][key]" value="{{ key }}"/>
+                    </td>
+                    <td>
+                      <select class="form-select" name="blocks[{{ key }}][display]">
+                        {% for opt in display_options %}
+                          <option value="{{ opt.value }}" {% if b.display == opt.value %}selected{% endif %}>{{ opt.text }}</option>
+                        {% endfor %}
+                      </select>
+                    </td>
+                    <td class="text-center">
+                      <input type="checkbox" class="form-check-input" name="blocks[{{ key }}][expanded]" value="1" {% if b.expanded %}checked{% endif %}/>
+                    </td>
+                    <td>
+                      <textarea class="form-control" name="blocks[{{ key }}][tooltip]" rows="2">{{ b.tooltip }}</textarea>
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{{ footer }}
