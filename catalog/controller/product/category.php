@@ -558,7 +558,17 @@ class Category extends \Opencart\System\Engine\Controller {
 
 			$data['continue'] = $this->url->link('common/home', 'language=' . $this->config->get('config_language'));
 
+			$data['filterpro_like'] = $this->load->controller('extension/manline/module/filterpro_like', ['status' => 1]);
 			$data['column_left'] = $this->load->controller('common/column_left');
+
+			// Inject our filter block into the left column (even when other modules already render there)
+			if (!empty($data['filterpro_like'])) {
+				if (!empty($data['column_left']) && strpos($data['column_left'], '</aside>') !== false) {
+					$data['column_left'] = str_replace('</aside>', $data['filterpro_like'] . "\n</aside>", $data['column_left']);
+				} elseif (empty($data['column_left'])) {
+					$data['column_left'] = '<aside id="column-left" class="col-md-3 hidden-xs hidden-sm">' . $data['filterpro_like'] . '</aside>';
+				}
+			}
 			$data['column_right'] = $this->load->controller('common/column_right');
 			$data['content_top'] = $this->load->controller('common/content_top');
 			$data['content_bottom'] = $this->load->controller('common/content_bottom');
