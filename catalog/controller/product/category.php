@@ -384,32 +384,7 @@ class Category extends \Opencart\System\Engine\Controller {
 			if (!empty($standard['new'])) $sel_slug['new'] = ['1'];
 
 			$build_f_url = function (string $base_url) use ($sel_slug, $min_price, $max_price): string {
-				if (!$sel_slug) return $base_url;
-				ksort($sel_slug);
-				$parts = [];
-				foreach ($sel_slug as $k => $vals) {
-					$vals = array_values(array_unique(array_filter(array_map('strval', (array)$vals), static fn($v) => $v !== '')));
-					if (!$vals) continue;
-					sort($vals);
-					$parts[] = $k . '_' . implode(',', $vals);
-				}
-				if (!$parts) return $base_url;
-
-				$base_path = $base_url;
-				$base_query = '';
-				$qpos = strpos($base_url, '?');
-				if ($qpos !== false) {
-					$base_path = substr($base_url, 0, $qpos);
-					$base_query = substr($base_url, $qpos + 1);
-				}
-
-				// Preserve price range as query params
-				if ($min_price !== null && (float)$min_price > 0) {
-					$base_query .= ($base_query ? '&' : '') . 'min_price=' . (float)$min_price;
-				}
-				if ($max_price !== null && (float)$max_price > 0) {
-					$base_query .= ($base_query ? '&' : '') . 'max_price=' . (float)$max_price;
-				}
+				// Always preserve price query params, even when there is no /f/ selection
 
 				$url = rtrim($base_path, '/') . '/f/' . implode('/', $parts);
 				if ($base_query !== '') $url .= '?' . $base_query;
@@ -421,8 +396,8 @@ class Category extends \Opencart\System\Engine\Controller {
 				'filter_sub_category'   => false,
 				'filter_filter'         => $filter,
 				'filter_manufacturer_ids' => $manufacturer_ids,
-				'filter_min_price'      => ($min_price !== null && $min_price > 0) ? $min_price : null,
-				'filter_max_price'      => ($max_price !== null && $max_price > 0) ? $max_price : null,
+				'filter_min_price'      => ($min_price !== null) ? $min_price : null,
+				'filter_max_price'      => ($max_price !== null) ? $max_price : null,
 				'filter_attribute_value' => $attribute_value,
 				'filter_attribute_slug'  => $attribute_slug,
 				'filter_option_value'    => $option_value,
