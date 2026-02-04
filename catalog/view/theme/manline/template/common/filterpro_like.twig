@@ -10,23 +10,25 @@
   </div>
 
   {# Price #}
-  <div class="f_group">
-    <div class="f_title">{% if is_ua %}Ціна{% else %}Цена{% endif %}</div>
-    <form method="get" action="{{ price_form_action }}" class="f_price">
-      <div class="f_row">
-        <label>{% if is_ua %}Від{% else %}От{% endif %}:</label>
-        <input type="number" name="min_price" value="{{ selected_min_price }}" min="{{ price_min_floor }}" placeholder="{{ price_min_floor }}" />
-      </div>
-      <div class="f_row">
-        <label>{% if is_ua %}До{% else %}До{% endif %}:</label>
-        <input type="number" name="max_price" value="{{ selected_max_price }}" max="{{ price_max_ceil }}" placeholder="{{ price_max_ceil }}" />
-      </div>
-      <button type="submit" class="btn">OK</button>
-    </form>
-  </div>
+  {% if show_price %}
+    <div class="f_group">
+      <div class="f_title">{% if is_ua %}Ціна{% else %}Цена{% endif %}</div>
+      <form method="get" action="{{ price_form_action }}" class="f_price">
+        <div class="f_row">
+          <label>{% if is_ua %}Від{% else %}От{% endif %}:</label>
+          <input type="number" name="min_price" value="{{ selected_min_price }}" min="{{ price_min_floor }}" placeholder="{{ price_min_floor }}" />
+        </div>
+        <div class="f_row">
+          <label>{% if is_ua %}До{% else %}До{% endif %}:</label>
+          <input type="number" name="max_price" value="{{ selected_max_price }}" max="{{ price_max_ceil }}" placeholder="{{ price_max_ceil }}" />
+        </div>
+        <button type="submit" class="btn">OK</button>
+      </form>
+    </div>
+  {% endif %}
 
   {# Manufacturers #}
-  {% if manufacturer_items %}
+  {% if show_manufacturer and manufacturer_items %}
     <div class="f_group">
       <div class="f_title">{% if is_ua %}Виробники{% else %}Производители{% endif %}</div>
       <ul class="f_list">
@@ -42,7 +44,7 @@
   {% endif %}
 
   {# Colors (option_id=13) #}
-  {% if color_items %}
+  {% if show_color and color_items %}
     <div class="f_group">
       <div class="f_title">{% if is_ua %}Колір{% else %}Цвет{% endif %}</div>
       <div class="f_colors">
@@ -60,7 +62,7 @@
   {% endif %}
 
   {# Style (attribute_id=23) #}
-  {% if style_items %}
+  {% if show_style and style_items %}
     <div class="f_group">
       <div class="f_title">{% if is_ua %}Стиль{% else %}Стиль{% endif %}</div>
       <ul class="f_list">

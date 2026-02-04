@@ -23,6 +23,28 @@ class FilterproLike extends \Opencart\System\Engine\Controller {
 
 		$data = [];
 
+		// Blocks config from admin module (FilterPro settings scaffold)
+		$blocks = [];
+		if (isset($setting['blocks']) && is_array($setting['blocks'])) {
+			$blocks = $setting['blocks'];
+		}
+
+		$block_on = function (string $key, bool $default = true) use ($blocks): bool {
+			if (!isset($blocks[$key]) || !is_array($blocks[$key])) {
+				return $default;
+			}
+			$display = (string)($blocks[$key]['display'] ?? '');
+			if ($display === 'hide') {
+				return false;
+			}
+			return true;
+		};
+
+		$data['show_price'] = $block_on('price', true);
+		$data['show_manufacturer'] = $block_on('manufacturer', true);
+		$data['show_color'] = $block_on('color', true);
+		$data['show_style'] = $block_on('style', true);
+
 		// Determine category_id from path + keep full path string for SEO URLs
 		$category_id = 0;
 		$path_str = '';
