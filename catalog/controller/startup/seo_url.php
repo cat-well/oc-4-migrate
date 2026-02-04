@@ -49,10 +49,15 @@ class SeoUrl extends \Opencart\System\Engine\Controller {
 					if ($seo_url_info) {
 						$this->request->get[$seo_url_info['key']] = html_entity_decode($seo_url_info['value'], ENT_QUOTES, 'UTF-8');
 
-						// OC4 category controller expects `path` (not category_id). If legacy SEO gives us category_id,
-						// map it to path when missing.
-						if ($seo_url_info['key'] === 'category_id' && !isset($this->request->get['path'])) {
-							$this->request->get['path'] = (string)$this->request->get['category_id'];
+						// OC4 category controller expects `path` (parent_child chain).
+						// If SEO table gives us category_id for multiple segments, build the chain.
+						if ($seo_url_info['key'] === 'category_id') {
+							$cid = (string)$this->request->get['category_id'];
+							if (isset($this->request->get['path']) && $this->request->get['path'] !== '') {
+								$this->request->get['path'] = (string)$this->request->get['path'] . '_' . $cid;
+							} else {
+								$this->request->get['path'] = $cid;
+							}
 						}
 
 						// Infer route from entity key when route is not explicitly set
