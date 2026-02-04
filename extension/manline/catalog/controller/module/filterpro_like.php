@@ -295,8 +295,8 @@ class FilterproLike extends \Opencart\System\Engine\Controller {
 
 		$data['selected_slug'] = $sel_slug;
 
-		// Helper: build /f/ URL from selection slug-map
-		$build_url = function (array $sel) use ($base_path, $base_query, $base): string {
+		// Helper: build /f/ URL from selection slug-map, for arbitrary base URL
+		$build_f_url = function (string $base_url, array $sel) use ($base): string {
 			ksort($sel);
 			$parts = [];
 			foreach ($sel as $k => $vals) {
@@ -309,7 +309,15 @@ class FilterproLike extends \Opencart\System\Engine\Controller {
 			}
 
 			if (!$parts) {
-				return $base;
+				return $base_url ?: $base;
+			}
+
+			$base_path = $base_url;
+			$base_query = '';
+			$qpos = strpos($base_url, '?');
+			if ($qpos !== false) {
+				$base_path = substr($base_url, 0, $qpos);
+				$base_query = substr($base_url, $qpos + 1);
 			}
 
 			$url = rtrim($base_path, '/') . '/f/' . implode('/', $parts);
@@ -319,7 +327,44 @@ class FilterproLike extends \Opencart\System\Engine\Controller {
 			return $url;
 		};
 
+		$build_url = function (array $sel) use ($build_f_url, $base): string {
+			return $build_f_url($base, $sel);
+		};
+
 		$data['build_url'] = $build_url;
+		$data['build_f_url'] = $build_f_url;
+
+		// Child categories (Category block)
+		$data['child_category_items'] = [];
+		try {
+			$this->load->model('catalog/category');
+			$this->load->model('catalog/product');
+			$children = $this->model_catalog_category->getCategories($category_id);
+			foreach ($children as $child) {
+				$child_id = (int)$child['category_id'];
+				$child_path = $path_str ? ($path_str . '_' . $child_id) : (string)$child_id;
+				$child_base = $this->url->link('product/category', 'language=' . $lang_code . '&path=' . $child_path);
+
+				// Preserve current /f/ selection when navigating to subcategory
+				$child_url = $build_f_url($child_base, $sel_slug);
+
+				// Total products (without applying current filters, for now)
+				$filter_data = [
+					'filter_category_id' => $child_id,
+					'filter_sub_category' => true
+				];
+				$total = (int)$this->model_catalog_product->getTotalProducts($filter_data);
+
+				$data['child_category_items'][] = [
+					'category_id' => $child_id,
+					'name' => (string)$child['name'],
+					'total' => $total,
+					'url' => $child_url,
+				];
+			}
+		} catch (\Throwable $e) {
+			// ignore
+		}
 
 		// Manufacturers available in category
 		$data['manufacturers'] = [];
@@ -568,6 +613,21 @@ class FilterproLike extends \Opencart\System\Engine\Controller {
 
 			$display = (string)($row['display'] ?? '');
 			if ($display === 'hide') continue;
+
+			if ($key === 'category' && !empty($data['child_category_items'])) {
+				$meta = $block_meta('category', ($data['is_ua'] ? 'Категорії' : 'Категории'));
+				$meta['type'] = 'nav';
+				$meta['display'] = 'list';
+				$meta['items'] = array_map(static function ($c) {
+					return [
+						'label' => (string)$c['name'],
+						'total' => (int)$c['total'],
+						'url' => (string)$c['url'],
+					];
+				}, $data['child_category_items']);
+				$data['blocks'][] = $meta;
+				continue;
+			}
 
 			if ($key === 'price' && $data['show_price']) {
 				$meta = $block_meta('price', ($data['is_ua'] ? 'Ціна' : 'Цена'));

@@ -18,7 +18,16 @@
       </div>
 
       <div class="f_body">
-        {% if b.type == 'price' %}
+        {% if b.type == 'nav' %}
+          <ul class="f_list fp_nav">
+            {% for it in b.items %}
+              <li class="f_item">
+                <a href="{{ it.url }}">{{ it.label }} <span class="f_cnt">({{ it.total }})</span></a>
+              </li>
+            {% endfor %}
+          </ul>
+
+        {% elseif b.type == 'price' %}
           <form method="get" action="{{ b.price.action }}" class="f_price" data-fp-price>
 
             {% if b.display == 'slider' %}
@@ -311,6 +320,7 @@
   .filterpro_like .f_item{margin:0 0 6px;}
   .filterpro_like .f_item a{color:#333;text-decoration:none;}
   .filterpro_like .f_item a.active{font-weight:700;text-decoration:underline;}
+  .filterpro_like .fp_nav a{color:#333;text-decoration:none;}
   .filterpro_like .f_cnt{color:#999;font-weight:400;}
 
   .filterpro_like .fp_checks .fp_check{display:flex;gap:8px;align-items:center;cursor:pointer;}
