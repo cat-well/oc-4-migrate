@@ -309,6 +309,12 @@ class Category extends \Opencart\System\Engine\Controller {
 				}
 			}
 
+			$standard = [
+				'stock' => !empty($this->request->get['stock']),
+				'special' => !empty($this->request->get['special']),
+				'new' => !empty($this->request->get['new']),
+			];
+
 			$option_value = [];
 			if (isset($this->request->get['option_value']) && is_array($this->request->get['option_value'])) {
 				foreach ($this->request->get['option_value'] as $option_id => $values) {
@@ -343,6 +349,9 @@ class Category extends \Opencart\System\Engine\Controller {
 				'filter_attribute_value' => $attribute_value,
 				'filter_attribute_slug'  => $attribute_slug,
 				'filter_option_value'    => $option_value,
+				'filter_stock'           => $standard['stock'] ? 1 : 0,
+				'filter_special'         => $standard['special'] ? 1 : 0,
+				'filter_new'             => $standard['new'] ? 1 : 0,
 				'sort'                  => $sort,
 				'order'                 => $order,
 				'start'                 => ($page - 1) * $limit,

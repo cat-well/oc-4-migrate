@@ -130,6 +130,22 @@ class SeoUrl extends \Opencart\System\Engine\Controller {
 							continue;
 						}
 
+						// Standard filters (checkboxes)
+						if ($k === 'stock') {
+							$this->request->get['stock'] = 1;
+							continue;
+						}
+
+						if ($k === 'special') {
+							$this->request->get['special'] = 1;
+							continue;
+						}
+
+						if ($k === 'new') {
+							$this->request->get['new'] = 1;
+							continue;
+						}
+
 						// Try OPTION by slug: option_description.slug == $k
 						$option_q = $this->db->query("SELECT option_id FROM `" . DB_PREFIX . "option_description` WHERE slug='" . $this->db->escape($k) . "' ORDER BY language_id='" . $lang_id . "' DESC LIMIT 1");
 						if ($option_q->num_rows) {

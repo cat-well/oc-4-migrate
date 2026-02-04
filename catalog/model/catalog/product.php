@@ -194,6 +194,19 @@ class Product extends \Opencart\System\Engine\Model {
 			$sql .= ")";
 		}
 
+		// Standard filters
+		if (!empty($data['filter_stock'])) {
+			$sql .= " AND `p`.`quantity` > 0";
+		}
+
+		if (!empty($data['filter_special'])) {
+			$sql .= " AND `special` IS NOT NULL";
+		}
+
+		if (!empty($data['filter_new'])) {
+			$sql .= " AND `p`.`date_added` >= DATE_SUB(NOW(), INTERVAL 60 DAY)";
+		}
+
 		// Manufacturer filter (single or multiple)
 		if (!empty($data['filter_manufacturer_ids']) && is_array($data['filter_manufacturer_ids'])) {
 			$ids = [];
@@ -444,6 +457,20 @@ class Product extends \Opencart\System\Engine\Model {
 			}
 
 			$sql .= ")";
+		}
+
+		// Standard filters
+		if (!empty($data['filter_stock'])) {
+			$sql .= " AND `p`.`quantity` > 0";
+		}
+
+		if (!empty($data['filter_special'])) {
+			// total query does not join specials; check specials existence
+			$sql .= " AND EXISTS (SELECT 1 FROM `" . DB_PREFIX . "product_discount` ps WHERE ps.product_id = p.product_id AND ps.customer_group_id = '" . (int)$this->config->get('config_customer_group_id') . "' AND ps.quantity = '1' AND ps.special = '1' AND ((ps.date_start = '0000-00-00' OR ps.date_start < NOW()) AND (ps.date_end = '0000-00-00' OR ps.date_end > NOW())))";
+		}
+
+		if (!empty($data['filter_new'])) {
+			$sql .= " AND `p`.`date_added` >= DATE_SUB(NOW(), INTERVAL 60 DAY)";
 		}
 
 		// Manufacturer filter (single or multiple)

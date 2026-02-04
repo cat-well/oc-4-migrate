@@ -614,6 +614,57 @@ class FilterproLike extends \Opencart\System\Engine\Controller {
 			$display = (string)($row['display'] ?? '');
 			if ($display === 'hide') continue;
 
+			if ($key === 'standard') {
+				$meta = $block_meta('standard', ($data['is_ua'] ? 'Стандартні фільтри' : 'Стандартные фильтры'));
+				$meta['type'] = 'list';
+				$meta['display'] = 'list';
+				$meta['slug_key'] = '__std';
+
+				// Standard toggles map to /f/ segments: stock_1 / special_1 / new_1
+				$items = [];
+				$std = [
+					'stock' => [
+						'label' => ($data['is_ua'] ? 'В наявності' : 'В наличии'),
+						'val' => 'stock',
+						'selected' => !empty($this->request->get['stock']),
+					],
+					'special' => [
+						'label' => ($data['is_ua'] ? 'Акції' : 'Акция'),
+						'val' => 'special',
+						'selected' => !empty($this->request->get['special']),
+					],
+					'new' => [
+						'label' => ($data['is_ua'] ? 'Новинки' : 'Новинки'),
+						'val' => 'new',
+						'selected' => !empty($this->request->get['new']),
+					],
+				];
+
+				foreach ($std as $s) {
+					$cur = $sel_slug;
+					$kstd = (string)$s['val'];
+					if (!empty($s['selected'])) {
+						unset($cur[$kstd]);
+						$sel = true;
+					} else {
+						$cur[$kstd] = ['1'];
+						$sel = false;
+					}
+
+					$items[] = [
+						'label' => (string)$s['label'],
+						'total' => 0,
+						'selected' => $sel,
+						'url' => $build_url($cur),
+						'fp_val' => (string)$s['val'],
+					];
+				}
+
+				$meta['items'] = $items;
+				$data['blocks'][] = $meta;
+				continue;
+			}
+
 			if ($key === 'category' && !empty($data['child_category_items'])) {
 				$meta = $block_meta('category', ($data['is_ua'] ? 'Категорії' : 'Категории'));
 				$meta['type'] = 'nav';
