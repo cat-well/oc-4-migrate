@@ -23,6 +23,10 @@ class FilterproLike extends \Opencart\System\Engine\Controller {
 
 		$data = [];
 
+		// Current language code (e.g. ru-ru / uk-ua)
+		$lang_code = (string)($this->config->get('config_language') ?? '');
+		$data['is_ua'] = in_array($lang_code, ['uk-ua', 'ua'], true);
+
 		// Blocks config from admin module (FilterPro settings scaffold)
 		$blocks = [];
 		if (isset($setting['blocks']) && is_array($setting['blocks'])) {
@@ -93,8 +97,6 @@ class FilterproLike extends \Opencart\System\Engine\Controller {
 		}
 
 		$language_id = (int)$this->config->get('config_language_id');
-		$lang_code = (string)($this->config->get('config_language') ?? '');
-		$data['is_ua'] = in_array($lang_code, ['uk-ua', 'ua'], true);
 
 		// Selected filters (from request, already parsed for /f/ by startup/seo_url)
 		$selected = [
