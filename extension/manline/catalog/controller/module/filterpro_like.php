@@ -235,6 +235,10 @@ class FilterproLike extends \Opencart\System\Engine\Controller {
 			$base_query = substr($base, $qpos + 1);
 		}
 
+		// Expose to JS for multi-select apply button
+		$data['fp_base_path'] = $base_path;
+		$data['fp_base_query'] = $base_query;
+
 		// Build current selection as slug-map for URL generation
 		$sel_slug = [];
 
@@ -584,12 +588,14 @@ class FilterproLike extends \Opencart\System\Engine\Controller {
 				$meta = $block_meta('manufacturer', ($data['is_ua'] ? 'Виробники' : 'Производители'));
 				$meta['type'] = 'list';
 				$meta['display'] = $data['disp_manufacturer'];
+				$meta['slug_key'] = 'manufacturer';
 				$meta['items'] = array_map(static function ($m) {
 					return [
 						'label' => (string)$m['name'],
 						'total' => (int)$m['total'],
 						'selected' => !empty($m['selected']),
 						'url' => (string)$m['url'],
+						'fp_val' => (string)$m['id'],
 					];
 				}, $data['manufacturer_items']);
 				$data['blocks'][] = $meta;
@@ -600,6 +606,7 @@ class FilterproLike extends \Opencart\System\Engine\Controller {
 				$meta = $block_meta('color', ($data['is_ua'] ? 'Колір' : 'Цвет'));
 				$meta['type'] = 'list';
 				$meta['display'] = $data['disp_color'];
+				$meta['slug_key'] = 'tsvet-o';
 				$meta['items'] = array_map(static function ($c) {
 					return [
 						'label' => (string)$c['name'],
@@ -607,6 +614,7 @@ class FilterproLike extends \Opencart\System\Engine\Controller {
 						'selected' => !empty($c['selected']),
 						'url' => (string)$c['url'],
 						'image' => (string)($c['image'] ?? ''),
+						'fp_val' => (string)$c['slug'],
 					];
 				}, $data['color_items']);
 				$data['blocks'][] = $meta;
@@ -617,12 +625,14 @@ class FilterproLike extends \Opencart\System\Engine\Controller {
 				$meta = $block_meta('style', ($data['is_ua'] ? 'Стиль' : 'Стиль'));
 				$meta['type'] = 'list';
 				$meta['display'] = $data['disp_style'];
+				$meta['slug_key'] = 'stil';
 				$meta['items'] = array_map(static function ($s) {
 					return [
 						'label' => (string)$s['text'],
 						'total' => (int)$s['total'],
 						'selected' => !empty($s['selected']),
 						'url' => (string)$s['url'],
+						'fp_val' => (string)$s['slug'],
 					];
 				}, $data['style_items']);
 				$data['blocks'][] = $meta;
@@ -633,12 +643,14 @@ class FilterproLike extends \Opencart\System\Engine\Controller {
 				$meta = $block_meta('size', ($data['is_ua'] ? 'Розмір' : 'Размер'));
 				$meta['type'] = 'list';
 				$meta['display'] = $data['disp_size'];
+				$meta['slug_key'] = 'razmer-o';
 				$meta['items'] = array_map(static function ($s) {
 					return [
 						'label' => (string)$s['name'],
 						'total' => (int)$s['total'],
 						'selected' => !empty($s['selected']),
 						'url' => (string)$s['url'],
+						'fp_val' => (string)$s['slug'],
 					];
 				}, $data['size_items']);
 				$data['blocks'][] = $meta;
@@ -687,6 +699,7 @@ class FilterproLike extends \Opencart\System\Engine\Controller {
 							'selected' => $sel,
 							'url' => $build_url($cur),
 							'image' => (string)($r['image'] ?? ''),
+							'fp_val' => (string)$slug,
 						];
 					}
 
@@ -694,6 +707,7 @@ class FilterproLike extends \Opencart\System\Engine\Controller {
 						$meta = $block_meta($key, $key);
 						$meta['type'] = 'list';
 						$meta['display'] = $get_display($key, 'checkbox');
+						$meta['slug_key'] = $opt_slug;
 						$meta['items'] = $items;
 						$data['blocks'][] = $meta;
 						continue;
@@ -740,6 +754,7 @@ class FilterproLike extends \Opencart\System\Engine\Controller {
 							'total' => (int)$r['total'],
 							'selected' => $sel,
 							'url' => $build_url($cur),
+							'fp_val' => (string)$slug,
 						];
 					}
 
@@ -747,6 +762,7 @@ class FilterproLike extends \Opencart\System\Engine\Controller {
 						$meta = $block_meta($key, $key);
 						$meta['type'] = 'list';
 						$meta['display'] = $get_display($key, 'checkbox');
+						$meta['slug_key'] = $attr_slug;
 						$meta['items'] = $items;
 						$data['blocks'][] = $meta;
 						continue;

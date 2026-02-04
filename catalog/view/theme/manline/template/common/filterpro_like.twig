@@ -1,10 +1,11 @@
 {# FilterPro-like sidebar (temporary, driven by admin blocks config) #}
 
-<div id="filterpro" class="filterpro_like">
+<div id="filterpro" class="filterpro_like" data-fp-base-path="{{ fp_base_path }}" data-fp-base-query="{{ fp_base_query }}" data-fp-base-url="{{ base_url }}">
 
   <div class="f_group">
     <div class="f_title">{% if is_ua %}Фільтр{% else %}Фильтр{% endif %}</div>
     <div class="f_actions">
+      <button type="button" class="btn btn-sm fp_apply" id="fp-apply" disabled>{% if is_ua %}Застосувати{% else %}Применить{% endif %}</button>
       <a class="f_clear" href="{{ base_url }}">{% if is_ua %}Скинути{% else %}Сбросить{% endif %}</a>
     </div>
   </div>
@@ -64,7 +65,7 @@
               {% for it in b.items %}
                 <li class="f_item">
                   <label class="fp_check">
-                    <input type="checkbox" {% if it.selected %}checked{% endif %} data-fp-url="{{ it.url }}" />
+                    <input type="checkbox" {% if it.selected %}checked{% endif %} data-fp-key="{{ b.slug_key|default(b.key) }}" data-fp-val="{{ it.fp_val|default('') }}" />
                     <span class="fp_check_text">{{ it.label }} <span class="f_cnt">({{ it.total }})</span></span>
                   </label>
                 </li>
@@ -91,15 +92,62 @@
 </div>
 
 <script>
-  // Checkbox navigation (keep link-based URLs)
+  // Multi-select apply: collect checked boxes and build /f/ URL
+  var fpRoot = document.getElementById('filterpro');
+  var applyBtn = document.getElementById('fp-apply');
+
+  function buildUrlFromChecks() {
+    if (!fpRoot) return null;
+    var basePath = fpRoot.getAttribute('data-fp-base-path') || '';
+    var baseQuery = fpRoot.getAttribute('data-fp-base-query') || '';
+    var baseUrl = fpRoot.getAttribute('data-fp-base-url') || basePath;
+
+    var sel = {};
+    fpRoot.querySelectorAll('input[type="checkbox"][data-fp-key][data-fp-val]').forEach(function(cb){
+      if (!cb.checked) return;
+      var k = cb.getAttribute('data-fp-key') || '';
+      var v = cb.getAttribute('data-fp-val') || '';
+      if (!k || !v) return;
+      if (!sel[k]) sel[k] = [];
+      sel[k].push(String(v));
+    });
+
+    var keys = Object.keys(sel).sort();
+    var parts = [];
+    keys.forEach(function(k){
+      var vals = Array.from(new Set(sel[k].filter(Boolean))).sort();
+      if (!vals.length) return;
+      parts.push(k + '_' + vals.join(','));
+    });
+
+    if (!parts.length) {
+      return baseUrl;
+    }
+
+    var url = String(basePath).replace(/\/+$/, '') + '/f/' + parts.join('/');
+    if (baseQuery) url += '?' + baseQuery;
+    return url;
+  }
+
+  function markDirty() {
+    if (applyBtn) applyBtn.disabled = false;
+  }
+
+  // When user changes any checkbox, enable Apply
   document.addEventListener('change', function(e) {
     var el = e.target;
     if (!el) return;
-    if (el.matches && el.matches('input[type="checkbox"][data-fp-url]')) {
-      var url = el.getAttribute('data-fp-url');
-      if (url) window.location.href = url;
+    if (el.matches && el.matches('#filterpro input[type="checkbox"][data-fp-key]')) {
+      markDirty();
     }
   });
+
+  if (applyBtn) {
+    applyBtn.addEventListener('click', function(){
+      var url = buildUrlFromChecks();
+      if (url) window.location.href = url;
+    });
+  }
 
   // Price slider sync (no AJAX; just keeps inputs in sync)
   document.querySelectorAll('form[data-fp-price]').forEach(function(form) {
@@ -184,7 +232,9 @@
 <style>
   .filterpro_like .f_group{margin:0 0 18px;}
   .filterpro_like .f_title{cursor:pointer;user-select:none;font-weight:700;margin:0 0 8px;}
-  .filterpro_like .f_actions{margin:-6px 0 10px;}
+  .filterpro_like .f_actions{margin:-6px 0 10px;display:flex;gap:10px;align-items:center;}
+  .filterpro_like .fp_apply{background:#fed700;border:1px solid #e8c800;color:#000;padding:2px 10px;border-radius:3px;}
+  .filterpro_like .fp_apply[disabled]{opacity:.5;cursor:not-allowed;}
   .filterpro_like .f_clear{font-size:12px;color:#666;text-decoration:underline;}
 
   .filterpro_like .fp_collapsed .f_body{display:none;}
