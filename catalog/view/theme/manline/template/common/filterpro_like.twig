@@ -140,6 +140,12 @@
       sel[k].push(String(v));
     });
 
+    // price (query params)
+    var minNum = fpRoot.querySelector('[data-fp-min-num]');
+    var maxNum = fpRoot.querySelector('[data-fp-max-num]');
+    if (minNum && String(minNum.value||'').trim() !== '') sel.min_price = [String(minNum.value).trim()];
+    if (maxNum && String(maxNum.value||'').trim() !== '') sel.max_price = [String(maxNum.value).trim()];
+
     // de-dup + sort
     Object.keys(sel).forEach(function(k){
       sel[k] = Array.from(new Set(sel[k].filter(Boolean))).sort();
@@ -160,6 +166,12 @@
 
     var sel = fpGetSelection();
 
+    // Extract price query params if present
+    var qMin = sel.min_price && sel.min_price[0] ? sel.min_price[0] : '';
+    var qMax = sel.max_price && sel.max_price[0] ? sel.max_price[0] : '';
+    delete sel.min_price;
+    delete sel.max_price;
+
     var keys = Object.keys(sel).sort();
     var parts = [];
     keys.forEach(function(k){
@@ -173,7 +185,10 @@
     }
 
     var url = String(basePath).replace(/\/+$/, '') + '/f/' + parts.join('/');
-    if (baseQuery) url += '?' + baseQuery;
+    var q = baseQuery ? baseQuery : '';
+    if (qMin) q += (q ? '&' : '') + 'min_price=' + encodeURIComponent(qMin);
+    if (qMax) q += (q ? '&' : '') + 'max_price=' + encodeURIComponent(qMax);
+    if (q) url += '?' + q;
     return url;
   }
 
@@ -278,14 +293,14 @@
     }
 
     if (minRange && maxRange) {
-      minRange.addEventListener('input', syncFromRanges);
-      maxRange.addEventListener('input', syncFromRanges);
+      minRange.addEventListener('input', function(){ syncFromRanges(); markDirty(); });
+      maxRange.addEventListener('input', function(){ syncFromRanges(); markDirty(); });
       syncFromRanges();
     }
 
     if (minNum && maxNum) {
-      minNum.addEventListener('change', syncFromNumbers);
-      maxNum.addEventListener('change', syncFromNumbers);
+      minNum.addEventListener('change', function(){ syncFromNumbers(); markDirty(); });
+      maxNum.addEventListener('change', function(){ syncFromNumbers(); markDirty(); });
     }
   });
 
