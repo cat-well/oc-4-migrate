@@ -89,6 +89,11 @@ class SeoUrl extends \Opencart\System\Engine\Controller {
 
 				// Parse legacy FilterPro /f/... filters (uses slugs from custom columns)
 				if ($filterpro_parts) {
+					// DEBUG (temporary): log parsed filter segments
+					if (defined('DIR_LOGS')) {
+						@file_put_contents(DIR_LOGS . 'filterpro_debug.log', date('c') . " route=" . $route_string . " f=" . json_encode($filterpro_parts, JSON_UNESCAPED_UNICODE) . "\n", FILE_APPEND);
+					}
+
 					// Determine language_id for slug lookups.
 					$lang_id = (int)$this->config->get('config_language_id');
 					if (isset($this->request->get['language']) && is_string($this->request->get['language']) && $this->request->get['language'] !== '') {

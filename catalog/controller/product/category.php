@@ -326,6 +326,11 @@ class Category extends \Opencart\System\Engine\Controller {
 				'limit'                 => $limit
 			];
 
+			// DEBUG (temporary): log applied filter data when /f/ is used
+			if (defined('DIR_LOGS') && isset($this->request->get['_route_']) && strpos((string)$this->request->get['_route_'], '/f/') !== false) {
+				@file_put_contents(DIR_LOGS . 'filterpro_debug.log', date('c') . " filter_data=" . json_encode($filter_data, JSON_UNESCAPED_UNICODE) . "\n", FILE_APPEND);
+			}
+
 			$results = $this->model_catalog_product->getProducts($filter_data);
 
 			foreach ($results as $result) {
