@@ -97,6 +97,16 @@ class FilterproLike extends \Opencart\System\Engine\Controller {
 		$base = $this->url->link('product/category', 'language=' . $lang_code . '&path=' . $path_str);
 		$data['base_url'] = $base;
 
+		// When language is passed as a query param, we must insert /f/... BEFORE the "?",
+		// otherwise it becomes language=uk-ua/f/... which breaks the language controller.
+		$base_path = $base;
+		$base_query = '';
+		$qpos = strpos($base, '?');
+		if ($qpos !== false) {
+			$base_path = substr($base, 0, $qpos);
+			$base_query = substr($base, $qpos + 1);
+		}
+
 		// Build current selection as slug-map for URL generation
 		$sel_slug = [];
 
@@ -154,7 +164,7 @@ class FilterproLike extends \Opencart\System\Engine\Controller {
 		$data['selected_slug'] = $sel_slug;
 
 		// Helper: build /f/ URL from selection slug-map
-		$build_url = function (array $sel) use ($base): string {
+		$build_url = function (array $sel) use ($base_path, $base_query, $base): string {
 			ksort($sel);
 			$parts = [];
 			foreach ($sel as $k => $vals) {
@@ -165,10 +175,16 @@ class FilterproLike extends \Opencart\System\Engine\Controller {
 				sort($vals);
 				$parts[] = $k . '_' . implode(',', $vals);
 			}
-			if ($parts) {
-				return rtrim($base, '/') . '/f/' . implode('/', $parts);
+
+			if (!$parts) {
+				return $base;
 			}
-			return $base;
+
+			$url = rtrim($base_path, '/') . '/f/' . implode('/', $parts);
+			if ($base_query !== '') {
+				$url .= '?' . $base_query;
+			}
+			return $url;
 		};
 
 		$data['build_url'] = $build_url;
