@@ -1,4 +1,4 @@
-{# Minimal FilterPro-like sidebar (temporary) #}
+{# FilterPro-like sidebar (temporary, driven by admin blocks config) #}
 
 <div id="filterpro" class="filterpro_like">
 
@@ -9,143 +9,74 @@
     </div>
   </div>
 
-  {# Price #}
-  {% if show_price %}
-    <div class="f_group {% if not exp_price %}fp_collapsed{% endif %}" data-fp-group>
+  {% for b in blocks %}
+    <div class="f_group {% if not b.expanded %}fp_collapsed{% endif %}" data-fp-group>
       <div class="f_title" data-fp-toggle>
-        {% if is_ua %}Ціна{% else %}Цена{% endif %}
-        {% if tip_price %}<span class="fp_tip" title="{{ tip_price }}">?</span>{% endif %}
+        {{ b.label }}
+        {% if b.tooltip %}<span class="fp_tip" title="{{ b.tooltip }}">?</span>{% endif %}
       </div>
+
       <div class="f_body">
-      <form method="get" action="{{ price_form_action }}" class="f_price">
-        <div class="f_row">
-          <label>{% if is_ua %}Від{% else %}От{% endif %}:</label>
-          <input type="number" name="min_price" value="{{ selected_min_price }}" min="{{ price_min_floor }}" placeholder="{{ price_min_floor }}" />
-        </div>
-        <div class="f_row">
-          <label>{% if is_ua %}До{% else %}До{% endif %}:</label>
-          <input type="number" name="max_price" value="{{ selected_max_price }}" max="{{ price_max_ceil }}" placeholder="{{ price_max_ceil }}" />
-        </div>
-        <button type="submit" class="btn">OK</button>
-      </form>
+        {% if b.type == 'price' %}
+          <form method="get" action="{{ b.price.action }}" class="f_price">
+            <div class="f_row">
+              <label>{% if is_ua %}Від{% else %}От{% endif %}:</label>
+              <input type="number" name="min_price" value="{{ b.price.selected_min }}" min="{{ b.price.min_floor }}" placeholder="{{ b.price.min_floor }}" />
+            </div>
+            <div class="f_row">
+              <label>{% if is_ua %}До{% else %}До{% endif %}:</label>
+              <input type="number" name="max_price" value="{{ b.price.selected_max }}" max="{{ b.price.max_ceil }}" placeholder="{{ b.price.max_ceil }}" />
+            </div>
+            <button type="submit" class="btn">OK</button>
+          </form>
+
+        {% else %}
+
+          {% if b.display == 'image' %}
+            <div class="f_colors">
+              {% for it in b.items %}
+                <a class="f_color {% if it.selected %}active{% endif %}" href="{{ it.url }}" title="{{ it.label }} ({{ it.total }})">
+                  {% if it.image %}
+                    <img src="image/{{ it.image }}" alt="{{ it.label }}" />
+                  {% else %}
+                    <span>{{ it.label }}</span>
+                  {% endif %}
+                </a>
+              {% endfor %}
+            </div>
+
+          {% elseif b.display == 'checkbox' %}
+            <ul class="f_list fp_checks">
+              {% for it in b.items %}
+                <li class="f_item">
+                  <label class="fp_check">
+                    <input type="checkbox" {% if it.selected %}checked{% endif %} data-fp-url="{{ it.url }}" />
+                    <span class="fp_check_text">{{ it.label }} <span class="f_cnt">({{ it.total }})</span></span>
+                  </label>
+                </li>
+              {% endfor %}
+            </ul>
+
+          {% else %}
+            <ul class="f_list">
+              {% for it in b.items %}
+                <li class="f_item">
+                  <a href="{{ it.url }}" class="{% if it.selected %}active{% endif %}">
+                    {{ it.label }} <span class="f_cnt">({{ it.total }})</span>
+                  </a>
+                </li>
+              {% endfor %}
+            </ul>
+          {% endif %}
+
+        {% endif %}
       </div>
     </div>
-  {% endif %}
-
-  {# Manufacturers #}
-  {% if show_manufacturer and manufacturer_items %}
-    <div class="f_group {% if not exp_manufacturer %}fp_collapsed{% endif %}" data-fp-group>
-      <div class="f_title" data-fp-toggle>
-        {% if is_ua %}Виробники{% else %}Производители{% endif %}
-        {% if tip_manufacturer %}<span class="fp_tip" title="{{ tip_manufacturer }}">?</span>{% endif %}
-      </div>
-      <div class="f_body">
-
-      {% if disp_manufacturer == 'checkbox' %}
-        <ul class="f_list fp_checks">
-          {% for m in manufacturer_items %}
-            <li class="f_item">
-              <label class="fp_check">
-                <input type="checkbox" {% if m.selected %}checked{% endif %} data-fp-url="{{ m.url }}" />
-                <span class="fp_check_text">{{ m.name }} <span class="f_cnt">({{ m.total }})</span></span>
-              </label>
-            </li>
-          {% endfor %}
-        </ul>
-      {% else %}
-        <ul class="f_list">
-          {% for m in manufacturer_items %}
-            <li class="f_item">
-              <a href="{{ m.url }}" class="{% if m.selected %}active{% endif %}">
-                {{ m.name }} <span class="f_cnt">({{ m.total }})</span>
-              </a>
-            </li>
-          {% endfor %}
-        </ul>
-      {% endif %}
-
-      </div>
-    </div>
-  {% endif %}
-
-  {# Colors (option_id=13) #}
-  {% if show_color and color_items %}
-    <div class="f_group {% if not exp_color %}fp_collapsed{% endif %}" data-fp-group>
-      <div class="f_title" data-fp-toggle>
-        {% if is_ua %}Колір{% else %}Цвет{% endif %}
-        {% if tip_color %}<span class="fp_tip" title="{{ tip_color }}">?</span>{% endif %}
-      </div>
-      <div class="f_body">
-
-      {% if disp_color == 'checkbox' or disp_color == 'list' %}
-        <ul class="f_list fp_checks">
-          {% for c in color_items %}
-            <li class="f_item">
-              <label class="fp_check">
-                <input type="checkbox" {% if c.selected %}checked{% endif %} data-fp-url="{{ c.url }}" />
-                <span class="fp_check_text">{{ c.name }} <span class="f_cnt">({{ c.total }})</span></span>
-              </label>
-            </li>
-          {% endfor %}
-        </ul>
-      {% else %}
-        <div class="f_colors">
-          {% for c in color_items %}
-            <a class="f_color {% if c.selected %}active{% endif %}" href="{{ c.url }}" title="{{ c.name }} ({{ c.total }})">
-              {% if c.image %}
-                <img src="image/{{ c.image }}" alt="{{ c.name }}" />
-              {% else %}
-                <span>{{ c.name }}</span>
-              {% endif %}
-            </a>
-          {% endfor %}
-        </div>
-      {% endif %}
-
-      </div>
-    </div>
-  {% endif %}
-
-  {# Style (attribute_id=23) #}
-  {% if show_style and style_items %}
-    <div class="f_group {% if not exp_style %}fp_collapsed{% endif %}" data-fp-group>
-      <div class="f_title" data-fp-toggle>
-        {% if is_ua %}Стиль{% else %}Стиль{% endif %}
-        {% if tip_style %}<span class="fp_tip" title="{{ tip_style }}">?</span>{% endif %}
-      </div>
-      <div class="f_body">
-
-      {% if disp_style == 'checkbox' %}
-        <ul class="f_list fp_checks">
-          {% for s in style_items %}
-            <li class="f_item">
-              <label class="fp_check">
-                <input type="checkbox" {% if s.selected %}checked{% endif %} data-fp-url="{{ s.url }}" />
-                <span class="fp_check_text">{{ s.text }} <span class="f_cnt">({{ s.total }})</span></span>
-              </label>
-            </li>
-          {% endfor %}
-        </ul>
-      {% else %}
-        <ul class="f_list">
-          {% for s in style_items %}
-            <li class="f_item">
-              <a href="{{ s.url }}" class="{% if s.selected %}active{% endif %}">
-                {{ s.text }} <span class="f_cnt">({{ s.total }})</span>
-              </a>
-            </li>
-          {% endfor %}
-        </ul>
-      {% endif %}
-
-      </div>
-    </div>
-  {% endif %}
+  {% endfor %}
 
 </div>
 
 <script>
-  // Simple accordion behavior for FilterPro-like groups
   // Checkbox navigation (keep link-based URLs)
   document.addEventListener('change', function(e) {
     var el = e.target;
@@ -156,9 +87,9 @@
     }
   });
 
+  // Accordion
   document.addEventListener('click', function(e) {
     var t = e.target;
-    // do not toggle when clicking on a link inside title
     if (!t) return;
     var title = t.closest && t.closest('[data-fp-toggle]');
     if (!title) return;
@@ -172,23 +103,28 @@
 
 <style>
   .filterpro_like .f_group{margin:0 0 18px;}
-  .filterpro_like .f_title{cursor:pointer;user-select:none;}
-  .filterpro_like .fp_collapsed .f_body{display:none;}
-  .filterpro_like .fp_tip{display:inline-block;margin-left:6px;width:16px;height:16px;line-height:16px;text-align:center;border-radius:50%;background:#eee;color:#555;font-size:12px;}
-  .filterpro_like .fp_checks .fp_check{display:flex;gap:8px;align-items:center;cursor:pointer;}
-  .filterpro_like .fp_checks input[type=checkbox]{margin:0;}
-  .filterpro_like .f_title{font-weight:700;margin:0 0 8px;}
+  .filterpro_like .f_title{cursor:pointer;user-select:none;font-weight:700;margin:0 0 8px;}
   .filterpro_like .f_actions{margin:-6px 0 10px;}
   .filterpro_like .f_clear{font-size:12px;color:#666;text-decoration:underline;}
+
+  .filterpro_like .fp_collapsed .f_body{display:none;}
+
+  .filterpro_like .fp_tip{display:inline-block;margin-left:6px;width:16px;height:16px;line-height:16px;text-align:center;border-radius:50%;background:#eee;color:#555;font-size:12px;}
+
   .filterpro_like .f_list{list-style:none;margin:0;padding:0;}
   .filterpro_like .f_item{margin:0 0 6px;}
   .filterpro_like .f_item a{color:#333;text-decoration:none;}
   .filterpro_like .f_item a.active{font-weight:700;text-decoration:underline;}
   .filterpro_like .f_cnt{color:#999;font-weight:400;}
+
+  .filterpro_like .fp_checks .fp_check{display:flex;gap:8px;align-items:center;cursor:pointer;}
+  .filterpro_like .fp_checks input[type=checkbox]{margin:0;}
+
   .filterpro_like .f_colors{display:flex;flex-wrap:wrap;gap:6px;}
   .filterpro_like .f_color{display:inline-block;border:1px solid #ddd;padding:2px;border-radius:3px;}
   .filterpro_like .f_color.active{border-color:#fed700;}
   .filterpro_like .f_color img{display:block;width:22px;height:22px;object-fit:contain;}
+
   .filterpro_like .f_price .f_row{display:flex;gap:6px;align-items:center;margin:0 0 6px;}
   .filterpro_like .f_price input{width:100%;}
 </style>

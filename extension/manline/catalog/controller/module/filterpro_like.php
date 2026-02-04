@@ -66,20 +66,23 @@ class FilterproLike extends \Opencart\System\Engine\Controller {
 			return !empty($blocks[$key]['expanded']) ? 1 : 0;
 		};
 
+		// Block meta derived from admin config (used later to build $data['blocks'])
+		$block_meta = function (string $key, string $default_label) use ($blocks, $get_tip, $get_expanded): array {
+			$cfg = (isset($blocks[$key]) && is_array($blocks[$key])) ? $blocks[$key] : [];
+			return [
+				'key' => $key,
+				'label' => (string)($cfg['label'] ?? $default_label),
+				'display' => (string)($cfg['display'] ?? ''),
+				'expanded' => $get_expanded($key, 1) ? true : false,
+				'tooltip' => $get_tip($key),
+			];
+		};
+
 		$data['show_price'] = $block_on('price', true);
 		$data['show_manufacturer'] = $block_on('manufacturer', true);
 		$data['show_color'] = $block_on('color', true);
 		$data['show_style'] = $block_on('style', true);
-
-		$data['tip_price'] = $get_tip('price');
-		$data['tip_manufacturer'] = $get_tip('manufacturer');
-		$data['tip_color'] = $get_tip('color');
-		$data['tip_style'] = $get_tip('style');
-
-		$data['exp_price'] = $get_expanded('price', 1);
-		$data['exp_manufacturer'] = $get_expanded('manufacturer', 1);
-		$data['exp_color'] = $get_expanded('color', 1);
-		$data['exp_style'] = $get_expanded('style', 0);
+		$data['show_size'] = $block_on('size', false);
 
 		$get_display = function (string $key, string $default = 'checkbox') use ($blocks): string {
 			if (!isset($blocks[$key]) || !is_array($blocks[$key])) {
@@ -93,6 +96,7 @@ class FilterproLike extends \Opencart\System\Engine\Controller {
 		$data['disp_manufacturer'] = $get_display('manufacturer', 'checkbox');
 		$data['disp_color'] = $get_display('color', 'image');
 		$data['disp_style'] = $get_display('style', 'checkbox');
+		$data['disp_size'] = $get_display('size', 'checkbox');
 
 		// Determine category_id from path + keep full path string for SEO URLs
 		$category_id = 0;
@@ -385,6 +389,52 @@ class FilterproLike extends \Opencart\System\Engine\Controller {
 			];
 		}
 
+		// Size option (option_id=14, slug razmer-o)
+		$size_option_id = 14;
+		$size_option_slug = 'razmer-o';
+		$data['size_items'] = [];
+		$siz_q = $this->db->query(
+			"SELECT pov.option_value_id, ovd.name, ovd.slug, COUNT(DISTINCT pov.product_id) total " .
+			"FROM `" . DB_PREFIX . "product_to_category` p2c " .
+			"JOIN `" . DB_PREFIX . "product` p ON p.product_id=p2c.product_id AND p.status='1' AND p.date_available<=NOW() " .
+			"JOIN `" . DB_PREFIX . "product_option_value` pov ON pov.product_id=p.product_id AND pov.option_id='" . (int)$size_option_id . "' " .
+			"JOIN `" . DB_PREFIX . "option_value_description` ovd ON ovd.option_value_id=pov.option_value_id AND ovd.option_id='" . (int)$size_option_id . "' AND ovd.language_id='" . (int)$language_id . "' " .
+			"WHERE p2c.category_id='" . (int)$category_id . "' AND ovd.slug != '' " .
+			"GROUP BY pov.option_value_id ORDER BY ovd.name"
+		);
+		foreach ($siz_q->rows as $row) {
+			$slug = (string)$row['slug'];
+			$name = (string)$row['name'];
+			$total = (int)$row['total'];
+
+			$cur = $sel_slug;
+			$key = $size_option_slug;
+			$cur_vals = $cur[$key] ?? [];
+			$cur_vals = array_values(array_unique(array_filter(array_map('strval', (array)$cur_vals))));
+			$sel = in_array($slug, $cur_vals, true);
+
+			if ($sel) {
+				$cur_vals = array_values(array_filter($cur_vals, static fn($v) => $v !== $slug));
+			} else {
+				$cur_vals[] = $slug;
+				$cur_vals = array_values(array_unique($cur_vals));
+			}
+
+			if ($cur_vals) {
+				$cur[$key] = $cur_vals;
+			} else {
+				unset($cur[$key]);
+			}
+
+			$data['size_items'][] = [
+				'slug' => $slug,
+				'name' => $name,
+				'total' => $total,
+				'selected' => $sel,
+				'url' => $build_url($cur),
+			];
+		}
+
 		// Style attribute (attribute_id=23)
 		$style_attr_id = 23;
 		$style_attr_slug = 'stil';
@@ -437,6 +487,96 @@ class FilterproLike extends \Opencart\System\Engine\Controller {
 				'selected' => $sel,
 				'url' => $build_url($cur),
 			];
+		}
+
+		// Build ordered blocks list from admin config (avoid hardcoded template sections)
+		$data['blocks'] = [];
+		$blocks_cfg = (isset($setting['blocks']) && is_array($setting['blocks'])) ? $setting['blocks'] : [];
+		foreach ($blocks_cfg as $key => $cfg) {
+			$key = (string)$key;
+			if ($key === '' || !is_array($cfg)) continue;
+			$display = (string)($cfg['display'] ?? '');
+			if ($display === 'hide') continue;
+
+			if ($key === 'price' && $data['show_price']) {
+				$meta = $block_meta('price', ($data['is_ua'] ? 'Ціна' : 'Цена'));
+				$meta['type'] = 'price';
+				$meta['display'] = $data['disp_price'];
+				$meta['price'] = [
+					'min_floor' => $data['price_min_floor'],
+					'max_ceil' => $data['price_max_ceil'],
+					'selected_min' => $data['selected_min_price'],
+					'selected_max' => $data['selected_max_price'],
+					'action' => $data['price_form_action'],
+				];
+				$data['blocks'][] = $meta;
+				continue;
+			}
+
+			if ($key === 'manufacturer' && $data['show_manufacturer'] && !empty($data['manufacturer_items'])) {
+				$meta = $block_meta('manufacturer', ($data['is_ua'] ? 'Виробники' : 'Производители'));
+				$meta['type'] = 'list';
+				$meta['display'] = $data['disp_manufacturer'];
+				$meta['items'] = array_map(static function ($m) {
+					return [
+						'label' => (string)$m['name'],
+						'total' => (int)$m['total'],
+						'selected' => !empty($m['selected']),
+						'url' => (string)$m['url'],
+					];
+				}, $data['manufacturer_items']);
+				$data['blocks'][] = $meta;
+				continue;
+			}
+
+			if ($key === 'color' && $data['show_color'] && !empty($data['color_items'])) {
+				$meta = $block_meta('color', ($data['is_ua'] ? 'Колір' : 'Цвет'));
+				$meta['type'] = 'list';
+				$meta['display'] = $data['disp_color'];
+				$meta['items'] = array_map(static function ($c) {
+					return [
+						'label' => (string)$c['name'],
+						'total' => (int)$c['total'],
+						'selected' => !empty($c['selected']),
+						'url' => (string)$c['url'],
+						'image' => (string)($c['image'] ?? ''),
+					];
+				}, $data['color_items']);
+				$data['blocks'][] = $meta;
+				continue;
+			}
+
+			if ($key === 'style' && $data['show_style'] && !empty($data['style_items'])) {
+				$meta = $block_meta('style', ($data['is_ua'] ? 'Стиль' : 'Стиль'));
+				$meta['type'] = 'list';
+				$meta['display'] = $data['disp_style'];
+				$meta['items'] = array_map(static function ($s) {
+					return [
+						'label' => (string)$s['text'],
+						'total' => (int)$s['total'],
+						'selected' => !empty($s['selected']),
+						'url' => (string)$s['url'],
+					];
+				}, $data['style_items']);
+				$data['blocks'][] = $meta;
+				continue;
+			}
+
+			if ($key === 'size' && $data['show_size'] && !empty($data['size_items'])) {
+				$meta = $block_meta('size', ($data['is_ua'] ? 'Розмір' : 'Размер'));
+				$meta['type'] = 'list';
+				$meta['display'] = $data['disp_size'];
+				$meta['items'] = array_map(static function ($s) {
+					return [
+						'label' => (string)$s['name'],
+						'total' => (int)$s['total'],
+						'selected' => !empty($s['selected']),
+						'url' => (string)$s['url'],
+					];
+				}, $data['size_items']);
+				$data['blocks'][] = $meta;
+				continue;
+			}
 		}
 
 		// Render from active theme template (DIR_TEMPLATE points to our theme folder)
