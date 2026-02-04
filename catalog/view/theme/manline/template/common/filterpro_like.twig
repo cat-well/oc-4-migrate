@@ -234,10 +234,60 @@
     }
   });
 
+  function fpAjaxUpdate(url) {
+    if (!url) return;
+
+    // fallback
+    if (!window.fetch || !window.DOMParser) {
+      window.location.href = url;
+      return;
+    }
+
+    var content = document.getElementById('content');
+    var list = document.getElementById('product-list');
+    var pag = document.querySelector('.pagination_w');
+
+    // If we are not on a category page yet, do normal navigation
+    if (!content || !list || !pag) {
+      window.location.href = url;
+      return;
+    }
+
+    content.classList.add('fp_loading');
+
+    fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+      .then(function(r){ return r.text(); })
+      .then(function(html){
+        var doc = new DOMParser().parseFromString(html, 'text/html');
+        var newList = doc.getElementById('product-list');
+        var newPag = doc.querySelector('.pagination_w');
+        var newSort = doc.getElementById('input-sort');
+        var newLimit = doc.getElementById('input-limit');
+        var curSort = document.getElementById('input-sort');
+        var curLimit = document.getElementById('input-limit');
+
+        if (newList) list.innerHTML = newList.innerHTML;
+        if (newPag) pag.innerHTML = newPag.innerHTML;
+        if (newSort && curSort) curSort.innerHTML = newSort.innerHTML;
+        if (newLimit && curLimit) curLimit.innerHTML = newLimit.innerHTML;
+
+        // update canonical/title from loaded doc (best effort)
+        if (doc.title) document.title = doc.title;
+
+        window.history.pushState({ fp: 1 }, '', url);
+      })
+      .catch(function(){
+        window.location.href = url;
+      })
+      .finally(function(){
+        content.classList.remove('fp_loading');
+      });
+  }
+
   if (applyBtn) {
     applyBtn.addEventListener('click', function(){
       var url = buildUrlFromSelection();
-      if (url) window.location.href = url;
+      if (url) fpAjaxUpdate(url);
     });
   }
 
@@ -306,6 +356,34 @@
     }
   });
 
+  // Pagination link hijack (AJAX)
+  document.addEventListener('click', function(e){
+    var a = e.target && (e.target.closest ? e.target.closest('.pagination_w a') : null);
+    if (!a) return;
+    var href = a.getAttribute('href');
+    if (!href) return;
+    e.preventDefault();
+    fpAjaxUpdate(href);
+  });
+
+  // Sort/limit change hijack (AJAX)
+  document.addEventListener('change', function(e){
+    var el = e.target;
+    if (!el) return;
+    if (el.id === 'input-sort' || el.id === 'input-limit') {
+      var url = el.value;
+      if (url) {
+        fpAjaxUpdate(url);
+      }
+    }
+  });
+
+  // Back/forward
+  window.addEventListener('popstate', function(){
+    // reload current URL via ajax to keep state in sync
+    fpAjaxUpdate(window.location.href);
+  });
+
   // Accordion
   document.addEventListener('click', function(e) {
     var t = e.target;
@@ -323,6 +401,7 @@
 
 <style>
   .filterpro_like .f_group{margin:0 0 18px;}
+  #content.fp_loading{opacity:.6;pointer-events:none;}
   .filterpro_like .f_title{cursor:pointer;user-select:none;font-weight:700;margin:0 0 8px;}
   .filterpro_like .f_actions{margin:-6px 0 10px;display:flex;gap:10px;align-items:center;}
   .filterpro_like .fp_apply{background:#fed700;border:1px solid #e8c800;color:#000;padding:2px 10px;border-radius:3px;}
