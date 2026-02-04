@@ -339,6 +339,75 @@ class Category extends \Opencart\System\Engine\Controller {
 				}
 			}
 
+			// Build current /f/ selection map (slugs) to preserve in pagination/sorts/limits links
+			$sel_slug = [];
+			if ($manufacturer_ids) {
+				$sel_slug['manufacturer'] = array_map('strval', $manufacturer_ids);
+			}
+			if (!empty($attribute_slug) && is_array($attribute_slug)) {
+				// map attribute_id -> attribute_slug keyword
+				foreach ($attribute_slug as $attr_id => $slugs) {
+					$attr_id = (int)$attr_id;
+					if ($attr_id <= 0 || !$slugs) continue;
+					$q = $this->db->query("SELECT slug FROM `" . DB_PREFIX . "attribute_description` WHERE language_id='" . (int)$this->config->get('config_language_id') . "' AND attribute_id='" . $attr_id . "' LIMIT 1");
+					if ($q->num_rows && $q->row['slug'] !== '') {
+						$k = (string)$q->row['slug'];
+						$sel_slug[$k] = array_values(array_unique(array_map('strval', (array)$slugs)));
+					}
+				}
+			}
+			if (!empty($option_value) && is_array($option_value)) {
+				foreach ($option_value as $opt_id => $ids) {
+					$opt_id = (int)$opt_id;
+					if ($opt_id <= 0 || !$ids) continue;
+					$opt_q = $this->db->query("SELECT slug FROM `" . DB_PREFIX . "option_description` WHERE language_id='" . (int)$this->config->get('config_language_id') . "' AND option_id='" . $opt_id . "' LIMIT 1");
+					if (!$opt_q->num_rows || $opt_q->row['slug'] === '') continue;
+					$opt_slug = (string)$opt_q->row['slug'];
+
+					$vals = [];
+					foreach ((array)$ids as $ov_id) {
+						$ov_id = (int)$ov_id;
+						if ($ov_id <= 0) continue;
+						$ov_q = $this->db->query("SELECT slug FROM `" . DB_PREFIX . "option_value_description` WHERE language_id='" . (int)$this->config->get('config_language_id') . "' AND option_id='" . $opt_id . "' AND option_value_id='" . $ov_id . "' LIMIT 1");
+						if ($ov_q->num_rows && $ov_q->row['slug'] !== '') {
+							$vals[] = (string)$ov_q->row['slug'];
+						}
+					}
+					$vals = array_values(array_unique(array_filter($vals)));
+					if ($vals) {
+						$sel_slug[$opt_slug] = $vals;
+					}
+				}
+			}
+			if (!empty($standard['stock'])) $sel_slug['stock'] = ['1'];
+			if (!empty($standard['special'])) $sel_slug['special'] = ['1'];
+			if (!empty($standard['new'])) $sel_slug['new'] = ['1'];
+
+			$build_f_url = function (string $base_url) use ($sel_slug): string {
+				if (!$sel_slug) return $base_url;
+				ksort($sel_slug);
+				$parts = [];
+				foreach ($sel_slug as $k => $vals) {
+					$vals = array_values(array_unique(array_filter(array_map('strval', (array)$vals), static fn($v) => $v !== '')));
+					if (!$vals) continue;
+					sort($vals);
+					$parts[] = $k . '_' . implode(',', $vals);
+				}
+				if (!$parts) return $base_url;
+
+				$base_path = $base_url;
+				$base_query = '';
+				$qpos = strpos($base_url, '?');
+				if ($qpos !== false) {
+					$base_path = substr($base_url, 0, $qpos);
+					$base_query = substr($base_url, $qpos + 1);
+				}
+
+				$url = rtrim($base_path, '/') . '/f/' . implode('/', $parts);
+				if ($base_query !== '') $url .= '?' . $base_query;
+				return $url;
+			};
+
 			$filter_data = [
 				'filter_category_id'    => $category_id,
 				'filter_sub_category'   => false,
@@ -560,11 +629,12 @@ class Category extends \Opencart\System\Engine\Controller {
 
 			$product_total = $this->model_catalog_product->getTotalProducts($filter_data);
 
+			$pagination_base = $this->url->link('product/category', 'language=' . $this->config->get('config_language') . $url . '&page={page}');
 			$data['pagination'] = $this->load->controller('common/pagination', [
 				'total' => $product_total,
 				'page'  => $page,
 				'limit' => $limit,
-				'url'   => $this->url->link('product/category', 'language=' . $this->config->get('config_language') . $url . '&page={page}')
+				'url'   => $build_f_url($pagination_base)
 			]);
 
 			$data['results'] = sprintf($this->language->get('text_pagination'), ($product_total) ? (($page - 1) * $limit) + 1 : 0, ((($page - 1) * $limit) > ($product_total - $limit)) ? $product_total : ((($page - 1) * $limit) + $limit), $product_total, ceil($product_total / $limit));
