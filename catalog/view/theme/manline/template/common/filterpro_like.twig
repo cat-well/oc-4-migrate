@@ -194,8 +194,20 @@
     return url;
   }
 
+  var fpApplyTimer = null;
+
   function markDirty() {
     if (applyBtn) applyBtn.disabled = false;
+  }
+
+  function scheduleApply(delayMs) {
+    delayMs = (typeof delayMs === 'number') ? delayMs : 450;
+    if (fpApplyTimer) clearTimeout(fpApplyTimer);
+    fpApplyTimer = setTimeout(function(){
+      var url = buildUrlFromSelection();
+      if (url) fpAjaxUpdate(url);
+      if (applyBtn) applyBtn.disabled = true;
+    }, delayMs);
   }
 
   // Toggle image tiles (multi-select) and enable Apply
@@ -209,6 +221,7 @@
         }
         a.classList.toggle('active');
         markDirty();
+        scheduleApply();
         return;
       }
     }
@@ -221,6 +234,7 @@
       }
       link.classList.toggle('active');
       markDirty();
+      scheduleApply();
       return;
     }
   });
@@ -286,10 +300,21 @@
 
   if (applyBtn) {
     applyBtn.addEventListener('click', function(){
+      // manual apply still works
       var url = buildUrlFromSelection();
       if (url) fpAjaxUpdate(url);
+      applyBtn.disabled = true;
     });
   }
+
+  // prevent price form submit from reloading page
+  document.addEventListener('submit', function(e){
+    var form = e.target;
+    if (form && form.matches && form.matches('form[data-fp-price]')) {
+      e.preventDefault();
+      scheduleApply(0);
+    }
+  });
 
   // Price slider sync (no AJAX; just keeps inputs in sync)
   document.querySelectorAll('form[data-fp-price]').forEach(function(form) {
@@ -345,14 +370,14 @@
     }
 
     if (minRange && maxRange) {
-      minRange.addEventListener('input', function(){ syncFromRanges(); markDirty(); });
-      maxRange.addEventListener('input', function(){ syncFromRanges(); markDirty(); });
+      minRange.addEventListener('input', function(){ syncFromRanges(); markDirty(); scheduleApply(600); });
+      maxRange.addEventListener('input', function(){ syncFromRanges(); markDirty(); scheduleApply(600); });
       syncFromRanges();
     }
 
     if (minNum && maxNum) {
-      minNum.addEventListener('change', function(){ syncFromNumbers(); markDirty(); });
-      maxNum.addEventListener('change', function(){ syncFromNumbers(); markDirty(); });
+      minNum.addEventListener('change', function(){ syncFromNumbers(); markDirty(); scheduleApply(300); });
+      maxNum.addEventListener('change', function(){ syncFromNumbers(); markDirty(); scheduleApply(300); });
     }
   });
 
