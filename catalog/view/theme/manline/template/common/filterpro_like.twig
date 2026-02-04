@@ -11,8 +11,12 @@
 
   {# Price #}
   {% if show_price %}
-    <div class="f_group">
-      <div class="f_title">{% if is_ua %}Ціна{% else %}Цена{% endif %}</div>
+    <div class="f_group {% if not exp_price %}fp_collapsed{% endif %}" data-fp-group>
+      <div class="f_title" data-fp-toggle>
+        {% if is_ua %}Ціна{% else %}Цена{% endif %}
+        {% if tip_price %}<span class="fp_tip" title="{{ tip_price }}">?</span>{% endif %}
+      </div>
+      <div class="f_body">
       <form method="get" action="{{ price_form_action }}" class="f_price">
         <div class="f_row">
           <label>{% if is_ua %}Від{% else %}От{% endif %}:</label>
@@ -24,13 +28,18 @@
         </div>
         <button type="submit" class="btn">OK</button>
       </form>
+      </div>
     </div>
   {% endif %}
 
   {# Manufacturers #}
   {% if show_manufacturer and manufacturer_items %}
-    <div class="f_group">
-      <div class="f_title">{% if is_ua %}Виробники{% else %}Производители{% endif %}</div>
+    <div class="f_group {% if not exp_manufacturer %}fp_collapsed{% endif %}" data-fp-group>
+      <div class="f_title" data-fp-toggle>
+        {% if is_ua %}Виробники{% else %}Производители{% endif %}
+        {% if tip_manufacturer %}<span class="fp_tip" title="{{ tip_manufacturer }}">?</span>{% endif %}
+      </div>
+      <div class="f_body">
       <ul class="f_list">
         {% for m in manufacturer_items %}
           <li class="f_item">
@@ -40,13 +49,18 @@
           </li>
         {% endfor %}
       </ul>
+      </div>
     </div>
   {% endif %}
 
   {# Colors (option_id=13) #}
   {% if show_color and color_items %}
-    <div class="f_group">
-      <div class="f_title">{% if is_ua %}Колір{% else %}Цвет{% endif %}</div>
+    <div class="f_group {% if not exp_color %}fp_collapsed{% endif %}" data-fp-group>
+      <div class="f_title" data-fp-toggle>
+        {% if is_ua %}Колір{% else %}Цвет{% endif %}
+        {% if tip_color %}<span class="fp_tip" title="{{ tip_color }}">?</span>{% endif %}
+      </div>
+      <div class="f_body">
       <div class="f_colors">
         {% for c in color_items %}
           <a class="f_color {% if c.selected %}active{% endif %}" href="{{ c.url }}" title="{{ c.name }} ({{ c.total }})">
@@ -58,13 +72,18 @@
           </a>
         {% endfor %}
       </div>
+      </div>
     </div>
   {% endif %}
 
   {# Style (attribute_id=23) #}
   {% if show_style and style_items %}
-    <div class="f_group">
-      <div class="f_title">{% if is_ua %}Стиль{% else %}Стиль{% endif %}</div>
+    <div class="f_group {% if not exp_style %}fp_collapsed{% endif %}" data-fp-group>
+      <div class="f_title" data-fp-toggle>
+        {% if is_ua %}Стиль{% else %}Стиль{% endif %}
+        {% if tip_style %}<span class="fp_tip" title="{{ tip_style }}">?</span>{% endif %}
+      </div>
+      <div class="f_body">
       <ul class="f_list">
         {% for s in style_items %}
           <li class="f_item">
@@ -74,13 +93,32 @@
           </li>
         {% endfor %}
       </ul>
+      </div>
     </div>
   {% endif %}
 
 </div>
 
+<script>
+  // Simple accordion behavior for FilterPro-like groups
+  document.addEventListener('click', function(e) {
+    var t = e.target;
+    // do not toggle when clicking on a link inside title
+    if (!t) return;
+    var title = t.closest && t.closest('[data-fp-toggle]');
+    if (!title) return;
+    var group = title.closest('[data-fp-group]');
+    if (!group) return;
+    if (t.closest('a')) return;
+    group.classList.toggle('fp_collapsed');
+  });
+</script>
+
 <style>
   .filterpro_like .f_group{margin:0 0 18px;}
+  .filterpro_like .f_title{cursor:pointer;user-select:none;}
+  .filterpro_like .fp_collapsed .f_body{display:none;}
+  .filterpro_like .fp_tip{display:inline-block;margin-left:6px;width:16px;height:16px;line-height:16px;text-align:center;border-radius:50%;background:#eee;color:#555;font-size:12px;}
   .filterpro_like .f_title{font-weight:700;margin:0 0 8px;}
   .filterpro_like .f_actions{margin:-6px 0 10px;}
   .filterpro_like .f_clear{font-size:12px;color:#666;text-decoration:underline;}

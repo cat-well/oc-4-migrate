@@ -83,7 +83,12 @@
                       <input type="checkbox" class="form-check-input" name="blocks[{{ key }}][expanded]" value="1" {% if b.expanded %}checked{% endif %}/>
                     </td>
                     <td>
-                      <textarea class="form-control" name="blocks[{{ key }}][tooltip]" rows="2">{{ b.tooltip }}</textarea>
+                      {% for language in languages %}
+                        <div class="input-group mb-2">
+                          <span class="input-group-text"><img src="language/{{ language.code }}/{{ language.code }}.png" alt="{{ language.name }}" title="{{ language.name }}"></span>
+                          <textarea class="form-control" name="blocks[{{ key }}][tooltip][{{ language.code }}]" rows="2">{{ b.tooltip[language.code] ?? '' }}</textarea>
+                        </div>
+                      {% endfor %}
                     </td>
                   </tr>
                 {% endfor %}

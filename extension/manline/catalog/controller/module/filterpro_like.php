@@ -40,10 +40,42 @@ class FilterproLike extends \Opencart\System\Engine\Controller {
 			return true;
 		};
 
+		// Helper: get per-language tooltip
+		$get_tip = function (string $key) use ($blocks, $lang_code): string {
+			if (!isset($blocks[$key]) || !is_array($blocks[$key])) {
+				return '';
+			}
+			$tip = $blocks[$key]['tooltip'] ?? '';
+			if (is_array($tip)) {
+				if (isset($tip[$lang_code])) return (string)$tip[$lang_code];
+				if (isset($tip['ru-ru'])) return (string)$tip['ru-ru'];
+				if (isset($tip['uk-ua'])) return (string)$tip['uk-ua'];
+				return '';
+			}
+			return (string)$tip;
+		};
+
+		$get_expanded = function (string $key, int $default = 1) use ($blocks): int {
+			if (!isset($blocks[$key]) || !is_array($blocks[$key])) {
+				return $default;
+			}
+			return !empty($blocks[$key]['expanded']) ? 1 : 0;
+		};
+
 		$data['show_price'] = $block_on('price', true);
 		$data['show_manufacturer'] = $block_on('manufacturer', true);
 		$data['show_color'] = $block_on('color', true);
 		$data['show_style'] = $block_on('style', true);
+
+		$data['tip_price'] = $get_tip('price');
+		$data['tip_manufacturer'] = $get_tip('manufacturer');
+		$data['tip_color'] = $get_tip('color');
+		$data['tip_style'] = $get_tip('style');
+
+		$data['exp_price'] = $get_expanded('price', 1);
+		$data['exp_manufacturer'] = $get_expanded('manufacturer', 1);
+		$data['exp_color'] = $get_expanded('color', 1);
+		$data['exp_style'] = $get_expanded('style', 0);
 
 		// Determine category_id from path + keep full path string for SEO URLs
 		$category_id = 0;

@@ -108,6 +108,10 @@ class FilterPro extends \Opencart\System\Engine\Controller {
 
 		$data['blocks'] = $module_info['blocks'] ?? $default_blocks;
 
+		// Languages
+		$this->load->model('localisation/language');
+		$data['languages'] = $this->model_localisation_language->getLanguages();
+
 		// Global binding (use one module instance on category pages)
 		$this->load->model('setting/setting');
 		$current_id = (int)$this->model_setting_setting->getValue('manline_filterpro_module_id');
@@ -150,11 +154,16 @@ class FilterPro extends \Opencart\System\Engine\Controller {
 			foreach ($post_info['blocks'] as $key => $b) {
 				$key = preg_replace('/[^a-z0-9_\-]/i', '', (string)$key);
 				if ($key === '') continue;
+				$tooltip = $b['tooltip'] ?? [];
+				if (!is_array($tooltip)) {
+					$tooltip = ['' => (string)$tooltip];
+				}
+
 				$norm[$key] = [
 					'label' => (string)($b['label'] ?? $key),
 					'display' => (string)($b['display'] ?? 'checkbox'),
 					'expanded' => !empty($b['expanded']) ? 1 : 0,
-					'tooltip' => (string)($b['tooltip'] ?? '')
+					'tooltip' => $tooltip
 				];
 			}
 		}
