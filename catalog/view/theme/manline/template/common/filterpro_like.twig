@@ -74,7 +74,7 @@
               {% for it in b.items %}
                 <li class="f_item">
                   <label class="fp_check">
-                    <input type="checkbox" {% if it.selected %}checked{% endif %} data-fp-key="{{ b.slug_key|default(b.key) }}" data-fp-val="{{ it.fp_val|default('') }}" />
+                    <input type="checkbox" {% if it.selected %}checked{% endif %} data-fp-key="{{ it.fp_key|default(b.slug_key|default(b.key)) }}" data-fp-val="{{ it.fp_val|default('') }}" />
                     <span class="fp_check_text">{{ it.label }} <span class="f_cnt">({{ it.total }})</span></span>
                   </label>
                 </li>
@@ -85,7 +85,7 @@
             <ul class="f_list" data-fp-list-group data-fp-key="{{ b.slug_key|default(b.key) }}">
               {% for it in b.items %}
                 <li class="f_item">
-                  <a href="{{ it.url }}" class="{% if it.selected %}active{% endif %}" data-fp-list data-fp-key="{{ b.slug_key|default(b.key) }}" data-fp-val="{{ it.fp_val|default('') }}">
+                  <a href="{{ it.url }}" class="{% if it.selected %}active{% endif %}" data-fp-list data-fp-key="{{ it.fp_key|default(b.slug_key|default(b.key)) }}" data-fp-val="{{ it.fp_val|default('') }}">
                     {{ it.label }} <span class="f_cnt">({{ it.total }})</span>
                   </a>
                 </li>

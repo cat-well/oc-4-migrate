@@ -618,31 +618,31 @@ class FilterproLike extends \Opencart\System\Engine\Controller {
 				$meta = $block_meta('standard', ($data['is_ua'] ? 'Стандартні фільтри' : 'Стандартные фильтры'));
 				$meta['type'] = 'list';
 				$meta['display'] = 'list';
-				$meta['slug_key'] = '__std';
 
 				// Standard toggles map to /f/ segments: stock_1 / special_1 / new_1
 				$items = [];
 				$std = [
-					'stock' => [
+					[
+						'key' => 'stock',
 						'label' => ($data['is_ua'] ? 'В наявності' : 'В наличии'),
-						'val' => 'stock',
 						'selected' => !empty($this->request->get['stock']),
 					],
-					'special' => [
+					[
+						'key' => 'special',
 						'label' => ($data['is_ua'] ? 'Акції' : 'Акция'),
-						'val' => 'special',
 						'selected' => !empty($this->request->get['special']),
 					],
-					'new' => [
+					[
+						'key' => 'new',
 						'label' => ($data['is_ua'] ? 'Новинки' : 'Новинки'),
-						'val' => 'new',
 						'selected' => !empty($this->request->get['new']),
 					],
 				];
 
 				foreach ($std as $s) {
+					$kstd = (string)$s['key'];
 					$cur = $sel_slug;
-					$kstd = (string)$s['val'];
+
 					if (!empty($s['selected'])) {
 						unset($cur[$kstd]);
 						$sel = true;
@@ -656,7 +656,8 @@ class FilterproLike extends \Opencart\System\Engine\Controller {
 						'total' => 0,
 						'selected' => $sel,
 						'url' => $build_url($cur),
-						'fp_val' => (string)$s['val'],
+						'fp_key' => $kstd,
+						'fp_val' => '1',
 					];
 				}
 
