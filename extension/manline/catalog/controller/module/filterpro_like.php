@@ -81,6 +81,19 @@ class FilterproLike extends \Opencart\System\Engine\Controller {
 		$data['exp_color'] = $get_expanded('color', 1);
 		$data['exp_style'] = $get_expanded('style', 0);
 
+		$get_display = function (string $key, string $default = 'checkbox') use ($blocks): string {
+			if (!isset($blocks[$key]) || !is_array($blocks[$key])) {
+				return $default;
+			}
+			$display = (string)($blocks[$key]['display'] ?? '');
+			return $display !== '' ? $display : $default;
+		};
+
+		$data['disp_price'] = $get_display('price', 'slider');
+		$data['disp_manufacturer'] = $get_display('manufacturer', 'checkbox');
+		$data['disp_color'] = $get_display('color', 'image');
+		$data['disp_style'] = $get_display('style', 'checkbox');
+
 		// Determine category_id from path + keep full path string for SEO URLs
 		$category_id = 0;
 		$path_str = '';

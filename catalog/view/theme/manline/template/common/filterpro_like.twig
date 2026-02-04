@@ -40,15 +40,30 @@
         {% if tip_manufacturer %}<span class="fp_tip" title="{{ tip_manufacturer }}">?</span>{% endif %}
       </div>
       <div class="f_body">
-      <ul class="f_list">
-        {% for m in manufacturer_items %}
-          <li class="f_item">
-            <a href="{{ m.url }}" class="{% if m.selected %}active{% endif %}">
-              {{ m.name }} <span class="f_cnt">({{ m.total }})</span>
-            </a>
-          </li>
-        {% endfor %}
-      </ul>
+
+      {% if disp_manufacturer == 'checkbox' %}
+        <ul class="f_list fp_checks">
+          {% for m in manufacturer_items %}
+            <li class="f_item">
+              <label class="fp_check">
+                <input type="checkbox" {% if m.selected %}checked{% endif %} data-fp-url="{{ m.url }}" />
+                <span class="fp_check_text">{{ m.name }} <span class="f_cnt">({{ m.total }})</span></span>
+              </label>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <ul class="f_list">
+          {% for m in manufacturer_items %}
+            <li class="f_item">
+              <a href="{{ m.url }}" class="{% if m.selected %}active{% endif %}">
+                {{ m.name }} <span class="f_cnt">({{ m.total }})</span>
+              </a>
+            </li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+
       </div>
     </div>
   {% endif %}
@@ -61,17 +76,32 @@
         {% if tip_color %}<span class="fp_tip" title="{{ tip_color }}">?</span>{% endif %}
       </div>
       <div class="f_body">
-      <div class="f_colors">
-        {% for c in color_items %}
-          <a class="f_color {% if c.selected %}active{% endif %}" href="{{ c.url }}" title="{{ c.name }} ({{ c.total }})">
-            {% if c.image %}
-              <img src="image/{{ c.image }}" alt="{{ c.name }}" />
-            {% else %}
-              <span>{{ c.name }}</span>
-            {% endif %}
-          </a>
-        {% endfor %}
-      </div>
+
+      {% if disp_color == 'checkbox' or disp_color == 'list' %}
+        <ul class="f_list fp_checks">
+          {% for c in color_items %}
+            <li class="f_item">
+              <label class="fp_check">
+                <input type="checkbox" {% if c.selected %}checked{% endif %} data-fp-url="{{ c.url }}" />
+                <span class="fp_check_text">{{ c.name }} <span class="f_cnt">({{ c.total }})</span></span>
+              </label>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <div class="f_colors">
+          {% for c in color_items %}
+            <a class="f_color {% if c.selected %}active{% endif %}" href="{{ c.url }}" title="{{ c.name }} ({{ c.total }})">
+              {% if c.image %}
+                <img src="image/{{ c.image }}" alt="{{ c.name }}" />
+              {% else %}
+                <span>{{ c.name }}</span>
+              {% endif %}
+            </a>
+          {% endfor %}
+        </div>
+      {% endif %}
+
       </div>
     </div>
   {% endif %}
@@ -84,15 +114,30 @@
         {% if tip_style %}<span class="fp_tip" title="{{ tip_style }}">?</span>{% endif %}
       </div>
       <div class="f_body">
-      <ul class="f_list">
-        {% for s in style_items %}
-          <li class="f_item">
-            <a href="{{ s.url }}" class="{% if s.selected %}active{% endif %}">
-              {{ s.text }} <span class="f_cnt">({{ s.total }})</span>
-            </a>
-          </li>
-        {% endfor %}
-      </ul>
+
+      {% if disp_style == 'checkbox' %}
+        <ul class="f_list fp_checks">
+          {% for s in style_items %}
+            <li class="f_item">
+              <label class="fp_check">
+                <input type="checkbox" {% if s.selected %}checked{% endif %} data-fp-url="{{ s.url }}" />
+                <span class="fp_check_text">{{ s.text }} <span class="f_cnt">({{ s.total }})</span></span>
+              </label>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <ul class="f_list">
+          {% for s in style_items %}
+            <li class="f_item">
+              <a href="{{ s.url }}" class="{% if s.selected %}active{% endif %}">
+                {{ s.text }} <span class="f_cnt">({{ s.total }})</span>
+              </a>
+            </li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+
       </div>
     </div>
   {% endif %}
@@ -101,6 +146,16 @@
 
 <script>
   // Simple accordion behavior for FilterPro-like groups
+  // Checkbox navigation (keep link-based URLs)
+  document.addEventListener('change', function(e) {
+    var el = e.target;
+    if (!el) return;
+    if (el.matches && el.matches('input[type="checkbox"][data-fp-url]')) {
+      var url = el.getAttribute('data-fp-url');
+      if (url) window.location.href = url;
+    }
+  });
+
   document.addEventListener('click', function(e) {
     var t = e.target;
     // do not toggle when clicking on a link inside title
@@ -110,6 +165,7 @@
     var group = title.closest('[data-fp-group]');
     if (!group) return;
     if (t.closest('a')) return;
+    if (t.closest('label')) return;
     group.classList.toggle('fp_collapsed');
   });
 </script>
@@ -119,6 +175,8 @@
   .filterpro_like .f_title{cursor:pointer;user-select:none;}
   .filterpro_like .fp_collapsed .f_body{display:none;}
   .filterpro_like .fp_tip{display:inline-block;margin-left:6px;width:16px;height:16px;line-height:16px;text-align:center;border-radius:50%;background:#eee;color:#555;font-size:12px;}
+  .filterpro_like .fp_checks .fp_check{display:flex;gap:8px;align-items:center;cursor:pointer;}
+  .filterpro_like .fp_checks input[type=checkbox]{margin:0;}
   .filterpro_like .f_title{font-weight:700;margin:0 0 8px;}
   .filterpro_like .f_actions{margin:-6px 0 10px;}
   .filterpro_like .f_clear{font-size:12px;color:#666;text-decoration:underline;}
