@@ -26,16 +26,13 @@
   </div>
 
   {# Manufacturers #}
-  {% if manufacturers %}
+  {% if manufacturer_items %}
     <div class="f_group">
       <div class="f_title">{{ is_ua ? 'Виробники' : 'Производители' }}</div>
       <ul class="f_list">
-        {% for m in manufacturers %}
-          {% set sel = selected_slug.manufacturer is defined and (m.id|string in selected_slug.manufacturer) %}
-          {% set new = selected_slug|merge({ 'manufacturer': (sel ? (selected_slug.manufacturer|filter(v => v != (m.id|string))) : ((selected_slug.manufacturer is defined ? selected_slug.manufacturer : [])|merge([m.id|string])) ) }) %}
-          {% set url = build_url(new) %}
+        {% for m in manufacturer_items %}
           <li class="f_item">
-            <a href="{{ url }}" class="{{ sel ? 'active' : '' }}">
+            <a href="{{ m.url }}" class="{{ m.selected ? 'active' : '' }}">
               {{ m.name }} <span class="f_cnt">({{ m.total }})</span>
             </a>
           </li>
@@ -45,18 +42,12 @@
   {% endif %}
 
   {# Colors (option_id=13) #}
-  {% if colors %}
+  {% if color_items %}
     <div class="f_group">
       <div class="f_title">{{ is_ua ? 'Колір' : 'Цвет' }}</div>
       <div class="f_colors">
-        {% for c in colors %}
-          {% set key = c.option_slug %}
-          {% set selvals = (selected_slug[key] is defined ? selected_slug[key] : []) %}
-          {% set sel = (c.slug in selvals) %}
-          {% set newvals = sel ? (selvals|filter(v => v != c.slug)) : (selvals|merge([c.slug])) %}
-          {% set new = selected_slug|merge({ (key): newvals }) %}
-          {% set url = build_url(new) %}
-          <a class="f_color {{ sel ? 'active' : '' }}" href="{{ url }}" title="{{ c.name }} ({{ c.total }})">
+        {% for c in color_items %}
+          <a class="f_color {{ c.selected ? 'active' : '' }}" href="{{ c.url }}" title="{{ c.name }} ({{ c.total }})">
             {% if c.image %}
               <img src="image/{{ c.image }}" alt="{{ c.name }}" />
             {% else %}
@@ -69,19 +60,13 @@
   {% endif %}
 
   {# Style (attribute_id=23) #}
-  {% if styles %}
+  {% if style_items %}
     <div class="f_group">
       <div class="f_title">{{ is_ua ? 'Стиль' : 'Стиль' }}</div>
       <ul class="f_list">
-        {% for s in styles %}
-          {% set key = s.attribute_slug %}
-          {% set selvals = (selected_slug[key] is defined ? selected_slug[key] : []) %}
-          {% set sel = (s.slug in selvals) %}
-          {% set newvals = sel ? (selvals|filter(v => v != s.slug)) : (selvals|merge([s.slug])) %}
-          {% set new = selected_slug|merge({ (key): newvals }) %}
-          {% set url = build_url(new) %}
+        {% for s in style_items %}
           <li class="f_item">
-            <a href="{{ url }}" class="{{ sel ? 'active' : '' }}">
+            <a href="{{ s.url }}" class="{{ s.selected ? 'active' : '' }}">
               {{ s.text }} <span class="f_cnt">({{ s.total }})</span>
             </a>
           </li>

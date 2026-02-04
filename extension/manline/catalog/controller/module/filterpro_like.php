@@ -154,7 +154,7 @@ class FilterproLike extends \Opencart\System\Engine\Controller {
 		$data['selected_slug'] = $sel_slug;
 
 		// Helper: build /f/ URL from selection slug-map
-		$data['build_url'] = function (array $sel) use ($base) {
+		$build_url = function (array $sel) use ($base): string {
 			ksort($sel);
 			$parts = [];
 			foreach ($sel as $k => $vals) {
@@ -171,8 +171,11 @@ class FilterproLike extends \Opencart\System\Engine\Controller {
 			return $base;
 		};
 
+		$data['build_url'] = $build_url;
+
 		// Manufacturers available in category
 		$data['manufacturers'] = [];
+		$data['manufacturer_items'] = [];
 		$m_q = $this->db->query(
 			"SELECT p.manufacturer_id, m.name, COUNT(DISTINCT p.product_id) total " .
 			"FROM `" . DB_PREFIX . "product_to_category` p2c " .
@@ -182,10 +185,36 @@ class FilterproLike extends \Opencart\System\Engine\Controller {
 			"GROUP BY p.manufacturer_id ORDER BY m.name"
 		);
 		foreach ($m_q->rows as $row) {
-			$data['manufacturers'][] = [
-				'id' => (int)$row['manufacturer_id'],
-				'name' => (string)$row['name'],
-				'total' => (int)$row['total'],
+			$id = (int)$row['manufacturer_id'];
+			$name = (string)$row['name'];
+			$total = (int)$row['total'];
+
+			$data['manufacturers'][] = ['id' => $id, 'name' => $name, 'total' => $total];
+
+			$cur = $sel_slug;
+			$cur_ids = $cur['manufacturer'] ?? [];
+			$cur_ids = array_values(array_unique(array_filter(array_map('strval', (array)$cur_ids))));
+			$sel = in_array((string)$id, $cur_ids, true);
+
+			if ($sel) {
+				$cur_ids = array_values(array_filter($cur_ids, static fn($v) => $v !== (string)$id));
+			} else {
+				$cur_ids[] = (string)$id;
+				$cur_ids = array_values(array_unique($cur_ids));
+			}
+
+			if ($cur_ids) {
+				$cur['manufacturer'] = $cur_ids;
+			} else {
+				unset($cur['manufacturer']);
+			}
+
+			$data['manufacturer_items'][] = [
+				'id' => $id,
+				'name' => $name,
+				'total' => $total,
+				'selected' => $sel,
+				'url' => $build_url($cur),
 			];
 		}
 
@@ -205,6 +234,7 @@ class FilterproLike extends \Opencart\System\Engine\Controller {
 		$color_option_id = 13;
 		$color_option_slug = 'tsvet-o';
 		$data['colors'] = [];
+		$data['color_items'] = [];
 		$c_q = $this->db->query(
 			"SELECT pov.option_value_id, ov.image, ovd.name, ovd.slug, COUNT(DISTINCT pov.product_id) total " .
 			"FROM `" . DB_PREFIX . "product_to_category` p2c " .
@@ -216,14 +246,47 @@ class FilterproLike extends \Opencart\System\Engine\Controller {
 			"GROUP BY pov.option_value_id ORDER BY ovd.name"
 		);
 		foreach ($c_q->rows as $row) {
+			$slug = (string)$row['slug'];
+			$name = (string)$row['name'];
+			$total = (int)$row['total'];
+			$image = (string)$row['image'];
+
 			$data['colors'][] = [
 				'option_id' => $color_option_id,
 				'option_slug' => $color_option_slug,
 				'id' => (int)$row['option_value_id'],
-				'slug' => (string)$row['slug'],
-				'name' => (string)$row['name'],
-				'image' => (string)$row['image'],
-				'total' => (int)$row['total'],
+				'slug' => $slug,
+				'name' => $name,
+				'image' => $image,
+				'total' => $total,
+			];
+
+			$cur = $sel_slug;
+			$key = $color_option_slug;
+			$cur_vals = $cur[$key] ?? [];
+			$cur_vals = array_values(array_unique(array_filter(array_map('strval', (array)$cur_vals))));
+			$sel = in_array($slug, $cur_vals, true);
+
+			if ($sel) {
+				$cur_vals = array_values(array_filter($cur_vals, static fn($v) => $v !== $slug));
+			} else {
+				$cur_vals[] = $slug;
+				$cur_vals = array_values(array_unique($cur_vals));
+			}
+
+			if ($cur_vals) {
+				$cur[$key] = $cur_vals;
+			} else {
+				unset($cur[$key]);
+			}
+
+			$data['color_items'][] = [
+				'slug' => $slug,
+				'name' => $name,
+				'total' => $total,
+				'image' => $image,
+				'selected' => $sel,
+				'url' => $build_url($cur),
 			];
 		}
 
@@ -231,6 +294,7 @@ class FilterproLike extends \Opencart\System\Engine\Controller {
 		$style_attr_id = 23;
 		$style_attr_slug = 'stil';
 		$data['styles'] = [];
+		$data['style_items'] = [];
 		$s_q = $this->db->query(
 			"SELECT pa.slug, pa.text, COUNT(DISTINCT pa.product_id) total " .
 			"FROM `" . DB_PREFIX . "product_to_category` p2c " .
@@ -240,12 +304,43 @@ class FilterproLike extends \Opencart\System\Engine\Controller {
 			"GROUP BY pa.slug, pa.text ORDER BY pa.text"
 		);
 		foreach ($s_q->rows as $row) {
+			$slug = (string)$row['slug'];
+			$text = (string)$row['text'];
+			$total = (int)$row['total'];
+
 			$data['styles'][] = [
 				'attribute_id' => $style_attr_id,
 				'attribute_slug' => $style_attr_slug,
-				'slug' => (string)$row['slug'],
-				'text' => (string)$row['text'],
-				'total' => (int)$row['total'],
+				'slug' => $slug,
+				'text' => $text,
+				'total' => $total,
+			];
+
+			$cur = $sel_slug;
+			$key = $style_attr_slug;
+			$cur_vals = $cur[$key] ?? [];
+			$cur_vals = array_values(array_unique(array_filter(array_map('strval', (array)$cur_vals))));
+			$sel = in_array($slug, $cur_vals, true);
+
+			if ($sel) {
+				$cur_vals = array_values(array_filter($cur_vals, static fn($v) => $v !== $slug));
+			} else {
+				$cur_vals[] = $slug;
+				$cur_vals = array_values(array_unique($cur_vals));
+			}
+
+			if ($cur_vals) {
+				$cur[$key] = $cur_vals;
+			} else {
+				unset($cur[$key]);
+			}
+
+			$data['style_items'][] = [
+				'slug' => $slug,
+				'text' => $text,
+				'total' => $total,
+				'selected' => $sel,
+				'url' => $build_url($cur),
 			];
 		}
 
