@@ -48,9 +48,9 @@
         {% else %}
 
           {% if b.display == 'image' %}
-            <div class="f_colors">
+            <div class="f_colors" data-fp-image-group data-fp-key="{{ b.slug_key|default(b.key) }}">
               {% for it in b.items %}
-                <a class="f_color {% if it.selected %}active{% endif %}" href="{{ it.url }}" title="{{ it.label }} ({{ it.total }})">
+                <a class="f_color {% if it.selected %}active{% endif %}" href="{{ it.url }}" title="{{ it.label }} ({{ it.total }})" data-fp-val="{{ it.fp_val|default('') }}">
                   {% if it.image %}
                     <img src="image/{{ it.image }}" alt="{{ it.label }}" />
                   {% else %}
@@ -96,13 +96,15 @@
   var fpRoot = document.getElementById('filterpro');
   var applyBtn = document.getElementById('fp-apply');
 
-  function buildUrlFromChecks() {
+  function buildUrlFromSelection() {
     if (!fpRoot) return null;
     var basePath = fpRoot.getAttribute('data-fp-base-path') || '';
     var baseQuery = fpRoot.getAttribute('data-fp-base-query') || '';
     var baseUrl = fpRoot.getAttribute('data-fp-base-url') || basePath;
 
     var sel = {};
+
+    // checkboxes
     fpRoot.querySelectorAll('input[type="checkbox"][data-fp-key][data-fp-val]').forEach(function(cb){
       if (!cb.checked) return;
       var k = cb.getAttribute('data-fp-key') || '';
@@ -110,6 +112,18 @@
       if (!k || !v) return;
       if (!sel[k]) sel[k] = [];
       sel[k].push(String(v));
+    });
+
+    // image tiles (selected via .active)
+    fpRoot.querySelectorAll('[data-fp-image-group]').forEach(function(group){
+      var k = group.getAttribute('data-fp-key') || '';
+      if (!k) return;
+      group.querySelectorAll('a.f_color.active[data-fp-val]').forEach(function(a){
+        var v = a.getAttribute('data-fp-val') || '';
+        if (!v) return;
+        if (!sel[k]) sel[k] = [];
+        sel[k].push(String(v));
+      });
     });
 
     var keys = Object.keys(sel).sort();
@@ -133,6 +147,17 @@
     if (applyBtn) applyBtn.disabled = false;
   }
 
+  // Toggle image tiles (multi-select) and enable Apply
+  document.addEventListener('click', function(e){
+    var a = e.target && (e.target.closest ? e.target.closest('a.f_color[data-fp-val]') : null);
+    if (!a) return;
+    var group = a.closest && a.closest('[data-fp-image-group]');
+    if (!group) return;
+    e.preventDefault();
+    a.classList.toggle('active');
+    markDirty();
+  });
+
   // When user changes any checkbox, enable Apply
   document.addEventListener('change', function(e) {
     var el = e.target;
@@ -144,7 +169,7 @@
 
   if (applyBtn) {
     applyBtn.addEventListener('click', function(){
-      var url = buildUrlFromChecks();
+      var url = buildUrlFromSelection();
       if (url) window.location.href = url;
     });
   }
