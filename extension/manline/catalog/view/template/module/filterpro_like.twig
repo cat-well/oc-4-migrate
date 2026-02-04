@@ -1,0 +1,111 @@
+{# Minimal FilterPro-like sidebar (temporary) #}
+
+<div id="filterpro" class="filterpro_like">
+
+  <div class="f_group">
+    <div class="f_title">{{ is_ua ? 'Фільтр' : 'Фильтр' }}</div>
+    <div class="f_actions">
+      <a class="f_clear" href="{{ base_url }}">{{ is_ua ? 'Скинути' : 'Сбросить' }}</a>
+    </div>
+  </div>
+
+  {# Price #}
+  <div class="f_group">
+    <div class="f_title">{{ is_ua ? 'Ціна' : 'Цена' }}</div>
+    <form method="get" action="{{ build_url(selected_slug) }}" class="f_price">
+      <div class="f_row">
+        <label>{{ is_ua ? 'Від' : 'От' }}:</label>
+        <input type="number" name="min_price" value="{{ selected.min_price is not null ? selected.min_price : '' }}" min="{{ price_bounds.min|round(0,'floor') }}" placeholder="{{ price_bounds.min|round(0,'floor') }}" />
+      </div>
+      <div class="f_row">
+        <label>{{ is_ua ? 'До' : 'До' }}:</label>
+        <input type="number" name="max_price" value="{{ selected.max_price is not null ? selected.max_price : '' }}" max="{{ price_bounds.max|round(0,'ceil') }}" placeholder="{{ price_bounds.max|round(0,'ceil') }}" />
+      </div>
+      <button type="submit" class="btn">OK</button>
+    </form>
+  </div>
+
+  {# Manufacturers #}
+  {% if manufacturers %}
+    <div class="f_group">
+      <div class="f_title">{{ is_ua ? 'Виробники' : 'Производители' }}</div>
+      <ul class="f_list">
+        {% for m in manufacturers %}
+          {% set sel = selected_slug.manufacturer is defined and (m.id|string in selected_slug.manufacturer) %}
+          {% set new = selected_slug|merge({ 'manufacturer': (sel ? (selected_slug.manufacturer|filter(v => v != (m.id|string))) : ((selected_slug.manufacturer is defined ? selected_slug.manufacturer : [])|merge([m.id|string])) ) }) %}
+          {% set url = build_url(new) %}
+          <li class="f_item">
+            <a href="{{ url }}" class="{{ sel ? 'active' : '' }}">
+              {{ m.name }} <span class="f_cnt">({{ m.total }})</span>
+            </a>
+          </li>
+        {% endfor %}
+      </ul>
+    </div>
+  {% endif %}
+
+  {# Colors (option_id=13) #}
+  {% if colors %}
+    <div class="f_group">
+      <div class="f_title">{{ is_ua ? 'Колір' : 'Цвет' }}</div>
+      <div class="f_colors">
+        {% for c in colors %}
+          {% set key = c.option_slug %}
+          {% set selvals = (selected_slug[key] is defined ? selected_slug[key] : []) %}
+          {% set sel = (c.slug in selvals) %}
+          {% set newvals = sel ? (selvals|filter(v => v != c.slug)) : (selvals|merge([c.slug])) %}
+          {% set new = selected_slug|merge({ (key): newvals }) %}
+          {% set url = build_url(new) %}
+          <a class="f_color {{ sel ? 'active' : '' }}" href="{{ url }}" title="{{ c.name }} ({{ c.total }})">
+            {% if c.image %}
+              <img src="image/{{ c.image }}" alt="{{ c.name }}" />
+            {% else %}
+              <span>{{ c.name }}</span>
+            {% endif %}
+          </a>
+        {% endfor %}
+      </div>
+    </div>
+  {% endif %}
+
+  {# Style (attribute_id=23) #}
+  {% if styles %}
+    <div class="f_group">
+      <div class="f_title">{{ is_ua ? 'Стиль' : 'Стиль' }}</div>
+      <ul class="f_list">
+        {% for s in styles %}
+          {% set key = s.attribute_slug %}
+          {% set selvals = (selected_slug[key] is defined ? selected_slug[key] : []) %}
+          {% set sel = (s.slug in selvals) %}
+          {% set newvals = sel ? (selvals|filter(v => v != s.slug)) : (selvals|merge([s.slug])) %}
+          {% set new = selected_slug|merge({ (key): newvals }) %}
+          {% set url = build_url(new) %}
+          <li class="f_item">
+            <a href="{{ url }}" class="{{ sel ? 'active' : '' }}">
+              {{ s.text }} <span class="f_cnt">({{ s.total }})</span>
+            </a>
+          </li>
+        {% endfor %}
+      </ul>
+    </div>
+  {% endif %}
+
+</div>
+
+<style>
+  .filterpro_like .f_group{margin:0 0 18px;}
+  .filterpro_like .f_title{font-weight:700;margin:0 0 8px;}
+  .filterpro_like .f_actions{margin:-6px 0 10px;}
+  .filterpro_like .f_clear{font-size:12px;color:#666;text-decoration:underline;}
+  .filterpro_like .f_list{list-style:none;margin:0;padding:0;}
+  .filterpro_like .f_item{margin:0 0 6px;}
+  .filterpro_like .f_item a{color:#333;text-decoration:none;}
+  .filterpro_like .f_item a.active{font-weight:700;text-decoration:underline;}
+  .filterpro_like .f_cnt{color:#999;font-weight:400;}
+  .filterpro_like .f_colors{display:flex;flex-wrap:wrap;gap:6px;}
+  .filterpro_like .f_color{display:inline-block;border:1px solid #ddd;padding:2px;border-radius:3px;}
+  .filterpro_like .f_color.active{border-color:#fed700;}
+  .filterpro_like .f_color img{display:block;width:22px;height:22px;object-fit:contain;}
+  .filterpro_like .f_price .f_row{display:flex;gap:6px;align-items:center;margin:0 0 6px;}
+  .filterpro_like .f_price input{width:100%;}
+</style>

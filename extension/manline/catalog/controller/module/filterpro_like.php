@@ -249,7 +249,7 @@ class FilterproLike extends \Opencart\System\Engine\Controller {
 			];
 		}
 
-		// Render using active theme templates (our theme does not auto-register extension template namespaces)
-		return $this->load->view('common/filterpro_like', $data);
+		// Render from extension template
+		return $this->load->view('extension/manline/module/filterpro_like', $data);
 	}
 }
