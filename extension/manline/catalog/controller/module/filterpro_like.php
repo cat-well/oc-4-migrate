@@ -225,10 +225,20 @@ class FilterproLike extends \Opencart\System\Engine\Controller {
 			"JOIN `" . DB_PREFIX . "product` p ON p.product_id=p2c.product_id AND p.status='1' AND p.date_available<=NOW() " .
 			"WHERE p2c.category_id='" . (int)$category_id . "'"
 		);
+		$min_price = isset($price_q->row['min_price']) ? (float)$price_q->row['min_price'] : 0.0;
+		$max_price = isset($price_q->row['max_price']) ? (float)$price_q->row['max_price'] : 0.0;
+
 		$data['price_bounds'] = [
-			'min' => isset($price_q->row['min_price']) ? (float)$price_q->row['min_price'] : 0,
-			'max' => isset($price_q->row['max_price']) ? (float)$price_q->row['max_price'] : 0,
+			'min' => $min_price,
+			'max' => $max_price,
 		];
+
+		// Precomputed values to avoid Twig filters incompatibilities
+		$data['price_min_floor'] = (int)floor($min_price);
+		$data['price_max_ceil'] = (int)ceil($max_price);
+		$data['selected_min_price'] = ($selected['min_price'] !== null) ? (string)$selected['min_price'] : '';
+		$data['selected_max_price'] = ($selected['max_price'] !== null) ? (string)$selected['max_price'] : '';
+		$data['price_form_action'] = $build_url($sel_slug);
 
 		// Color option (option_id=13)
 		$color_option_id = 13;
