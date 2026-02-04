@@ -429,8 +429,9 @@ class FilterproLike extends \Opencart\System\Engine\Controller {
 		// Precomputed values to avoid Twig filters incompatibilities
 		$data['price_min_floor'] = (int)floor($min_price);
 		$data['price_max_ceil'] = (int)ceil($max_price);
-		$data['selected_min_price'] = ($selected['min_price'] !== null) ? (string)$selected['min_price'] : '';
-		$data['selected_max_price'] = ($selected['max_price'] !== null) ? (string)$selected['max_price'] : '';
+		// Default selected values to bounds if not specified (to match OC2 FilterPro UX)
+		$data['selected_min_price'] = ($selected['min_price'] !== null) ? (string)$selected['min_price'] : (string)$data['price_min_floor'];
+		$data['selected_max_price'] = ($selected['max_price'] !== null) ? (string)$selected['max_price'] : (string)$data['price_max_ceil'];
 		$data['price_form_action'] = $build_url($sel_slug);
 
 		// Color option (option_id=13)
