@@ -21,9 +21,15 @@
           <form method="get" action="{{ b.price.action }}" class="f_price" data-fp-price>
 
             {% if b.display == 'slider' %}
-              <div class="fp_price_ranges">
+              <div class="fp_price_slider" data-fp-slider>
+                <div class="fp_track"></div>
+                <div class="fp_range" data-fp-range></div>
                 <input type="range" min="{{ b.price.min_floor }}" max="{{ b.price.max_ceil }}" value="{{ b.price.selected_min ?: b.price.min_floor }}" step="1" data-fp-min-range>
                 <input type="range" min="{{ b.price.min_floor }}" max="{{ b.price.max_ceil }}" value="{{ b.price.selected_max ?: b.price.max_ceil }}" step="1" data-fp-max-range>
+                <div class="fp_ticks">
+                  <span class="fp_tick">{{ b.price.min_floor }}</span>
+                  <span class="fp_tick">{{ b.price.max_ceil }}</span>
+                </div>
               </div>
             {% endif %}
 
@@ -101,8 +107,22 @@
     var maxRange = form.querySelector('[data-fp-max-range]');
     var minNum = form.querySelector('[data-fp-min-num]');
     var maxNum = form.querySelector('[data-fp-max-num]');
+    var rangeEl = form.querySelector('[data-fp-range]');
 
     function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+    function updateFill() {
+      if (!rangeEl || !minRange || !maxRange) return;
+      var lo = parseInt(minRange.min || '0', 10);
+      var hi = parseInt(minRange.max || '0', 10);
+      var vMin = parseInt(minRange.value || lo, 10);
+      var vMax = parseInt(maxRange.value || hi, 10);
+      var total = (hi - lo) || 1;
+      var left = ((vMin - lo) / total) * 100;
+      var right = ((vMax - lo) / total) * 100;
+      rangeEl.style.left = left + '%';
+      rangeEl.style.width = Math.max(0, right - left) + '%';
+    }
 
     function syncFromRanges() {
       if (!minRange || !maxRange) return;
@@ -115,6 +135,7 @@
       maxRange.value = vMax;
       if (minNum) minNum.value = vMin;
       if (maxNum) maxNum.value = vMax;
+      updateFill();
     }
 
     function syncFromNumbers() {
@@ -130,6 +151,7 @@
       maxNum.value = vMax;
       if (minRange) minRange.value = vMin;
       if (maxRange) maxRange.value = vMax;
+      updateFill();
     }
 
     if (minRange && maxRange) {
@@ -185,6 +207,13 @@
 
   .filterpro_like .f_price .f_row{display:flex;gap:6px;align-items:center;margin:0 0 6px;}
   .filterpro_like .f_price input{width:100%;}
-  .filterpro_like .fp_price_ranges{display:flex;flex-direction:column;gap:6px;margin:0 0 10px;}
-  .filterpro_like .fp_price_ranges input[type=range]{width:100%;}
+  .filterpro_like .fp_price_slider{position:relative;margin:0 0 12px;padding:10px 0 18px;}
+  .filterpro_like .fp_price_slider .fp_track{position:absolute;left:0;right:0;top:18px;height:4px;background:#e5e5e5;border-radius:2px;}
+  .filterpro_like .fp_price_slider .fp_range{position:absolute;top:18px;height:4px;background:#fed700;border-radius:2px;}
+  .filterpro_like .fp_price_slider input[type=range]{position:absolute;left:0;right:0;top:10px;width:100%;pointer-events:none;background:transparent;-webkit-appearance:none;appearance:none;height:30px;margin:0;}
+  .filterpro_like .fp_price_slider input[type=range]::-webkit-slider-thumb{pointer-events:auto;-webkit-appearance:none;appearance:none;width:14px;height:14px;border-radius:50%;background:#333;border:2px solid #fff;box-shadow:0 1px 2px rgba(0,0,0,.25);}
+  .filterpro_like .fp_price_slider input[type=range]::-moz-range-thumb{pointer-events:auto;width:14px;height:14px;border-radius:50%;background:#333;border:2px solid #fff;box-shadow:0 1px 2px rgba(0,0,0,.25);}
+  .filterpro_like .fp_price_slider input[type=range]::-webkit-slider-runnable-track{height:4px;background:transparent;}
+  .filterpro_like .fp_price_slider input[type=range]::-moz-range-track{height:4px;background:transparent;}
+  .filterpro_like .fp_price_slider .fp_ticks{display:flex;justify-content:space-between;font-size:11px;color:#777;margin-top:20px;}
 </style>
