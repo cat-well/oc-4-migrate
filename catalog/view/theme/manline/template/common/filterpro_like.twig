@@ -73,10 +73,10 @@
             </ul>
 
           {% else %}
-            <ul class="f_list">
+            <ul class="f_list" data-fp-list-group data-fp-key="{{ b.slug_key|default(b.key) }}">
               {% for it in b.items %}
                 <li class="f_item">
-                  <a href="{{ it.url }}" class="{% if it.selected %}active{% endif %}">
+                  <a href="{{ it.url }}" class="{% if it.selected %}active{% endif %}" data-fp-list data-fp-key="{{ b.slug_key|default(b.key) }}" data-fp-val="{{ it.fp_val|default('') }}">
                     {{ it.label }} <span class="f_cnt">({{ it.total }})</span>
                   </a>
                 </li>
@@ -120,6 +120,15 @@
         if (!sel[k]) sel[k] = [];
         sel[k].push(String(v));
       });
+    });
+
+    // list links (selected via .active)
+    fpRoot.querySelectorAll('a[data-fp-list].active[data-fp-key][data-fp-val]').forEach(function(a){
+      var k = a.getAttribute('data-fp-key') || '';
+      var v = a.getAttribute('data-fp-val') || '';
+      if (!k || !v) return;
+      if (!sel[k]) sel[k] = [];
+      sel[k].push(String(v));
     });
 
     // de-dup + sort
@@ -166,12 +175,28 @@
   // Toggle image tiles (multi-select) and enable Apply
   document.addEventListener('click', function(e){
     var a = e.target && (e.target.closest ? e.target.closest('a.f_color[data-fp-val]') : null);
-    if (!a) return;
-    var group = a.closest && a.closest('[data-fp-image-group]');
-    if (!group) return;
-    e.preventDefault();
-    a.classList.toggle('active');
-    markDirty();
+    if (a) {
+      var group = a.closest && a.closest('[data-fp-image-group]');
+      if (group) {
+        if (!(e.metaKey || e.ctrlKey || e.shiftKey || e.altKey)) {
+          e.preventDefault();
+        }
+        a.classList.toggle('active');
+        markDirty();
+        return;
+      }
+    }
+
+    // Toggle list links (multi-select) and enable Apply
+    var link = e.target && (e.target.closest ? e.target.closest('a[data-fp-list][data-fp-val]') : null);
+    if (link && fpRoot && fpRoot.contains(link)) {
+      if (!(e.metaKey || e.ctrlKey || e.shiftKey || e.altKey)) {
+        e.preventDefault();
+      }
+      link.classList.toggle('active');
+      markDirty();
+      return;
+    }
   });
 
   // When user changes any checkbox, enable Apply
