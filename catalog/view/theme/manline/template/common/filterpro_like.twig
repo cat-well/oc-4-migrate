@@ -18,14 +18,22 @@
 
       <div class="f_body">
         {% if b.type == 'price' %}
-          <form method="get" action="{{ b.price.action }}" class="f_price">
+          <form method="get" action="{{ b.price.action }}" class="f_price" data-fp-price>
+
+            {% if b.display == 'slider' %}
+              <div class="fp_price_ranges">
+                <input type="range" min="{{ b.price.min_floor }}" max="{{ b.price.max_ceil }}" value="{{ b.price.selected_min ?: b.price.min_floor }}" step="1" data-fp-min-range>
+                <input type="range" min="{{ b.price.min_floor }}" max="{{ b.price.max_ceil }}" value="{{ b.price.selected_max ?: b.price.max_ceil }}" step="1" data-fp-max-range>
+              </div>
+            {% endif %}
+
             <div class="f_row">
               <label>{% if is_ua %}Від{% else %}От{% endif %}:</label>
-              <input type="number" name="min_price" value="{{ b.price.selected_min }}" min="{{ b.price.min_floor }}" placeholder="{{ b.price.min_floor }}" />
+              <input type="number" name="min_price" value="{{ b.price.selected_min }}" min="{{ b.price.min_floor }}" max="{{ b.price.max_ceil }}" placeholder="{{ b.price.min_floor }}" data-fp-min-num />
             </div>
             <div class="f_row">
               <label>{% if is_ua %}До{% else %}До{% endif %}:</label>
-              <input type="number" name="max_price" value="{{ b.price.selected_max }}" max="{{ b.price.max_ceil }}" placeholder="{{ b.price.max_ceil }}" />
+              <input type="number" name="max_price" value="{{ b.price.selected_max }}" min="{{ b.price.min_floor }}" max="{{ b.price.max_ceil }}" placeholder="{{ b.price.max_ceil }}" data-fp-max-num />
             </div>
             <button type="submit" class="btn">OK</button>
           </form>
@@ -87,6 +95,55 @@
     }
   });
 
+  // Price slider sync (no AJAX; just keeps inputs in sync)
+  document.querySelectorAll('form[data-fp-price]').forEach(function(form) {
+    var minRange = form.querySelector('[data-fp-min-range]');
+    var maxRange = form.querySelector('[data-fp-max-range]');
+    var minNum = form.querySelector('[data-fp-min-num]');
+    var maxNum = form.querySelector('[data-fp-max-num]');
+
+    function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+    function syncFromRanges() {
+      if (!minRange || !maxRange) return;
+      var lo = parseInt(minRange.min || '0', 10);
+      var hi = parseInt(minRange.max || '0', 10);
+      var vMin = parseInt(minRange.value || lo, 10);
+      var vMax = parseInt(maxRange.value || hi, 10);
+      if (vMin > vMax) vMin = vMax;
+      minRange.value = vMin;
+      maxRange.value = vMax;
+      if (minNum) minNum.value = vMin;
+      if (maxNum) maxNum.value = vMax;
+    }
+
+    function syncFromNumbers() {
+      if (!minNum || !maxNum) return;
+      var lo = parseInt(minNum.min || '0', 10);
+      var hi = parseInt(minNum.max || '0', 10);
+      var vMin = parseInt(minNum.value || lo, 10);
+      var vMax = parseInt(maxNum.value || hi, 10);
+      vMin = clamp(vMin, lo, hi);
+      vMax = clamp(vMax, lo, hi);
+      if (vMin > vMax) vMin = vMax;
+      minNum.value = vMin;
+      maxNum.value = vMax;
+      if (minRange) minRange.value = vMin;
+      if (maxRange) maxRange.value = vMax;
+    }
+
+    if (minRange && maxRange) {
+      minRange.addEventListener('input', syncFromRanges);
+      maxRange.addEventListener('input', syncFromRanges);
+      syncFromRanges();
+    }
+
+    if (minNum && maxNum) {
+      minNum.addEventListener('change', syncFromNumbers);
+      maxNum.addEventListener('change', syncFromNumbers);
+    }
+  });
+
   // Accordion
   document.addEventListener('click', function(e) {
     var t = e.target;
@@ -97,6 +154,7 @@
     if (!group) return;
     if (t.closest('a')) return;
     if (t.closest('label')) return;
+    if (t.closest('input')) return;
     group.classList.toggle('fp_collapsed');
   });
 </script>
@@ -127,4 +185,6 @@
 
   .filterpro_like .f_price .f_row{display:flex;gap:6px;align-items:center;margin:0 0 6px;}
   .filterpro_like .f_price input{width:100%;}
+  .filterpro_like .fp_price_ranges{display:flex;flex-direction:column;gap:6px;margin:0 0 10px;}
+  .filterpro_like .fp_price_ranges input[type=range]{width:100%;}
 </style>
