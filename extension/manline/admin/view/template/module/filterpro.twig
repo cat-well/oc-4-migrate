@@ -74,7 +74,12 @@
                           <input type="text" class="form-control" name="blocks[{{ i }}][key]" value="{{ b.key ?? '' }}" placeholder="key (e.g. price, manufacturer, option:14)"/>
                         </div>
                         <div class="col-md-8">
-                          <input type="text" class="form-control" name="blocks[{{ i }}][label]" value="{{ b.label }}" placeholder="{{ column_block }}"/>
+                          {% for language in languages %}
+                            <div class="input-group mb-2">
+                              <span class="input-group-text"><img src="language/{{ language.code }}/{{ language.code }}.png" alt="{{ language.name }}" title="{{ language.name }}"></span>
+                              <input type="text" class="form-control" name="blocks[{{ i }}][label][{{ language.code }}]" value="{{ b.label[language.code] ?? '' }}" placeholder="{{ column_block }}"/>
+                            </div>
+                          {% endfor %}
                         </div>
                       </div>
                     </td>
@@ -153,7 +158,16 @@
                 '<input type="text" class="form-control" name="blocks[' + i + '][key]" value="" placeholder="key (e.g. price, manufacturer, option:14)"/>' +
               '</div>' +
               '<div class="col-md-8">' +
-                '<input type="text" class="form-control" name="blocks[' + i + '][label]" value="" placeholder="{{ column_block }}"/>' +
+                (function(){
+                  var html='';
+                  languages.forEach(function(lang){
+                    html += '<div class="input-group mb-2">' +
+                      '<span class="input-group-text"><img src="language/' + lang.code + '/' + lang.code + '.png" alt="' + lang.name + '" title="' + lang.name + '"></span>' +
+                      '<input type="text" class="form-control" name="blocks[' + i + '][label][' + lang.code + ']" value="" placeholder="{{ column_block }}"/>' +
+                    '</div>';
+                  });
+                  return html;
+                })() +
               '</div>' +
             '</div>' +
           '</td>' +

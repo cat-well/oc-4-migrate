@@ -108,11 +108,25 @@ class FilterproLike extends \Opencart\System\Engine\Controller {
 		};
 
 		// Block meta derived from admin config (used later to build $data['blocks'])
-		$block_meta = function (string $key, string $default_label) use ($blocks_map, $get_tip, $get_expanded): array {
+		$block_meta = function (string $key, string $default_label) use ($blocks_map, $get_tip, $get_expanded, $lang_code): array {
 			$cfg = (isset($blocks_map[$key]) && is_array($blocks_map[$key])) ? $blocks_map[$key] : [];
+
+			$label = $cfg['label'] ?? $default_label;
+			if (is_array($label)) {
+				if (isset($label[$lang_code]) && (string)$label[$lang_code] !== '') {
+					$label = (string)$label[$lang_code];
+				} elseif (isset($label['ru-ru']) && (string)$label['ru-ru'] !== '') {
+					$label = (string)$label['ru-ru'];
+				} elseif (isset($label['uk-ua']) && (string)$label['uk-ua'] !== '') {
+					$label = (string)$label['uk-ua'];
+				} else {
+					$label = (string)($default_label ?: $key);
+				}
+			}
+
 			return [
 				'key' => $key,
-				'label' => (string)($cfg['label'] ?? $default_label),
+				'label' => (string)$label,
 				'display' => (string)($cfg['display'] ?? ''),
 				'expanded' => $get_expanded($key, 1) ? true : false,
 				'tooltip' => $get_tip($key),

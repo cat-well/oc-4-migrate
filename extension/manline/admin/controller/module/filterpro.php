@@ -56,7 +56,7 @@ class FilterPro extends \Opencart\System\Engine\Controller {
 		$default_blocks = [
 			[
 				'key' => 'price',
-				'label' => $this->language->get('text_block_price'),
+				'label' => ['' => $this->language->get('text_block_price')],
 				'display' => 'slider',
 				'expanded' => 1,
 				'sort_order' => 10,
@@ -64,7 +64,7 @@ class FilterPro extends \Opencart\System\Engine\Controller {
 			],
 			[
 				'key' => 'manufacturer',
-				'label' => $this->language->get('text_block_manufacturer'),
+				'label' => ['' => $this->language->get('text_block_manufacturer')],
 				'display' => 'checkbox',
 				'expanded' => 1,
 				'sort_order' => 20,
@@ -72,7 +72,7 @@ class FilterPro extends \Opencart\System\Engine\Controller {
 			],
 			[
 				'key' => 'size',
-				'label' => $this->language->get('text_block_size'),
+				'label' => ['' => $this->language->get('text_block_size')],
 				'display' => 'checkbox',
 				'expanded' => 1,
 				'sort_order' => 30,
@@ -80,7 +80,7 @@ class FilterPro extends \Opencart\System\Engine\Controller {
 			],
 			[
 				'key' => 'color',
-				'label' => $this->language->get('text_block_color'),
+				'label' => ['' => $this->language->get('text_block_color')],
 				'display' => 'image',
 				'expanded' => 1,
 				'sort_order' => 40,
@@ -88,7 +88,7 @@ class FilterPro extends \Opencart\System\Engine\Controller {
 			],
 			[
 				'key' => 'style',
-				'label' => $this->language->get('text_block_style'),
+				'label' => ['' => $this->language->get('text_block_style')],
 				'display' => 'checkbox',
 				'expanded' => 0,
 				'sort_order' => 50,
@@ -116,7 +116,7 @@ class FilterPro extends \Opencart\System\Engine\Controller {
 					if (!is_array($b)) continue;
 					$list[] = [
 						'key' => (string)$k,
-						'label' => (string)($b['label'] ?? (string)$k),
+						'label' => (is_array($b['label'] ?? null) ? $b['label'] : ['' => (string)($b['label'] ?? (string)$k)]),
 						'display' => (string)($b['display'] ?? 'checkbox'),
 						'expanded' => !empty($b['expanded']) ? 1 : 0,
 						'sort_order' => (int)($b['sort_order'] ?? $sort),
@@ -193,9 +193,14 @@ class FilterPro extends \Opencart\System\Engine\Controller {
 					$tooltip = ['' => (string)$tooltip];
 				}
 
+				$label = $b['label'] ?? [];
+				if (!is_array($label)) {
+					$label = ['' => (string)$label];
+				}
+
 				$norm[] = [
 					'key' => $key,
-					'label' => (string)($b['label'] ?? $key),
+					'label' => $label,
 					'display' => (string)($b['display'] ?? 'checkbox'),
 					'expanded' => !empty($b['expanded']) ? 1 : 0,
 					'sort_order' => (int)($b['sort_order'] ?? ($i * 10)),
@@ -207,6 +212,53 @@ class FilterPro extends \Opencart\System\Engine\Controller {
 		usort($norm, static function ($a, $b) {
 			return (int)($a['sort_order'] ?? 0) <=> (int)($b['sort_order'] ?? 0);
 		});
+
+		// Auto-fill label per language for option:<id> / attribute:<id> when missing
+		$this->load->model('localisation/language');
+		$languages = $this->model_localisation_language->getLanguages();
+
+		foreach ($norm as &$row) {
+			$key = (string)($row['key'] ?? '');
+			if (!isset($row['label']) || !is_array($row['label'])) {
+				$row['label'] = ['' => (string)$key];
+			}
+
+			$needs = true;
+			foreach ($languages as $lang) {
+				$code = (string)$lang['code'];
+				if (!empty($row['label'][$code])) {
+					$needs = false;
+					break;
+				}
+			}
+
+			if (!$needs) {
+				continue;
+			}
+
+			if (preg_match('/^option:(\d+)$/', $key, $m)) {
+				$option_id = (int)$m[1];
+				foreach ($languages as $lang) {
+					$code = (string)$lang['code'];
+					$lang_id = (int)$lang['language_id'];
+					$q = $this->db->query("SELECT name FROM `" . DB_PREFIX . "option_description` WHERE option_id='" . (int)$option_id . "' AND language_id='" . (int)$lang_id . "' LIMIT 1");
+					if ($q->num_rows) {
+						$row['label'][$code] = (string)$q->row['name'];
+					}
+				}
+			} elseif (preg_match('/^attribute:(\d+)$/', $key, $m)) {
+				$attribute_id = (int)$m[1];
+				foreach ($languages as $lang) {
+					$code = (string)$lang['code'];
+					$lang_id = (int)$lang['language_id'];
+					$q = $this->db->query("SELECT name FROM `" . DB_PREFIX . "attribute_description` WHERE attribute_id='" . (int)$attribute_id . "' AND language_id='" . (int)$lang_id . "' LIMIT 1");
+					if ($q->num_rows) {
+						$row['label'][$code] = (string)$q->row['name'];
+					}
+				}
+			}
+		}
+		unset($row);
 
 		$post_info['blocks'] = $norm;
 
