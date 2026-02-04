@@ -239,12 +239,13 @@
     }
   });
 
-  // When user changes any checkbox, enable Apply
+  // When user changes any checkbox, enable Apply + auto-apply
   document.addEventListener('change', function(e) {
     var el = e.target;
     if (!el) return;
     if (el.matches && el.matches('#filterpro input[type="checkbox"][data-fp-key]')) {
       markDirty();
+      scheduleApply();
     }
   });
 
