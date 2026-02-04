@@ -51,7 +51,7 @@
               <label>{% if is_ua %}До{% else %}До{% endif %}:</label>
               <input type="number" name="max_price" value="{{ b.price.selected_max }}" min="{{ b.price.min_floor }}" max="{{ b.price.max_ceil }}" placeholder="{{ b.price.max_ceil }}" data-fp-max-num />
             </div>
-            <button type="submit" class="btn">OK</button>
+            
           </form>
 
         {% else %}
