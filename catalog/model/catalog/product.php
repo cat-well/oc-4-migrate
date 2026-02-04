@@ -208,8 +208,25 @@ class Product extends \Opencart\System\Engine\Model {
 			$sql .= " AND `p`.`manufacturer_id` = '" . (int)$data['filter_manufacturer_id'] . "'";
 		}
 
-		// Attribute value filters (legacy FilterPro: attribute_value[<id>][]=<text>)
-		if (!empty($data['filter_attribute_value']) && is_array($data['filter_attribute_value'])) {
+		// Attribute filters by SLUG (preferred, language-independent)
+		if (!empty($data['filter_attribute_slug']) && is_array($data['filter_attribute_slug'])) {
+			foreach ($data['filter_attribute_slug'] as $attribute_id => $slugs) {
+				$attribute_id = (int)$attribute_id;
+				if ($attribute_id <= 0 || !is_array($slugs) || !$slugs) continue;
+
+				$in = [];
+				foreach ($slugs as $s) {
+					$s = trim((string)$s);
+					if ($s === '') continue;
+					$in[] = "'" . $this->db->escape($s) . "'";
+				}
+				$in = array_values(array_unique($in));
+				if ($in) {
+					$sql .= " AND EXISTS (SELECT 1 FROM `" . DB_PREFIX . "product_attribute` pa WHERE pa.product_id = p.product_id AND pa.attribute_id = '" . $attribute_id . "' AND pa.slug IN (" . implode(',', $in) . "))";
+				}
+			}
+		} elseif (!empty($data['filter_attribute_value']) && is_array($data['filter_attribute_value'])) {
+			// Backward compatibility: filter by TEXT for current language
 			$lang_id = (int)$this->config->get('config_language_id');
 			foreach ($data['filter_attribute_value'] as $attribute_id => $values) {
 				$attribute_id = (int)$attribute_id;
@@ -443,8 +460,25 @@ class Product extends \Opencart\System\Engine\Model {
 			$sql .= " AND `p`.`manufacturer_id` = '" . (int)$data['filter_manufacturer_id'] . "'";
 		}
 
-		// Attribute value filters (legacy FilterPro: attribute_value[<id>][]=<text>)
-		if (!empty($data['filter_attribute_value']) && is_array($data['filter_attribute_value'])) {
+		// Attribute filters by SLUG (preferred, language-independent)
+		if (!empty($data['filter_attribute_slug']) && is_array($data['filter_attribute_slug'])) {
+			foreach ($data['filter_attribute_slug'] as $attribute_id => $slugs) {
+				$attribute_id = (int)$attribute_id;
+				if ($attribute_id <= 0 || !is_array($slugs) || !$slugs) continue;
+
+				$in = [];
+				foreach ($slugs as $s) {
+					$s = trim((string)$s);
+					if ($s === '') continue;
+					$in[] = "'" . $this->db->escape($s) . "'";
+				}
+				$in = array_values(array_unique($in));
+				if ($in) {
+					$sql .= " AND EXISTS (SELECT 1 FROM `" . DB_PREFIX . "product_attribute` pa WHERE pa.product_id = p.product_id AND pa.attribute_id = '" . $attribute_id . "' AND pa.slug IN (" . implode(',', $in) . "))";
+				}
+			}
+		} elseif (!empty($data['filter_attribute_value']) && is_array($data['filter_attribute_value'])) {
+			// Backward compatibility: filter by TEXT for current language
 			$lang_id = (int)$this->config->get('config_language_id');
 			foreach ($data['filter_attribute_value'] as $attribute_id => $values) {
 				$attribute_id = (int)$attribute_id;

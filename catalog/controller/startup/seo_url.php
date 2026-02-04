@@ -136,11 +136,11 @@ class SeoUrl extends \Opencart\System\Engine\Controller {
 						}
 
 						// Try OPTION by slug: option_description.slug == $k
-						$option_q = $this->db->query("SELECT option_id FROM `" . DB_PREFIX . "option_description` WHERE language_id='" . $lang_id . "' AND slug='" . $this->db->escape($k) . "' LIMIT 1");
+						$option_q = $this->db->query("SELECT option_id FROM `" . DB_PREFIX . "option_description` WHERE slug='" . $this->db->escape($k) . "' ORDER BY language_id='" . $lang_id . "' DESC LIMIT 1");
 						if ($option_q->num_rows) {
 							$option_id = (int)$option_q->row['option_id'];
 							foreach ($vals as $vslug) {
-								$ov_q = $this->db->query("SELECT option_value_id FROM `" . DB_PREFIX . "option_value_description` WHERE language_id='" . $lang_id . "' AND option_id='" . $option_id . "' AND slug='" . $this->db->escape($vslug) . "' LIMIT 1");
+								$ov_q = $this->db->query("SELECT option_value_id FROM `" . DB_PREFIX . "option_value_description` WHERE option_id='" . $option_id . "' AND slug='" . $this->db->escape($vslug) . "' ORDER BY language_id='" . $lang_id . "' DESC LIMIT 1");
 								if ($ov_q->num_rows) {
 									$this->request->get['option_value'] = $this->request->get['option_value'] ?? [];
 									if (!isset($this->request->get['option_value'][$option_id]) || !is_array($this->request->get['option_value'][$option_id])) {
@@ -153,11 +153,22 @@ class SeoUrl extends \Opencart\System\Engine\Controller {
 						}
 
 						// Try ATTRIBUTE by slug: attribute_description.slug == $k
-						$attr_q = $this->db->query("SELECT attribute_id FROM `" . DB_PREFIX . "attribute_description` WHERE language_id='" . $lang_id . "' AND slug='" . $this->db->escape($k) . "' LIMIT 1");
+						$attr_q = $this->db->query("SELECT attribute_id FROM `" . DB_PREFIX . "attribute_description` WHERE slug='" . $this->db->escape($k) . "' ORDER BY language_id='" . $lang_id . "' DESC LIMIT 1");
 						if ($attr_q->num_rows) {
 							$attribute_id = (int)$attr_q->row['attribute_id'];
 							foreach ($vals as $vslug) {
-								$text_q = $this->db->query("SELECT text FROM `" . DB_PREFIX . "product_attribute` WHERE language_id='" . $lang_id . "' AND attribute_id='" . $attribute_id . "' AND slug='" . $this->db->escape($vslug) . "' LIMIT 1");
+								// Always store slugs for reliable filtering across languages
+								$this->request->get['attribute_slug'] = $this->request->get['attribute_slug'] ?? [];
+								if (!isset($this->request->get['attribute_slug'][$attribute_id]) || !is_array($this->request->get['attribute_slug'][$attribute_id])) {
+									$this->request->get['attribute_slug'][$attribute_id] = [];
+								}
+								$this->request->get['attribute_slug'][$attribute_id][] = (string)$vslug;
+
+								// Also keep legacy text (best-effort) for UI
+								$text_q = $this->db->query("SELECT text FROM `" . DB_PREFIX . "product_attribute` WHERE attribute_id='" . $attribute_id . "' AND language_id='" . $lang_id . "' AND slug='" . $this->db->escape($vslug) . "' LIMIT 1");
+								if (!$text_q->num_rows) {
+									$text_q = $this->db->query("SELECT text FROM `" . DB_PREFIX . "product_attribute` WHERE attribute_id='" . $attribute_id . "' AND slug='" . $this->db->escape($vslug) . "' LIMIT 1");
+								}
 								if ($text_q->num_rows) {
 									$this->request->get['attribute_value'] = $this->request->get['attribute_value'] ?? [];
 									if (!isset($this->request->get['attribute_value'][$attribute_id]) || !is_array($this->request->get['attribute_value'][$attribute_id])) {

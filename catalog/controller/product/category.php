@@ -287,6 +287,28 @@ class Category extends \Opencart\System\Engine\Controller {
 				}
 			}
 
+			$attribute_slug = [];
+			if (isset($this->request->get['attribute_slug']) && is_array($this->request->get['attribute_slug'])) {
+				foreach ($this->request->get['attribute_slug'] as $attribute_id => $values) {
+					$attribute_id = (int)$attribute_id;
+					if ($attribute_id <= 0) continue;
+					$vals = [];
+					if (is_array($values)) {
+						foreach ($values as $v) {
+							$v = trim((string)$v);
+							if ($v !== '') $vals[] = $v;
+						}
+					} else {
+						$v = trim((string)$values);
+						if ($v !== '') $vals[] = $v;
+					}
+					$vals = array_values(array_unique($vals));
+					if ($vals) {
+						$attribute_slug[$attribute_id] = $vals;
+					}
+				}
+			}
+
 			$option_value = [];
 			if (isset($this->request->get['option_value']) && is_array($this->request->get['option_value'])) {
 				foreach ($this->request->get['option_value'] as $option_id => $values) {
@@ -319,6 +341,7 @@ class Category extends \Opencart\System\Engine\Controller {
 				'filter_min_price'      => ($min_price !== null && $min_price > 0) ? $min_price : null,
 				'filter_max_price'      => ($max_price !== null && $max_price > 0) ? $max_price : null,
 				'filter_attribute_value' => $attribute_value,
+				'filter_attribute_slug'  => $attribute_slug,
 				'filter_option_value'    => $option_value,
 				'sort'                  => $sort,
 				'order'                 => $order,
