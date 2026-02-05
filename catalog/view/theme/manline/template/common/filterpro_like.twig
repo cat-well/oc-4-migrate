@@ -103,11 +103,12 @@
 {% if not fp_partial %}
 <script>
   // Multi-select apply: collect selected values and build /f/ URL
-  var fpRoot = document.getElementById('filterpro');
-  var applyBtn = document.getElementById('fp-apply');
+  function fpRootEl() { return document.getElementById('filterpro'); }
+  function fpApplyBtn() { return document.getElementById('fp-apply'); }
 
   function fpGetSelection() {
     var sel = {};
+    var fpRoot = fpRootEl();
     if (!fpRoot) return sel;
 
     // checkboxes
@@ -160,6 +161,7 @@
   window.fpGetSelection = fpGetSelection;
 
   function buildUrlFromSelection() {
+    var fpRoot = fpRootEl();
     if (!fpRoot) return null;
     var basePath = fpRoot.getAttribute('data-fp-base-path') || '';
     var baseQuery = fpRoot.getAttribute('data-fp-base-query') || '';
@@ -198,6 +200,7 @@
   var fpApplyTimer = null;
 
   function markDirty() {
+    var applyBtn = fpApplyBtn();
     if (applyBtn) applyBtn.disabled = false;
   }
 
@@ -207,6 +210,7 @@
     fpApplyTimer = setTimeout(function(){
       var url = buildUrlFromSelection();
       if (url) fpAjaxUpdate(url);
+      var applyBtn = fpApplyBtn();
       if (applyBtn) applyBtn.disabled = true;
     }, delayMs);
   }
@@ -250,11 +254,13 @@
     }
   });
 
+  var fpReqSeq = 0;
+
   function fpAjaxUpdate(url) {
     if (!url) return;
 
     // fallback
-    if (!window.fetch || !window.DOMParser) {
+    if (!window.fetch) {
       window.location.href = url;
       return;
     }
@@ -271,6 +277,10 @@
 
     content.classList.add('fp_loading');
 
+    // Guard against out-of-order responses (double clicks / rapid changes)
+    fpReqSeq += 1;
+    var reqId = fpReqSeq;
+
     // Use partial JSON endpoint (lighter than full HTML fetch)
     var purl = url + (url.indexOf('?') === -1 ? '?' : '&') + 'fp_partial=1';
 
@@ -283,10 +293,12 @@
       .then(function(r){
         var ct = (r.headers && r.headers.get && r.headers.get('content-type')) || '';
         if (ct.indexOf('application/json') !== -1) return r.json();
-        // fallback for non-json responses
         return r.text().then(function(t){ throw { kind: 'non-json', text: t }; });
       })
       .then(function(payload){
+        // Ignore stale responses
+        if (reqId !== fpReqSeq) return;
+
         if (!payload) throw { kind: 'empty' };
 
         if (payload.products_html != null) {
@@ -318,22 +330,26 @@
         window.history.pushState({ fp: 1 }, '', url);
       })
       .catch(function(err){
-        // fallback: do normal navigation
+        // Ignore stale errors
+        if (reqId !== fpReqSeq) return;
         window.location.href = url;
       })
       .finally(function(){
-        content.classList.remove('fp_loading');
+        // Only clear loader for the latest request
+        if (reqId === fpReqSeq) {
+          content.classList.remove('fp_loading');
+        }
       });
   }
 
-  if (applyBtn) {
-    applyBtn.addEventListener('click', function(){
-      // manual apply still works
-      var url = buildUrlFromSelection();
-      if (url) fpAjaxUpdate(url);
-      applyBtn.disabled = true;
-    });
-  }
+  document.addEventListener('click', function(e){
+    var btn = e.target && (e.target.closest ? e.target.closest('#fp-apply') : null);
+    if (!btn) return;
+    // manual apply still works
+    var url = buildUrlFromSelection();
+    if (url) fpAjaxUpdate(url);
+    btn.disabled = true;
+  });
 
   // prevent price form submit from reloading page
   document.addEventListener('submit', function(e){
