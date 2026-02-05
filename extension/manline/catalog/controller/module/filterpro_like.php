@@ -23,6 +23,10 @@ class FilterproLike extends \Opencart\System\Engine\Controller {
 
 		$data = [];
 
+		// When category page is fetched via AJAX partial endpoint, we re-render only the filter HTML
+		// (no inline <script>/<style>) and let the already-loaded JS handle interactions.
+		$data['fp_partial'] = !empty($this->request->get['fp_partial']);
+
 		// Current language code (e.g. ru-ru / uk-ua)
 		$lang_code = (string)($this->config->get('config_language') ?? '');
 		$data['is_ua'] = in_array($lang_code, ['uk-ua', 'ua'], true);

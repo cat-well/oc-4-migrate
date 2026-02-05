@@ -100,6 +100,7 @@
 
 </div>
 
+{% if not fp_partial %}
 <script>
   // Multi-select apply: collect selected values and build /f/ URL
   var fpRoot = document.getElementById('filterpro');
@@ -270,28 +271,54 @@
 
     content.classList.add('fp_loading');
 
-    fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
-      .then(function(r){ return r.text(); })
-      .then(function(html){
-        var doc = new DOMParser().parseFromString(html, 'text/html');
-        var newList = doc.getElementById('product-list');
-        var newPag = doc.querySelector('.pagination_w');
-        var newSort = doc.getElementById('input-sort');
-        var newLimit = doc.getElementById('input-limit');
+    // Use partial JSON endpoint (lighter than full HTML fetch)
+    var purl = url + (url.indexOf('?') === -1 ? '?' : '&') + 'fp_partial=1';
+
+    fetch(purl, {
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest',
+        'Accept': 'application/json'
+      }
+    })
+      .then(function(r){
+        var ct = (r.headers && r.headers.get && r.headers.get('content-type')) || '';
+        if (ct.indexOf('application/json') !== -1) return r.json();
+        // fallback for non-json responses
+        return r.text().then(function(t){ throw { kind: 'non-json', text: t }; });
+      })
+      .then(function(payload){
+        if (!payload) throw { kind: 'empty' };
+
+        if (payload.products_html != null) {
+          list.innerHTML = String(payload.products_html);
+        }
+        if (payload.pagination_html != null) {
+          pag.innerHTML = String(payload.pagination_html);
+        }
+
         var curSort = document.getElementById('input-sort');
         var curLimit = document.getElementById('input-limit');
+        if (curSort && payload.sort_options_html != null) {
+          curSort.innerHTML = String(payload.sort_options_html);
+        }
+        if (curLimit && payload.limit_options_html != null) {
+          curLimit.innerHTML = String(payload.limit_options_html);
+        }
 
-        if (newList) list.innerHTML = newList.innerHTML;
-        if (newPag) pag.innerHTML = newPag.innerHTML;
-        if (newSort && curSort) curSort.innerHTML = newSort.innerHTML;
-        if (newLimit && curLimit) curLimit.innerHTML = newLimit.innerHTML;
+        // Update filter sidebar HTML (scripts are loaded only on first render)
+        if (payload.filter_html) {
+          var oldFp = document.getElementById('filterpro');
+          if (oldFp) {
+            oldFp.outerHTML = String(payload.filter_html);
+          }
+        }
 
-        // update canonical/title from loaded doc (best effort)
-        if (doc.title) document.title = doc.title;
+        if (payload.title) document.title = String(payload.title);
 
         window.history.pushState({ fp: 1 }, '', url);
       })
-      .catch(function(){
+      .catch(function(err){
+        // fallback: do normal navigation
         window.location.href = url;
       })
       .finally(function(){
@@ -465,3 +492,4 @@
   .filterpro_like .fp_price_slider input[type=range]::-moz-range-track{height:4px;background:transparent;}
   .filterpro_like .fp_price_slider .fp_ticks{display:flex;justify-content:space-between;font-size:11px;color:#777;margin-top:20px;}
 </style>
+{% endif %}

@@ -703,7 +703,35 @@ class Category extends \Opencart\System\Engine\Controller {
 			$data['footer'] = $this->load->controller('common/footer');
 			$data['header'] = $this->load->controller('common/header');
 
-			$this->response->setOutput($this->load->view('product/category', $data));
+			// AJAX partial endpoint for FilterPro-like UX
+			if (!empty($this->request->get['fp_partial']) && ($this->request->server['HTTP_X_REQUESTED_WITH'] ?? '') === 'XMLHttpRequest') {
+				// Build <option> lists (so we can update selects without re-rendering the full page)
+				$sort_options = '';
+				foreach (($data['sorts'] ?? []) as $s) {
+					if (!is_array($s)) continue;
+					$selected = ((string)($s['value'] ?? '') === sprintf('%s-%s', $sort, $order)) ? ' selected' : '';
+					$sort_options .= '<option value="' . htmlspecialchars((string)($s['href'] ?? ''), ENT_QUOTES) . '"' . $selected . '>' . htmlspecialchars((string)($s['text'] ?? ''), ENT_QUOTES) . '</option>';
+				}
+
+				$limit_options = '';
+				foreach (($data['limits'] ?? []) as $l) {
+					if (!is_array($l)) continue;
+					$selected = ((string)($l['value'] ?? '') === (string)$limit) ? ' selected' : '';
+					$limit_options .= '<option value="' . htmlspecialchars((string)($l['href'] ?? ''), ENT_QUOTES) . '"' . $selected . '>' . htmlspecialchars((string)($l['text'] ?? ''), ENT_QUOTES) . '</option>';
+				}
+
+				$this->response->addHeader('Content-Type: application/json; charset=utf-8');
+				$this->response->setOutput(json_encode([
+					'title' => (string)$this->document->getTitle(),
+					'products_html' => implode('', $data['products'] ?? []),
+					'pagination_html' => (string)($data['pagination'] ?? ''),
+					'sort_options_html' => $sort_options,
+					'limit_options_html' => $limit_options,
+					'filter_html' => (string)($data['filterpro_like'] ?? ''),
+				], JSON_UNESCAPED_UNICODE));
+			} else {
+				$this->response->setOutput($this->load->view('product/category', $data));
+			}
 		} else {
 			return new \Opencart\System\Engine\Action('error/not_found');
 		}
