@@ -31,8 +31,9 @@
       <div class="f_title">{{ is_ua ? 'Виробники' : 'Производители' }}</div>
       <ul class="f_list">
         {% for m in manufacturer_items %}
-          <li class="f_item">
-            <a href="{{ m.url }}" class="{{ m.selected ? 'active' : '' }}">
+          {% set is_disabled = (not m.selected) and (m.total == 0) %}
+          <li class="f_item {{ is_disabled ? 'disabled' : '' }}">
+            <a href="{{ m.url }}" class="{{ m.selected ? 'active' : '' }}" {{ is_disabled ? 'aria-disabled="true" tabindex="-1"' : '' }}>
               {{ m.name }} <span class="f_cnt">({{ m.total }})</span>
             </a>
           </li>
@@ -47,7 +48,8 @@
       <div class="f_title">{{ is_ua ? 'Колір' : 'Цвет' }}</div>
       <div class="f_colors">
         {% for c in color_items %}
-          <a class="f_color {{ c.selected ? 'active' : '' }}" href="{{ c.url }}" title="{{ c.name }} ({{ c.total }})">
+          {% set is_disabled = (not c.selected) and (c.total == 0) %}
+          <a class="f_color {{ c.selected ? 'active' : '' }} {{ is_disabled ? 'disabled' : '' }}" href="{{ c.url }}" title="{{ c.name }} ({{ c.total }})" {{ is_disabled ? 'aria-disabled="true" tabindex="-1"' : '' }}>
             {% if c.image %}
               <img src="image/{{ c.image }}" alt="{{ c.name }}" />
             {% else %}
@@ -65,8 +67,9 @@
       <div class="f_title">{{ is_ua ? 'Стиль' : 'Стиль' }}</div>
       <ul class="f_list">
         {% for s in style_items %}
-          <li class="f_item">
-            <a href="{{ s.url }}" class="{{ s.selected ? 'active' : '' }}">
+          {% set is_disabled = (not s.selected) and (s.total == 0) %}
+          <li class="f_item {{ is_disabled ? 'disabled' : '' }}">
+            <a href="{{ s.url }}" class="{{ s.selected ? 'active' : '' }}" {{ is_disabled ? 'aria-disabled="true" tabindex="-1"' : '' }}>
               {{ s.text }} <span class="f_cnt">({{ s.total }})</span>
             </a>
           </li>
@@ -86,6 +89,9 @@
   .filterpro_like .f_item{margin:0 0 6px;}
   .filterpro_like .f_item a{color:#333;text-decoration:none;}
   .filterpro_like .f_item a.active{font-weight:700;text-decoration:underline;}
+  .filterpro_like .f_item.disabled{opacity:.45;}
+  .filterpro_like .f_item.disabled a{pointer-events:none;}
+  .filterpro_like .f_color.disabled{opacity:.45;pointer-events:none;}
   .filterpro_like .f_cnt{color:#999;font-weight:400;}
   .filterpro_like .f_colors{display:flex;flex-wrap:wrap;gap:6px;}
   .filterpro_like .f_color{display:inline-block;border:1px solid #ddd;padding:2px;border-radius:3px;}

@@ -369,8 +369,10 @@ class FilterproLike extends \Opencart\System\Engine\Controller {
 			if (!empty($this->request->get['new']) && $exclude !== 'new') {
 				$w[] = "p.date_added >= DATE_SUB(NOW(), INTERVAL 60 DAY)";
 			}
-			// 'special' is hard to express without joining special tables; we skip it in facet SQL.
-			// It will still be reflected in actual product list via model_catalog_product.
+			// Special toggle (same semantics as model_catalog_product->getTotalProducts)
+			if (!empty($this->request->get['special']) && $exclude !== 'special') {
+				$w[] = "EXISTS (SELECT 1 FROM `" . DB_PREFIX . "product_discount` ps WHERE ps.product_id = p.product_id AND ps.customer_group_id = '" . (int)$this->config->get('config_customer_group_id') . "' AND ps.quantity = '1' AND ps.special = '1' AND ((ps.date_start = '0000-00-00' OR ps.date_start < NOW()) AND (ps.date_end = '0000-00-00' OR ps.date_end > NOW())))";
+			}
 
 			// Manufacturer
 			if ($exclude !== 'manufacturer' && !empty($selected['manufacturer'])) {
