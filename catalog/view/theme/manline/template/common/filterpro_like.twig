@@ -322,6 +322,8 @@
           var oldFp = document.getElementById('filterpro');
           if (oldFp) {
             oldFp.outerHTML = String(payload.filter_html);
+            // re-init handlers for newly inserted DOM (price slider)
+            fpInitPrice();
           }
         }
 
@@ -360,70 +362,78 @@
     }
   });
 
-  // Price slider sync (no AJAX; just keeps inputs in sync)
-  document.querySelectorAll('form[data-fp-price]').forEach(function(form) {
-    var minRange = form.querySelector('[data-fp-min-range]');
-    var maxRange = form.querySelector('[data-fp-max-range]');
-    var minNum = form.querySelector('[data-fp-min-num]');
-    var maxNum = form.querySelector('[data-fp-max-num]');
-    var rangeEl = form.querySelector('[data-fp-range]');
+  function fpInitPrice() {
+    // Price slider sync (re-init after sidebar replacement)
+    document.querySelectorAll('form[data-fp-price]').forEach(function(form) {
+      if (form.getAttribute('data-fp-inited') === '1') return;
+      form.setAttribute('data-fp-inited', '1');
 
-    function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+      var minRange = form.querySelector('[data-fp-min-range]');
+      var maxRange = form.querySelector('[data-fp-max-range]');
+      var minNum = form.querySelector('[data-fp-min-num]');
+      var maxNum = form.querySelector('[data-fp-max-num]');
+      var rangeEl = form.querySelector('[data-fp-range]');
 
-    function updateFill() {
-      if (!rangeEl || !minRange || !maxRange) return;
-      var lo = parseInt(minRange.min || '0', 10);
-      var hi = parseInt(minRange.max || '0', 10);
-      var vMin = parseInt(minRange.value || lo, 10);
-      var vMax = parseInt(maxRange.value || hi, 10);
-      var total = (hi - lo) || 1;
-      var left = ((vMin - lo) / total) * 100;
-      var right = ((vMax - lo) / total) * 100;
-      rangeEl.style.left = left + '%';
-      rangeEl.style.width = Math.max(0, right - left) + '%';
-    }
+      function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
 
-    function syncFromRanges() {
-      if (!minRange || !maxRange) return;
-      var lo = parseInt(minRange.min || '0', 10);
-      var hi = parseInt(minRange.max || '0', 10);
-      var vMin = parseInt(minRange.value || lo, 10);
-      var vMax = parseInt(maxRange.value || hi, 10);
-      if (vMin > vMax) vMin = vMax;
-      minRange.value = vMin;
-      maxRange.value = vMax;
-      if (minNum) minNum.value = vMin;
-      if (maxNum) maxNum.value = vMax;
-      updateFill();
-    }
+      function updateFill() {
+        if (!rangeEl || !minRange || !maxRange) return;
+        var lo = parseInt(minRange.min || '0', 10);
+        var hi = parseInt(minRange.max || '0', 10);
+        var vMin = parseInt(minRange.value || lo, 10);
+        var vMax = parseInt(maxRange.value || hi, 10);
+        var total = (hi - lo) || 1;
+        var left = ((vMin - lo) / total) * 100;
+        var right = ((vMax - lo) / total) * 100;
+        rangeEl.style.left = left + '%';
+        rangeEl.style.width = Math.max(0, right - left) + '%';
+      }
 
-    function syncFromNumbers() {
-      if (!minNum || !maxNum) return;
-      var lo = parseInt(minNum.min || '0', 10);
-      var hi = parseInt(minNum.max || '0', 10);
-      var vMin = parseInt(minNum.value || lo, 10);
-      var vMax = parseInt(maxNum.value || hi, 10);
-      vMin = clamp(vMin, lo, hi);
-      vMax = clamp(vMax, lo, hi);
-      if (vMin > vMax) vMin = vMax;
-      minNum.value = vMin;
-      maxNum.value = vMax;
-      if (minRange) minRange.value = vMin;
-      if (maxRange) maxRange.value = vMax;
-      updateFill();
-    }
+      function syncFromRanges() {
+        if (!minRange || !maxRange) return;
+        var lo = parseInt(minRange.min || '0', 10);
+        var hi = parseInt(minRange.max || '0', 10);
+        var vMin = parseInt(minRange.value || lo, 10);
+        var vMax = parseInt(maxRange.value || hi, 10);
+        if (vMin > vMax) vMin = vMax;
+        minRange.value = vMin;
+        maxRange.value = vMax;
+        if (minNum) minNum.value = vMin;
+        if (maxNum) maxNum.value = vMax;
+        updateFill();
+      }
 
-    if (minRange && maxRange) {
-      minRange.addEventListener('input', function(){ syncFromRanges(); markDirty(); scheduleApply(600); });
-      maxRange.addEventListener('input', function(){ syncFromRanges(); markDirty(); scheduleApply(600); });
-      syncFromRanges();
-    }
+      function syncFromNumbers() {
+        if (!minNum || !maxNum) return;
+        var lo = parseInt(minNum.min || '0', 10);
+        var hi = parseInt(minNum.max || '0', 10);
+        var vMin = parseInt(minNum.value || lo, 10);
+        var vMax = parseInt(maxNum.value || hi, 10);
+        vMin = clamp(vMin, lo, hi);
+        vMax = clamp(vMax, lo, hi);
+        if (vMin > vMax) vMin = vMax;
+        minNum.value = vMin;
+        maxNum.value = vMax;
+        if (minRange) minRange.value = vMin;
+        if (maxRange) maxRange.value = vMax;
+        updateFill();
+      }
 
-    if (minNum && maxNum) {
-      minNum.addEventListener('change', function(){ syncFromNumbers(); markDirty(); scheduleApply(300); });
-      maxNum.addEventListener('change', function(){ syncFromNumbers(); markDirty(); scheduleApply(300); });
-    }
-  });
+      if (minRange && maxRange) {
+        minRange.addEventListener('input', function(){ syncFromRanges(); markDirty(); scheduleApply(600); });
+        maxRange.addEventListener('input', function(){ syncFromRanges(); markDirty(); scheduleApply(600); });
+        syncFromRanges();
+      }
+
+      if (minNum && maxNum) {
+        minNum.addEventListener('change', function(){ syncFromNumbers(); markDirty(); scheduleApply(300); });
+        maxNum.addEventListener('change', function(){ syncFromNumbers(); markDirty(); scheduleApply(300); });
+      }
+    });
+  }
+
+  // init once
+  fpInitPrice();
 
   // Pagination link hijack (AJAX)
   document.addEventListener('click', function(e){
