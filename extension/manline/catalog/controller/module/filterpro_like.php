@@ -174,6 +174,9 @@ class FilterproLike extends \Opencart\System\Engine\Controller {
 
 		$language_id = (int)$this->config->get('config_language_id');
 
+		// We'll need catalog/product model for totals (standard toggles etc.)
+		$this->load->model('catalog/product');
+
 		// Selected filters (from request, already parsed for /f/ by startup/seo_url)
 		$selected = [
 			'manufacturer'   => [],
@@ -224,6 +227,20 @@ class FilterproLike extends \Opencart\System\Engine\Controller {
 		}
 
 		$data['selected'] = $selected;
+
+		// Build normalized filter_data for model_catalog_product (used for totals)
+		$filter_data_base = [
+			'filter_category_id' => $category_id,
+			'filter_sub_category' => true,
+			'filter_stock' => !empty($this->request->get['stock']) ? 1 : 0,
+			'filter_special' => !empty($this->request->get['special']) ? 1 : 0,
+			'filter_new' => !empty($this->request->get['new']) ? 1 : 0,
+			'filter_manufacturer_ids' => $selected['manufacturer'] ?: [],
+			'filter_option_value' => $selected['option_value'] ?: [],
+			'filter_attribute_slug' => $selected['attribute_value'] ?: [],
+			'filter_min_price' => $selected['min_price'],
+			'filter_max_price' => $selected['max_price'],
+		];
 
 		// Helper: base category URL (seo rewritten). Use full path chain.
 		$base = $this->url->link('product/category', 'language=' . $lang_code . '&path=' . $path_str);
@@ -338,11 +355,78 @@ class FilterproLike extends \Opencart\System\Engine\Controller {
 		$data['build_url'] = $build_url;
 		$data['build_f_url'] = $build_f_url;
 
+		// Helper: apply current selection as SQL conditions (for facet counts)
+		$facet_where = function (string $exclude) use ($selected, $category_id): string {
+			$w = [];
+			$w[] = "p2c.category_id='" . (int)$category_id . "'";
+			$w[] = "p.status='1'";
+			$w[] = "p.date_available<=NOW()";
+
+			// Standard toggles
+			if (!empty($this->request->get['stock']) && $exclude !== 'stock') {
+				$w[] = "p.quantity > 0";
+			}
+			if (!empty($this->request->get['new']) && $exclude !== 'new') {
+				$w[] = "p.date_added >= DATE_SUB(NOW(), INTERVAL 60 DAY)";
+			}
+			// 'special' is hard to express without joining special tables; we skip it in facet SQL.
+			// It will still be reflected in actual product list via model_catalog_product.
+
+			// Manufacturer
+			if ($exclude !== 'manufacturer' && !empty($selected['manufacturer'])) {
+				$ids = array_map('intval', $selected['manufacturer']);
+				$ids = array_values(array_unique(array_filter($ids)));
+				if ($ids) $w[] = "p.manufacturer_id IN (" . implode(',', $ids) . ")";
+			}
+
+			// Option filters
+			if (!empty($selected['option_value']) && is_array($selected['option_value'])) {
+				foreach ($selected['option_value'] as $opt_id => $vals) {
+					$opt_id = (int)$opt_id;
+					if ($opt_id <= 0) continue;
+					if ($exclude === 'option:' . $opt_id) continue;
+					$ids = array_map('intval', (array)$vals);
+					$ids = array_values(array_unique(array_filter($ids)));
+					if (!$ids) continue;
+					$w[] = "EXISTS (SELECT 1 FROM `" . DB_PREFIX . "product_option_value` povf WHERE povf.product_id=p.product_id AND povf.option_id='" . $opt_id . "' AND povf.option_value_id IN (" . implode(',', $ids) . "))";
+				}
+			}
+
+			// Attribute filters by slug
+			if (!empty($selected['attribute_value']) && is_array($selected['attribute_value'])) {
+				foreach ($selected['attribute_value'] as $attr_id => $vals) {
+					$attr_id = (int)$attr_id;
+					if ($attr_id <= 0) continue;
+					if ($exclude === 'attribute:' . $attr_id) continue;
+					$in = [];
+					foreach ((array)$vals as $v) {
+						$v = trim((string)$v);
+						if ($v === '') continue;
+						$in[] = "'" . $this->db->escape($v) . "'";
+					}
+					$in = array_values(array_unique($in));
+					if (!$in) continue;
+					$w[] = "EXISTS (SELECT 1 FROM `" . DB_PREFIX . "product_attribute` paf WHERE paf.product_id=p.product_id AND paf.attribute_id='" . $attr_id . "' AND paf.slug IN (" . implode(',', $in) . "))";
+				}
+			}
+
+			// Price range (base p.price, consistent with getTotalProducts)
+			if ($exclude !== 'price') {
+				if ($selected['min_price'] !== null && (float)$selected['min_price'] > 0) {
+					$w[] = "p.price >= " . (float)$selected['min_price'];
+				}
+				if ($selected['max_price'] !== null && (float)$selected['max_price'] > 0) {
+					$w[] = "p.price <= " . (float)$selected['max_price'];
+				}
+			}
+
+			return $w ? (' WHERE ' . implode(' AND ', $w)) : '';
+		};
+
 		// Child categories (Category block)
 		$data['child_category_items'] = [];
 		try {
 			$this->load->model('catalog/category');
-			$this->load->model('catalog/product');
 			$children = $this->model_catalog_category->getCategories($category_id);
 			foreach ($children as $child) {
 				$child_id = (int)$child['category_id'];
@@ -370,16 +454,17 @@ class FilterproLike extends \Opencart\System\Engine\Controller {
 			// ignore
 		}
 
-		// Manufacturers available in category
+		// Manufacturers available in category (counts reflect current selection except manufacturer facet)
 		$data['manufacturers'] = [];
 		$data['manufacturer_items'] = [];
 		$m_q = $this->db->query(
 			"SELECT p.manufacturer_id, m.name, COUNT(DISTINCT p.product_id) total " .
 			"FROM `" . DB_PREFIX . "product_to_category` p2c " .
-			"JOIN `" . DB_PREFIX . "product` p ON p.product_id=p2c.product_id AND p.status='1' AND p.date_available<=NOW() " .
+			"JOIN `" . DB_PREFIX . "product` p ON p.product_id=p2c.product_id " .
 			"JOIN `" . DB_PREFIX . "manufacturer` m ON m.manufacturer_id=p.manufacturer_id " .
-			"WHERE p2c.category_id='" . (int)$category_id . "' AND p.manufacturer_id > 0 " .
-			"GROUP BY p.manufacturer_id ORDER BY m.name"
+			$facet_where('manufacturer') .
+			" AND p.manufacturer_id > 0 " .
+			" GROUP BY p.manufacturer_id ORDER BY m.name"
 		);
 		foreach ($m_q->rows as $row) {
 			$id = (int)$row['manufacturer_id'];
@@ -444,14 +529,15 @@ class FilterproLike extends \Opencart\System\Engine\Controller {
 		$data['colors'] = [];
 		$data['color_items'] = [];
 		$c_q = $this->db->query(
-			"SELECT pov.option_value_id, ov.image, ovd.name, ovd.slug, COUNT(DISTINCT pov.product_id) total " .
+			"SELECT pov.option_value_id, ov.image, ovd.name, ovd.slug, COUNT(DISTINCT p.product_id) total " .
 			"FROM `" . DB_PREFIX . "product_to_category` p2c " .
-			"JOIN `" . DB_PREFIX . "product` p ON p.product_id=p2c.product_id AND p.status='1' AND p.date_available<=NOW() " .
+			"JOIN `" . DB_PREFIX . "product` p ON p.product_id=p2c.product_id " .
 			"JOIN `" . DB_PREFIX . "product_option_value` pov ON pov.product_id=p.product_id AND pov.option_id='" . (int)$color_option_id . "' " .
 			"JOIN `" . DB_PREFIX . "option_value` ov ON ov.option_value_id=pov.option_value_id " .
 			"JOIN `" . DB_PREFIX . "option_value_description` ovd ON ovd.option_value_id=pov.option_value_id AND ovd.option_id='" . (int)$color_option_id . "' AND ovd.language_id='" . (int)$language_id . "' " .
-			"WHERE p2c.category_id='" . (int)$category_id . "' " .
-			"GROUP BY pov.option_value_id ORDER BY ovd.name"
+			$facet_where('option:' . (int)$color_option_id) .
+			" AND ovd.slug != '' " .
+			" GROUP BY pov.option_value_id ORDER BY ovd.name"
 		);
 		foreach ($c_q->rows as $row) {
 			$slug = (string)$row['slug'];
@@ -503,13 +589,14 @@ class FilterproLike extends \Opencart\System\Engine\Controller {
 		$size_option_slug = 'razmer-o';
 		$data['size_items'] = [];
 		$siz_q = $this->db->query(
-			"SELECT pov.option_value_id, ovd.name, ovd.slug, COUNT(DISTINCT pov.product_id) total " .
+			"SELECT pov.option_value_id, ovd.name, ovd.slug, COUNT(DISTINCT p.product_id) total " .
 			"FROM `" . DB_PREFIX . "product_to_category` p2c " .
-			"JOIN `" . DB_PREFIX . "product` p ON p.product_id=p2c.product_id AND p.status='1' AND p.date_available<=NOW() " .
+			"JOIN `" . DB_PREFIX . "product` p ON p.product_id=p2c.product_id " .
 			"JOIN `" . DB_PREFIX . "product_option_value` pov ON pov.product_id=p.product_id AND pov.option_id='" . (int)$size_option_id . "' " .
 			"JOIN `" . DB_PREFIX . "option_value_description` ovd ON ovd.option_value_id=pov.option_value_id AND ovd.option_id='" . (int)$size_option_id . "' AND ovd.language_id='" . (int)$language_id . "' " .
-			"WHERE p2c.category_id='" . (int)$category_id . "' AND ovd.slug != '' " .
-			"GROUP BY pov.option_value_id ORDER BY ovd.name"
+			$facet_where('option:' . (int)$size_option_id) .
+			" AND ovd.slug != '' " .
+			" GROUP BY pov.option_value_id ORDER BY ovd.name"
 		);
 		foreach ($siz_q->rows as $row) {
 			$slug = (string)$row['slug'];
@@ -550,12 +637,13 @@ class FilterproLike extends \Opencart\System\Engine\Controller {
 		$data['styles'] = [];
 		$data['style_items'] = [];
 		$s_q = $this->db->query(
-			"SELECT pa.slug, pa.text, COUNT(DISTINCT pa.product_id) total " .
+			"SELECT pa.slug, pa.text, COUNT(DISTINCT p.product_id) total " .
 			"FROM `" . DB_PREFIX . "product_to_category` p2c " .
-			"JOIN `" . DB_PREFIX . "product` p ON p.product_id=p2c.product_id AND p.status='1' AND p.date_available<=NOW() " .
+			"JOIN `" . DB_PREFIX . "product` p ON p.product_id=p2c.product_id " .
 			"JOIN `" . DB_PREFIX . "product_attribute` pa ON pa.product_id=p.product_id AND pa.attribute_id='" . (int)$style_attr_id . "' AND pa.language_id='" . (int)$language_id . "' " .
-			"WHERE p2c.category_id='" . (int)$category_id . "' AND pa.slug != '' AND pa.text != '' " .
-			"GROUP BY pa.slug, pa.text ORDER BY pa.text"
+			$facet_where('attribute:' . (int)$style_attr_id) .
+			" AND pa.slug != '' AND pa.text != '' " .
+			" GROUP BY pa.slug, pa.text ORDER BY pa.text"
 		);
 		foreach ($s_q->rows as $row) {
 			$slug = (string)$row['slug'];
@@ -656,9 +744,16 @@ class FilterproLike extends \Opencart\System\Engine\Controller {
 						$sel = false;
 					}
 
+					// Compute how many products we'd have if this toggle is ON (with all other filters preserved)
+					$fd = $filter_data_base;
+					if ($kstd === 'stock') $fd['filter_stock'] = 1;
+					if ($kstd === 'special') $fd['filter_special'] = 1;
+					if ($kstd === 'new') $fd['filter_new'] = 1;
+					$total = (int)$this->model_catalog_product->getTotalProducts($fd);
+
 					$items[] = [
 						'label' => (string)$s['label'],
-						'total' => 0,
+						'total' => $total,
 						'selected' => $sel,
 						'url' => $build_url($cur),
 						'fp_key' => $kstd,
