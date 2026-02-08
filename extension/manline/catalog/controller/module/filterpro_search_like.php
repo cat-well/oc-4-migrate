@@ -226,10 +226,42 @@ class FilterproSearchLike extends \Opencart\System\Engine\Controller {
 
 			// Limit number of attribute blocks on search (as per OC2 feel)
 			$max_attr_blocks = 5; // + manufacturer + price = up to 7 blocks total (as agreed)
+
+			// Pin important attributes to the top if they exist in the result set (OC2-like):
+			// Style, Delivery time, Size, Color.
+			$pinned_ids = [];
+			$aid_style = $findAttributeId(['stil','style'], ['Стиль']);
+			$aid_delivery = $findAttributeId(['srok-dostavki','delivery','termin-dostavki'], ['Срок доставки', 'Термін доставки']);
+			$aid_size = $findAttributeId(['size','rozmir','razmer'], ['Размер', 'Розмір']);
+			$aid_color = $findAttributeId(['color','kolir','cvet'], ['Цвет', 'Колір']);
+			foreach ([$aid_style, $aid_delivery, $aid_size, $aid_color] as $x) {
+				if ($x) $pinned_ids[] = (int)$x;
+			}
+			$pinned_ids = array_values(array_unique(array_filter($pinned_ids)));
+
+			$disc_by_id = [];
+			foreach ($discovered as $d) {
+				$disc_by_id[(int)$d['attribute_id']] = $d;
+			}
+
+			$picked = [];
+			foreach ($pinned_ids as $pid) {
+				if (isset($disc_by_id[$pid])) {
+					$picked[] = $disc_by_id[$pid];
+				}
+			}
+			foreach ($discovered as $d) {
+				if (count($picked) >= $max_attr_blocks) break;
+				$aid = (int)$d['attribute_id'];
+				if (in_array($aid, $pinned_ids, true)) continue;
+				$picked[] = $d;
+			}
+			$picked = array_slice($picked, 0, $max_attr_blocks);
+
 			$blocks_list[] = ['key' => 'manufacturer', 'sort_order' => 10, 'display' => 'checkbox', 'expanded' => 1];
 
 			$sort = 20;
-			foreach (array_slice($discovered, 0, $max_attr_blocks) as $d) {
+			foreach ($picked as $d) {
 				$blocks_list[] = [
 					'key' => 'attribute:' . (int)$d['attribute_id'],
 					'sort_order' => $sort,
