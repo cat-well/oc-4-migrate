@@ -170,7 +170,8 @@
 
     function rowTemplate(i) {
       // Note: tooltips are per-language
-      var languages = {{ languages|json_encode|raw }};
+      var languagesRaw = {{ languages|json_encode|raw }};
+      var languages = Array.isArray(languagesRaw) ? languagesRaw : Object.values(languagesRaw || {});
       var tooltipHtml = '';
       languages.forEach(function(lang) {
         tooltipHtml +=
