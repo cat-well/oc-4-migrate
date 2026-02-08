@@ -110,13 +110,22 @@ class Header extends \Opencart\System\Engine\Controller {
 		$data['current_language'] = $this->config->get('config_language');
 
 		// Manline theme: simple UA/RU switch (OC2-like), avoids bootstrap dropdown dependency.
+		// IMPORTANT: ensure URLs are absolute or start with '/' to avoid relative URL duplication like /cat/cat?language=...
+		$normalize_href = static function (string $href): string {
+			$href = trim($href);
+			if ($href === '') return $href;
+			if (preg_match('#^https?://#i', $href)) return $href;
+			if ($href[0] !== '/') $href = '/' . $href;
+			return $href;
+		};
+
 		$route = $this->request->get['route'] ?? 'common/home';
 		$params = $this->request->get;
 		unset($params['route'], $params['language'], $params['_route_']);
 		$query_ru = http_build_query(['language' => 'ru-ru'] + $params);
 		$query_ua = http_build_query(['language' => 'uk-ua'] + $params);
-		$data['lang_switch_ru'] = $this->url->link($route, $query_ru);
-		$data['lang_switch_ua'] = $this->url->link($route, $query_ua);
+		$data['lang_switch_ru'] = $normalize_href($this->url->link($route, $query_ru));
+		$data['lang_switch_ua'] = $normalize_href($this->url->link($route, $query_ua));
 		$data['search'] = $this->load->controller('common/search');
 		$data['cart'] = $this->load->controller('common/cart');
 		$data['menu'] = $this->load->controller('common/menu');
