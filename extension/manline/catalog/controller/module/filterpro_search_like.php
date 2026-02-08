@@ -154,36 +154,128 @@ class FilterproSearchLike extends \Opencart\System\Engine\Controller {
 				return $q->num_rows ? (int)$q->row['attribute_id'] : 0;
 			};
 
-			// Facet discovery (OC2-like): pick top attributes that appear in the current result set.
+			// Parse selection (query params) early so facet discovery reflects current filtered result set
+			$sel = [];
+			$man = $this->request->get['manufacturer'] ?? null;
+			$mans = [];
+			if (is_array($man)) {
+				foreach ($man as $v) foreach (explode(',', (string)$v) as $vv) $mans[] = (int)$vv;
+			} elseif ($man !== null && $man !== '') {
+				foreach (explode(',', (string)$man) as $vv) $mans[] = (int)$vv;
+			}
+			$mans = array_values(array_unique(array_filter($mans)));
+			if ($mans) $sel['manufacturer'] = array_map('strval', $mans);
+
+			if (!empty($this->request->get['stock'])) $sel['stock'] = ['1'];
+			if (!empty($this->request->get['special'])) $sel['special'] = ['1'];
+			if (!empty($this->request->get['new'])) $sel['new'] = ['1'];
+
+			foreach ($this->request->get as $k => $v) {
+				$k = (string)$k;
+				if (!str_starts_with($k, 'f_')) continue;
+				$slug_key = substr($k, 2);
+				$vals = [];
+				if (is_array($v)) {
+					foreach ($v as $vv) $vals = array_merge($vals, explode(',', (string)$vv));
+				} else {
+					$vals = explode(',', (string)$v);
+				}
+				$vals = array_values(array_unique(array_filter(array_map('trim', $vals))));
+				if ($slug_key !== '' && $vals) {
+					$sel[$slug_key] = $vals;
+				}
+			}
+
+			$min_price = isset($this->request->get['min_price']) ? (float)$this->request->get['min_price'] : null;
+			$max_price = isset($this->request->get['max_price']) ? (float)$this->request->get['max_price'] : null;
+
+			$search_where = function () use ($search, $tag, $language_id): string {
+				$term = trim($search !== '' ? $search : $tag);
+				if ($term === '') return '';
+				$words = preg_split('/\s+/', $term, -1, PREG_SPLIT_NO_EMPTY);
+				$conds = [];
+				foreach ($words as $w) {
+					$w = $this->db->escape((string)$w);
+					$conds[] = "`pd`.`name` LIKE '%" . $w . "%'";
+					$conds[] = "`pd`.`tag` LIKE '%" . $w . "%'";
+				}
+				if (!$conds) return '';
+				return " AND `pd`.`language_id`='" . (int)$language_id . "' AND (" . implode(' OR ', $conds) . ")";
+			};
+
+			$facet_where = function (string $exclude) use ($sel, $min_price, $max_price): string {
+				$w = [];
+				$w[] = "p.status='1'";
+				$w[] = "p.date_available<=NOW()";
+
+				if ($exclude !== 'manufacturer' && !empty($sel['manufacturer'])) {
+					$ids = array_map('intval', (array)$sel['manufacturer']);
+					$ids = array_values(array_unique(array_filter($ids)));
+					if ($ids) $w[] = "p.manufacturer_id IN (" . implode(',', $ids) . ")";
+				}
+
+				foreach ($sel as $k => $vals) {
+					if (!is_array($vals) || !$vals) continue;
+					if (in_array($k, ['manufacturer','stock','special','new'], true)) continue;
+					if ($exclude === 'slug:' . $k) continue;
+
+					$opt_q = $this->db->query("SELECT option_id FROM `" . DB_PREFIX . "option_description` WHERE slug='" . $this->db->escape($k) . "' ORDER BY language_id='" . (int)$this->config->get('config_language_id') . "' DESC LIMIT 1");
+					if ($opt_q->num_rows) {
+						$option_id = (int)$opt_q->row['option_id'];
+						$in = [];
+						foreach ($vals as $vslug) {
+							$ov_q = $this->db->query("SELECT option_value_id FROM `" . DB_PREFIX . "option_value_description` WHERE option_id='" . $option_id . "' AND slug='" . $this->db->escape((string)$vslug) . "' ORDER BY language_id='" . (int)$this->config->get('config_language_id') . "' DESC LIMIT 1");
+							if ($ov_q->num_rows) $in[] = (int)$ov_q->row['option_value_id'];
+						}
+						$in = array_values(array_unique(array_filter($in)));
+						if ($in) {
+							$w[] = "EXISTS (SELECT 1 FROM `" . DB_PREFIX . "product_option_value` povf WHERE povf.product_id=p.product_id AND povf.option_id='" . $option_id . "' AND povf.option_value_id IN (" . implode(',', $in) . "))";
+							continue;
+						}
+					}
+
+					$attr_q = $this->db->query("SELECT attribute_id FROM `" . DB_PREFIX . "attribute_description` WHERE slug='" . $this->db->escape($k) . "' ORDER BY language_id='" . (int)$this->config->get('config_language_id') . "' DESC LIMIT 1");
+					if ($attr_q->num_rows) {
+						$attribute_id = (int)$attr_q->row['attribute_id'];
+						$in = [];
+						foreach ($vals as $vslug) {
+							$vslug = trim((string)$vslug);
+							if ($vslug !== '') $in[] = "'" . $this->db->escape($vslug) . "'";
+						}
+						$in = array_values(array_unique($in));
+						if ($in) {
+							$w[] = "EXISTS (SELECT 1 FROM `" . DB_PREFIX . "product_attribute` paf WHERE paf.product_id=p.product_id AND paf.attribute_id='" . $attribute_id . "' AND paf.slug IN (" . implode(',', $in) . "))";
+							continue;
+						}
+					}
+				}
+
+				if (!empty($sel['stock']) && $exclude !== 'stock') $w[] = "p.quantity > 0";
+				if (!empty($sel['new']) && $exclude !== 'new') $w[] = "p.date_added >= DATE_SUB(NOW(), INTERVAL 60 DAY)";
+				if (!empty($sel['special']) && $exclude !== 'special') {
+					$w[] = "EXISTS (SELECT 1 FROM `" . DB_PREFIX . "product_discount` ps WHERE ps.product_id = p.product_id AND ps.customer_group_id = '" . (int)$this->config->get('config_customer_group_id') . "' AND ps.quantity = '1' AND ps.special = '1' AND ((ps.date_start = '0000-00-00' OR ps.date_start < NOW()) AND (ps.date_end = '0000-00-00' OR ps.date_end > NOW())))";
+				}
+
+				if ($exclude !== 'price') {
+					if ($min_price !== null && (float)$min_price > 0) $w[] = "p.price >= " . (float)$min_price;
+					if ($max_price !== null && (float)$max_price > 0) $w[] = "p.price <= " . (float)$max_price;
+				}
+
+				return $w ? (' WHERE ' . implode(' AND ', $w)) : '';
+			};
+
+			// Facet discovery (OC2-like): pick top attributes that appear in the current filtered result set.
 			// We keep manufacturer + discovered attributes + price.
 			$ignore_attr_ids = [];
 			$ignore_attr_names = ['Артикул', 'SKU', 'Модель', 'Model'];
 
 			// Build a baseline product set for this search WITH current selection applied.
-			// Note: we intentionally include currently selected facets here; each block is computed with facet_where(exclude=that facet)
-			// later when generating its items.
-			// Baseline discovery query: approximate search match in name/tag (without other facet filters)
-			$term = trim($search !== '' ? $search : $tag);
-			$base_where = "";
-			if ($term !== '') {
-				$words = preg_split('/\s+/', $term, -1, PREG_SPLIT_NO_EMPTY);
-				$conds = [];
-				foreach ($words as $w) {
-					$w = $this->db->escape((string)$w);
-					$conds[] = "pd.name LIKE '%" . $w . "%'";
-					$conds[] = "pd.tag LIKE '%" . $w . "%'";
-				}
-				if ($conds) {
-					$base_where = " AND pd.language_id='" . (int)$language_id . "' AND (" . implode(' OR ', $conds) . ")";
-				}
-			}
-
 			$base_rows = $cacheRows(
 				"SELECT DISTINCT p.product_id " .
 				"FROM `" . DB_PREFIX . "product` p " .
 				"JOIN `" . DB_PREFIX . "product_description` pd ON pd.product_id=p.product_id " .
-				" WHERE p.status='1' AND p.date_available<=NOW() " .
-				$base_where .
+				$facet_where('none') .
+				$search_where() .
 				" LIMIT 5000"
 			);
 			$pids = [];
@@ -232,8 +324,8 @@ class FilterproSearchLike extends \Opencart\System\Engine\Controller {
 			$pinned_ids = [];
 			$aid_style = $findAttributeId(['stil','style'], ['Стиль']);
 			$aid_delivery = $findAttributeId(['srok-dostavki','delivery','termin-dostavki'], ['Срок доставки', 'Термін доставки']);
-			$aid_size = $findAttributeId(['size','rozmir','razmer'], ['Размер', 'Розмір']);
-			$aid_color = $findAttributeId(['color','kolir','cvet'], ['Цвет', 'Колір']);
+			$aid_size = $findAttributeId(['size','rozmir','razmer'], ['Размер', 'Розмір', 'Размер:']);
+			$aid_color = $findAttributeId(['color','kolir','cvet'], ['Цвет', 'Колір', 'Цвет:']);
 			foreach ([$aid_style, $aid_delivery, $aid_size, $aid_color] as $x) {
 				if ($x) $pinned_ids[] = (int)$x;
 			}
