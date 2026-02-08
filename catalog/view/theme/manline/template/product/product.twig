@@ -426,25 +426,49 @@
         if ($(this).prop('checked')) $(this).closest('label').addClass('checked');
       });
 
-      // Add to cart (OC4 endpoint)
+      // Add to cart (OC2-like UX)
       $(document).on('click', '#button-cart', function(){
-        var data = {
-          product_id: {{ product_id }},
-          quantity: $('#quantity').val() || {{ minimum|default(1) }}
-        };
-        // collect option radios
-        $('input[name^="option["]:checked').each(function(){
-          data[$(this).attr('name')] = $(this).val();
-        });
-
         $.ajax({
           url: 'index.php?route=checkout/cart.add&language={{ language }}',
           type: 'post',
-          data: data,
+          data: $('.product-info input[type=\'text\'], .product-info input[type=\'hidden\'], .product-info input[type=\'radio\']:checked, .product-info input[type=\'checkbox\']:checked, .product-info select, .product-info textarea'),
           dataType: 'json',
           success: function(json){
+            $('.success, .warning, .attention, .information, .error').remove();
+            $('span.error').remove();
+
+            if (json && json.error) {
+              if (json.error.option) {
+                for (var i in json.error.option) {
+                  $('#option-' + i).after('<span class="error">' + json.error.option[i] + '</span>');
+                }
+              }
+              if (json.error.quantity) {
+                $('.qnt_w').after('<span class="error">' + json.error.quantity + '</span>');
+              }
+              return;
+            }
+
             if (json && json.success) {
-              $('#cart').load('index.php?route=common/cart.info&language={{ language }}');
+              // cart popup (close reloads header cart)
+              if ($.magnificPopup) {
+                $.magnificPopup.open({
+                  items: { src: 'index.php?route=common/cart.info&language={{ language }}' },
+                  closeBtnInside: true,
+                  type: 'ajax',
+                  overflowY: 'scroll',
+                  tLoading: '',
+                  removalDelay: 200,
+                  mainClass: 'mfp-with-anim mfp-zoom-in',
+                  callbacks: {
+                    close: function () {
+                      $('#cart').load('index.php?route=common/cart.info&language={{ language }}');
+                    }
+                  }
+                });
+              } else {
+                $('#cart').load('index.php?route=common/cart.info&language={{ language }}');
+              }
             }
           }
         });
