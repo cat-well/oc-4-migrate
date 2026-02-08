@@ -136,18 +136,76 @@ class FilterproSearchLike extends \Opencart\System\Engine\Controller {
 				return $q->num_rows ? (int)$q->row['attribute_id'] : 0;
 			};
 
-			// Common facets (RU/UA) — on Manline these are ATTRIBUTES (not options)
-			$size_attr_id = $findAttributeId(['size','rozmir','razmer'], ['Размер', 'Розмір']);
-			$color_attr_id = $findAttributeId(['color','kolir','cvet'], ['Цвет', 'Колір']);
-			$style_attr_id = $findAttributeId(['stil','style'], ['Стиль']);
-			$delivery_attr_id = $findAttributeId(['srok-dostavki','delivery'], ['Срок доставки', 'Термін доставки']);
+			// Facet discovery (OC2-like): pick top attributes that appear in the current result set.
+			// We keep manufacturer + discovered attributes + price.
+			$ignore_attr_ids = [];
+			$ignore_attr_names = ['Артикул', 'SKU', 'Модель', 'Model'];
 
+			// Build a baseline product set for this search WITH current selection applied.
+			// Note: we intentionally include currently selected facets here; each block is computed with facet_where(exclude=that facet)
+			// later when generating its items.
+			$base_rows = $cacheRows(
+				"SELECT DISTINCT p.product_id " .
+				"FROM `" . DB_PREFIX . "product` p " .
+				"JOIN `" . DB_PREFIX . "product_description` pd ON pd.product_id=p.product_id " .
+				$facet_where('none') .
+				$search_where() .
+				" LIMIT 5000"
+			);
+			$pids = [];
+			foreach ($base_rows as $r) {
+				$id = (int)($r['product_id'] ?? 0);
+				if ($id > 0) $pids[] = $id;
+			}
+			$pids = array_values(array_unique($pids));
+
+			$discovered = [];
+			if ($pids) {
+				$pid_list = implode(',', array_map('intval', $pids));
+
+				$attr_rows = $cacheRows(
+					"SELECT pa.attribute_id, COUNT(DISTINCT pa.product_id) products, COUNT(DISTINCT pa.slug) vals " .
+					"FROM `" . DB_PREFIX . "product_attribute` pa " .
+					"JOIN `" . DB_PREFIX . "attribute_description` ad ON ad.attribute_id=pa.attribute_id AND ad.language_id='" . (int)$language_id . "' " .
+					"WHERE pa.product_id IN (" . $pid_list . ") AND pa.language_id='" . (int)$language_id . "' " .
+					"AND pa.slug != '' AND pa.text != '' AND ad.slug != '' " .
+					"GROUP BY pa.attribute_id ORDER BY products DESC, vals DESC LIMIT 40"
+				);
+
+				foreach ($attr_rows as $ar) {
+					$aid = (int)($ar['attribute_id'] ?? 0);
+					if ($aid <= 0) continue;
+					if (in_array($aid, $ignore_attr_ids, true)) continue;
+
+					$name = $this->db->query("SELECT name FROM `" . DB_PREFIX . "attribute_description` WHERE attribute_id='" . (int)$aid . "' AND language_id='" . (int)$language_id . "' LIMIT 1");
+					$aname = $name->num_rows ? (string)$name->row['name'] : '';
+					if ($aname !== '' && in_array($aname, $ignore_attr_names, true)) continue;
+
+					$discovered[] = [
+						'attribute_id' => $aid,
+						'products' => (int)($ar['products'] ?? 0),
+						'vals' => (int)($ar['vals'] ?? 0),
+						'name' => $aname,
+					];
+				}
+			}
+
+			// Limit number of attribute blocks on search (as per OC2 feel)
+			$max_attr_blocks = 6; // + manufacturer + price = ~8 total blocks max
 			$blocks_list[] = ['key' => 'manufacturer', 'sort_order' => 10, 'display' => 'checkbox', 'expanded' => 1];
-			if ($style_attr_id) $blocks_list[] = ['key' => 'attribute:' . $style_attr_id, 'sort_order' => 20, 'display' => 'checkbox', 'expanded' => 1];
-			if ($delivery_attr_id) $blocks_list[] = ['key' => 'attribute:' . $delivery_attr_id, 'sort_order' => 30, 'display' => 'checkbox', 'expanded' => 1];
-			if ($size_attr_id) $blocks_list[] = ['key' => 'attribute:' . $size_attr_id, 'sort_order' => 40, 'display' => 'checkbox', 'expanded' => 1];
-			if ($color_attr_id) $blocks_list[] = ['key' => 'attribute:' . $color_attr_id, 'sort_order' => 50, 'display' => 'checkbox', 'expanded' => 1];
-			$blocks_list[] = ['key' => 'price', 'sort_order' => 60, 'display' => 'slider', 'expanded' => 1];
+
+			$sort = 20;
+			foreach (array_slice($discovered, 0, $max_attr_blocks) as $d) {
+				$blocks_list[] = [
+					'key' => 'attribute:' . (int)$d['attribute_id'],
+					'sort_order' => $sort,
+					'display' => 'checkbox',
+					'expanded' => 1,
+				];
+				$sort += 10;
+			}
+
+			$blocks_list[] = ['key' => 'price', 'sort_order' => 100, 'display' => 'slider', 'expanded' => 1];
 		}
 
 		foreach ($blocks_list as $row) {
