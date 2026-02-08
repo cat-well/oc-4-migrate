@@ -136,6 +136,18 @@ class Search extends \Opencart\System\Engine\Controller {
 
 		$data['compare'] = $this->url->link('product/compare', 'language=' . $this->config->get('config_language'));
 
+		// FilterPro-like sidebar for search page (Manline)
+		$filterpro_setting = ['status' => 1];
+		$this->load->model('setting/setting');
+		$filterpro_module_id = (int)$this->model_setting_setting->getValue('manline_filterpro_module_id');
+		if ($filterpro_module_id) {
+			$this->load->model('setting/module');
+			$module_info = $this->model_setting_module->getModule($filterpro_module_id);
+			if (is_array($module_info)) {
+				$filterpro_setting = $module_info;
+			}
+		}
+
 		// 3 Level Category Search
 		$data['categories'] = [];
 
@@ -164,12 +176,84 @@ class Search extends \Opencart\System\Engine\Controller {
 		$data['products'] = [];
 
 		if ($filter_search || $filter_tag) {
+			// Parse query-param based filters (stage 1) to match FilterPro-like sidebar on /search
+			$manufacturer_ids = [];
+			if (isset($this->request->get['manufacturer'])) {
+				$m = $this->request->get['manufacturer'];
+				if (is_array($m)) {
+					foreach ($m as $vv) {
+						foreach (explode(',', (string)$vv) as $id) $manufacturer_ids[] = (int)$id;
+					}
+				} elseif ((string)$m !== '') {
+					foreach (explode(',', (string)$m) as $id) $manufacturer_ids[] = (int)$id;
+				}
+			}
+			$manufacturer_ids = array_values(array_unique(array_filter($manufacturer_ids)));
+
+			$min_price = isset($this->request->get['min_price']) ? (float)$this->request->get['min_price'] : null;
+			$max_price = isset($this->request->get['max_price']) ? (float)$this->request->get['max_price'] : null;
+
+			$attribute_slug = [];
+			$option_value = [];
+			foreach ($this->request->get as $k => $v) {
+				$k = (string)$k;
+				if (!str_starts_with($k, 'f_')) continue;
+				$slug_key = substr($k, 2);
+				if ($slug_key === '') continue;
+
+				$vals = [];
+				if (is_array($v)) {
+					foreach ($v as $vv) $vals = array_merge($vals, explode(',', (string)$vv));
+				} else {
+					$vals = explode(',', (string)$v);
+				}
+				$vals = array_values(array_unique(array_filter(array_map('trim', $vals))));
+				if (!$vals) continue;
+
+				// OPTION by slug
+				$opt_q = $this->db->query("SELECT option_id FROM `" . DB_PREFIX . "option_description` WHERE slug='" . $this->db->escape($slug_key) . "' ORDER BY language_id='" . (int)$this->config->get('config_language_id') . "' DESC LIMIT 1");
+				if ($opt_q->num_rows) {
+					$option_id = (int)$opt_q->row['option_id'];
+					foreach ($vals as $vslug) {
+						$ov_q = $this->db->query("SELECT option_value_id FROM `" . DB_PREFIX . "option_value_description` WHERE option_id='" . $option_id . "' AND slug='" . $this->db->escape((string)$vslug) . "' ORDER BY language_id='" . (int)$this->config->get('config_language_id') . "' DESC LIMIT 1");
+						if ($ov_q->num_rows) {
+							$option_value[$option_id][] = (int)$ov_q->row['option_value_id'];
+						}
+					}
+					continue;
+				}
+
+				// ATTRIBUTE by slug
+				$attr_q = $this->db->query("SELECT attribute_id FROM `" . DB_PREFIX . "attribute_description` WHERE slug='" . $this->db->escape($slug_key) . "' ORDER BY language_id='" . (int)$this->config->get('config_language_id') . "' DESC LIMIT 1");
+				if ($attr_q->num_rows) {
+					$attribute_id = (int)$attr_q->row['attribute_id'];
+					foreach ($vals as $vslug) {
+						$attribute_slug[$attribute_id][] = (string)$vslug;
+					}
+					continue;
+				}
+			}
+
+			// normalize option_value
+			foreach ($option_value as $oid => $ids) {
+				$ids = array_values(array_unique(array_filter(array_map('intval', (array)$ids))));
+				$option_value[(int)$oid] = $ids;
+			}
+
 			$filter_data = [
 				'filter_search'       => $filter_search,
 				'filter_description'  => $filter_description,
 				'filter_tag'          => $filter_tag ? $filter_tag : $filter_search,
 				'filter_category_id'  => $filter_category_id,
 				'filter_sub_category' => $filter_sub_category,
+				'filter_manufacturer_ids' => $manufacturer_ids,
+				'filter_min_price' => $min_price,
+				'filter_max_price' => $max_price,
+				'filter_attribute_slug' => $attribute_slug,
+				'filter_option_value' => $option_value,
+				'filter_stock' => !empty($this->request->get['stock']) ? 1 : 0,
+				'filter_special' => !empty($this->request->get['special']) ? 1 : 0,
+				'filter_new' => !empty($this->request->get['new']) ? 1 : 0,
 				'sort'                => $sort,
 				'order'               => $order,
 				'start'               => ($page - 1) * $limit,
@@ -435,13 +519,48 @@ class Search extends \Opencart\System\Engine\Controller {
 
 		$data['language'] = $this->config->get('config_language');
 
+		$data['filterpro_like'] = $this->load->controller('extension/manline/module/filterpro_search_like', $filterpro_setting);
 		$data['column_left'] = $this->load->controller('common/column_left');
+		if (!empty($data['filterpro_like'])) {
+			if (!empty($data['column_left']) && strpos($data['column_left'], '</aside>') !== false) {
+				$data['column_left'] = str_replace('</aside>', $data['filterpro_like'] . "\n</aside>", $data['column_left']);
+			} elseif (empty($data['column_left'])) {
+				$data['column_left'] = '<aside id="column-left" class="col-md-3 hidden-xs hidden-sm">' . $data['filterpro_like'] . '</aside>';
+			}
+		}
 		$data['column_right'] = $this->load->controller('common/column_right');
 		$data['content_top'] = $this->load->controller('common/content_top');
 		$data['content_bottom'] = $this->load->controller('common/content_bottom');
 		$data['footer'] = $this->load->controller('common/footer');
 		$data['header'] = $this->load->controller('common/header');
 
-		$this->response->setOutput($this->load->view('product/search', $data));
+		// AJAX partial endpoint for FilterPro-like UX on search
+		if (!empty($this->request->get['fp_partial']) && ($this->request->server['HTTP_X_REQUESTED_WITH'] ?? '') === 'XMLHttpRequest') {
+			$sort_options = '';
+			foreach (($data['sorts'] ?? []) as $s) {
+				if (!is_array($s)) continue;
+				$selected = ((string)($s['value'] ?? '') === sprintf('%s-%s', $sort, $order)) ? ' selected' : '';
+				$sort_options .= '<option value="' . htmlspecialchars((string)($s['href'] ?? ''), ENT_QUOTES) . '"' . $selected . '>' . htmlspecialchars((string)($s['text'] ?? ''), ENT_QUOTES) . '</option>';
+			}
+
+			$limit_options = '';
+			foreach (($data['limits'] ?? []) as $l) {
+				if (!is_array($l)) continue;
+				$selected = ((string)($l['value'] ?? '') === (string)$limit) ? ' selected' : '';
+				$limit_options .= '<option value="' . htmlspecialchars((string)($l['href'] ?? ''), ENT_QUOTES) . '"' . $selected . '>' . htmlspecialchars((string)($l['text'] ?? ''), ENT_QUOTES) . '</option>';
+			}
+
+			$this->response->addHeader('Content-Type: application/json; charset=utf-8');
+			$this->response->setOutput(json_encode([
+				'title' => (string)$this->document->getTitle(),
+				'products_html' => implode('', $data['products'] ?? []),
+				'pagination_html' => (string)($data['pagination'] ?? ''),
+				'sort_options_html' => $sort_options,
+				'limit_options_html' => $limit_options,
+				'filter_html' => (string)($data['filterpro_like'] ?? ''),
+			], JSON_UNESCAPED_UNICODE));
+		} else {
+			$this->response->setOutput($this->load->view('product/search', $data));
+		}
 	}
 }
