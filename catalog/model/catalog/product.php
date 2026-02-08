@@ -199,9 +199,8 @@ class Product extends \Opencart\System\Engine\Model {
 			$sql .= " AND `p`.`quantity` > 0";
 		}
 
-		if (!empty($data['filter_special'])) {
-			$sql .= " AND `special` IS NOT NULL";
-		}
+		// Note: `special` is a computed select alias, so we can't use it in WHERE.
+		// We apply it later via HAVING after GROUP BY.
 
 		if (!empty($data['filter_new'])) {
 			$sql .= " AND `p`.`date_added` >= DATE_SUB(NOW(), INTERVAL 60 DAY)";
@@ -280,6 +279,11 @@ class Product extends \Opencart\System\Engine\Model {
 		// Price range filters (min_price/max_price) on effective price (special/discount/regular)
 		$price_expr = "(CASE WHEN `special` IS NOT NULL THEN `special` WHEN `discount` IS NOT NULL THEN `discount` ELSE `p`.`price` END)";
 		$having = [];
+
+		// Standard toggle: special
+		if (!empty($data['filter_special'])) {
+			$having[] = "`special` IS NOT NULL";
+		}
 		if (isset($data['filter_min_price']) && $data['filter_min_price'] !== null && (float)$data['filter_min_price'] > 0) {
 			$having[] = $price_expr . " >= " . (float)$data['filter_min_price'];
 		}
