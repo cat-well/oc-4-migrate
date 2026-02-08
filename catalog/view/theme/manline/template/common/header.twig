@@ -157,11 +157,44 @@
   </div>
 
   <div class="search_w mob_hid">
-    <div id="search">
-      <input type="text" value="" placeholder="{{ text_search|default('Поиск') }}" name="search" class="ui-autocomplete-input ui-corner-all" autocomplete="off" role="textbox" aria-autocomplete="list" aria-haspopup="true">
-      <div class="button-search"><div class="button_search_inner"></div></div>
+    <div id="search" data-search-url="{{ search_url }}">
+      <input type="text" value="{{ search_query|e }}" placeholder="{{ text_search|default('Поиск') }}" name="search" class="ui-autocomplete-input ui-corner-all" autocomplete="off" role="textbox" aria-autocomplete="list" aria-haspopup="true">
+      <div class="button-search" role="button" aria-label="Search"><div class="button_search_inner"></div></div>
     </div>
   </div>
+
+  <script>
+    // Legacy Manline search: redirect to product/search with ?search=
+    (function(){
+      function root(){ return document.getElementById('search'); }
+      function inp(){ return root() ? root().querySelector('input[name=search]') : null; }
+      function go(){
+        var r = root();
+        var i = inp();
+        if(!r || !i) return;
+        var base = r.getAttribute('data-search-url') || '';
+        var q = String(i.value || '').trim();
+        if(!base) return;
+        // keep existing query string (language=...) and append search
+        var url = base + (base.indexOf('?') === -1 ? '?' : '&') + 'search=' + encodeURIComponent(q);
+        window.location.href = url;
+      }
+
+      document.addEventListener('click', function(e){
+        var btn = e.target && (e.target.closest ? e.target.closest('#search .button-search') : null);
+        if(btn) { e.preventDefault(); go(); }
+      });
+
+      document.addEventListener('keydown', function(e){
+        var i = inp();
+        if(!i) return;
+        if(e.key === 'Enter' && document.activeElement === i) {
+          e.preventDefault();
+          go();
+        }
+      });
+    })();
+  </script>
 
   {{ cart }}
 

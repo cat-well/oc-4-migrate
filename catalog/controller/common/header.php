@@ -133,6 +133,10 @@ class Header extends \Opencart\System\Engine\Controller {
 
 		$data['lang_switch_ru'] = $build_lang_switch('ru-ru');
 		$data['lang_switch_ua'] = $build_lang_switch('uk-ua');
+		// Search: provide SEO-safe URL for JS redirect (legacy Manline header markup)
+		$data['search_url'] = $this->url->link('product/search', 'language=' . $this->config->get('config_language'));
+		$data['search_query'] = (string)($this->request->get['search'] ?? '');
+
 		$data['search'] = $this->load->controller('common/search');
 		$data['cart'] = $this->load->controller('common/cart');
 		$data['menu'] = $this->load->controller('common/menu');
