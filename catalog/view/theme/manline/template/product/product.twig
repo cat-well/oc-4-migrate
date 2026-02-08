@@ -13,7 +13,7 @@
 
   {% for breadcrumb in crumbs %}
     {% if not loop.last %}
-      <div style="display:inline"><a href="{{ breadcrumb.href }}"><span>{{ breadcrumb.text }}</span></a></div>
+      <div style="display:inline"><a href="{{ breadcrumb.href }}"><span>{{ breadcrumb.text ?: (loop.first ? (lang == 'uk-ua' ? 'Головна' : 'Главная') : '') }}</span></a></div>
       <div class="text_separator"></div>
     {% else %}
       <div><span>{{ breadcrumb.text }}</span></div>
