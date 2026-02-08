@@ -334,6 +334,8 @@ class Product extends \Opencart\System\Engine\Controller {
 				}
 
 				$style_value = trim($style_value);
+				// In OC2 style could contain compound values like "Слипы:Комплекты белья".
+				$style_main = trim(explode(':', $style_value)[0]);
 				$map = [
 					'Свободные боксеры' => '/muzhskie-trusy/svobodnye-boksery/',
 					'Слипы' => '/muzhskie-trusy/slipy/',
@@ -342,10 +344,10 @@ class Product extends \Opencart\System\Engine\Controller {
 					'Футболка' => '/majki-futbolki/futbolki/',
 				];
 
-				if ($style_value !== '' && isset($map[$style_value])) {
+				if ($style_main !== '' && isset($map[$style_main])) {
 					$data['style_breadcrumb'] = [
-						'text' => $style_value,
-						'href' => $map[$style_value],
+						'text' => $style_main,
+						'href' => $map[$style_main],
 					];
 				}
 			}
