@@ -32,44 +32,44 @@
       {% set class = 'col-md-9' %}
     {% endif %}
 
-    <div id="content" class="{{ class }}">
+    <div id="content" class="{{ class }}">{% set is_ua = is_ua is defined ? is_ua : (language|default('') in ['uk-ua','ua']) %}
       {# content_top currently contains a category list module that duplicates navigation and breaks layout #}
       {# {{ content_top }} #}
 
       <div class="title"><h1>{{ heading_title }}</h1></div>
 
-      {% if products %}
-        <div class="product-filter">
-          <div class="sort">
-            <div class="product-filter-title">{{ text_sort }}:</div>
-            <select id="input-sort" class="select" onchange="location = this.value;">
-              {% for sorts in sorts %}
-                <option value="{{ sorts.href }}"{% if sorts.value == '%s-%s'|format(sort, order) %} selected{% endif %}>{{ sorts.text }}</option>
-              {% endfor %}
-            </select>
-          </div>
-
-          <div class="limit">
-            <div class="product-filter-title">{{ text_limit }}:</div>
-            <select id="input-limit" class="select" onchange="location = this.value;">
-              {% for limits in limits %}
-                <option value="{{ limits.href }}"{% if limits.value == limit %} selected{% endif %}>{{ limits.text }}</option>
-              {% endfor %}
-            </select>
-          </div>
+      {# IMPORTANT for FilterPro AJAX: keep these nodes always present, even when 0 products #}
+      <div class="product-filter">
+        <div class="sort">
+          <div class="product-filter-title">{{ text_sort }}:</div>
+          <select id="input-sort" class="select" onchange="location = this.value;">
+            {% for sorts in sorts %}
+              <option value="{{ sorts.href }}"{% if sorts.value == '%s-%s'|format(sort, order) %} selected{% endif %}>{{ sorts.text }}</option>
+            {% endfor %}
+          </select>
         </div>
 
-        <div class="row product-grid" id="product-list">
+        <div class="limit">
+          <div class="product-filter-title">{{ text_limit }}:</div>
+          <select id="input-limit" class="select" onchange="location = this.value;">
+            {% for limits in limits %}
+              <option value="{{ limits.href }}"{% if limits.value == limit %} selected{% endif %}>{{ limits.text }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div class="row product-grid" id="product-list">
+        {% if products %}
           {% for product in products %}
             {{ product }}
           {% endfor %}
-        </div>
+        {% else %}
+          <div class="fp_empty">{% if is_ua %}Товарів не знайдено{% else %}Товаров не найдено{% endif %}</div>
+        {% endif %}
+      </div>
 
-        <div class="pagination_w center">
-          {{ pagination }}
-        </div>
-
-      {% endif %}
+      <div class="pagination_w center">{{ pagination }}</div>
 
       {% if description %}
         <div class="cat_seo_text">
@@ -77,9 +77,9 @@
         </div>
       {% endif %}
 
+      {# When 0 products, we show the empty message inside #product-list above #}
       {% if not categories and not products %}
-        <p>{{ text_no_results }}</p>
-        <div class="text-end"><a href="{{ continue }}" class="btn btn-primary">{{ button_continue }}</a></div>
+        {# keep legacy block disabled to avoid duplicate empty messages #}
       {% endif %}
 
       {{ content_bottom }}
