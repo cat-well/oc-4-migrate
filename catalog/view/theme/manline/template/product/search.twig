@@ -16,8 +16,10 @@
 
   <div class="row">
 
-    {# Left column: on OC2 search there is a FilterPro sidebar; keep placeholder width for now #}
-    {% if column_left %}
+    {# Left column: OC2-like FilterPro sidebar (search mode) #}
+    {% if filterpro_like %}
+      <aside id="column-left" class="col-md-3 hidden-xs hidden-sm">{{ filterpro_like }}</aside>
+    {% elseif column_left %}
       {{ column_left }}
     {% else %}
       <aside id="column-left" class="col-md-3 hidden-xs hidden-sm"></aside>
