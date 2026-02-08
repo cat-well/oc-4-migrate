@@ -70,10 +70,14 @@ class Header extends \Opencart\System\Engine\Controller {
 		$this->load->language('extension/manline/common/header');
 
 		// Manline theme: quick links used in OC2 header top bar
-		$data['info_help'] = $this->url->link('information/information', 'language=' . $this->config->get('config_language') . '&information_id=7');
-		$data['info_exchange'] = $this->url->link('information/information', 'language=' . $this->config->get('config_language') . '&information_id=8');
-		$data['info_size'] = $this->url->link('information/information', 'language=' . $this->config->get('config_language') . '&information_id=9');
-		$data['info_contacts'] = $this->url->link('information/information', 'language=' . $this->config->get('config_language') . '&information_id=14');
+		// Use SEO keywords directly to ensure stable pretty URLs.
+		$lang = (string)$this->config->get('config_language');
+		$data['info_help'] = $this->config->get('config_url') . 'kak-uznat-svoj-razmer?language=' . $lang;
+		$data['info_exchange'] = $this->config->get('config_url') . 'obmenvozvrat?language=' . $lang;
+		$data['info_size'] = $this->config->get('config_url') . 'kak-uznat-svoj-razmer?language=' . $lang;
+		$data['info_contacts'] = $this->config->get('config_url') . 'kontakty?language=' . $lang;
+		// Track order page keyword
+		$data['info_track'] = $this->config->get('config_url') . 'otsledit-zakaz?language=' . $lang;
 
 		// Wishlist
 		if ($this->customer->isLogged()) {
