@@ -81,12 +81,64 @@
 
         <div class="hara">
           <ul class="hara_list">
+            {% set first_cat = (breadcrumbs|length > 1) ? (breadcrumbs[1].text|default('')) : '' %}
             {% for attribute_group in attribute_groups %}
               {% for attribute in attribute_group.attribute %}
-                <li>
-                  <div class="hara_n">{{ attribute.name }}</div>
-                  <div class="hara_t">{{ attribute.text }}</div>
-                </li>
+
+                {# OC2 special cases #}
+                {% if attribute.attribute_id == 26 and manufacturer %}
+                  <li>
+                    <div class="hara_n">{{ text_manufacturer|default(attribute.name) }}</div>
+                    <div class="hara_t">
+                      <a href="{{ attribute.text }}">{{ manufacturer }}</a>
+                    </div>
+                  </li>
+
+                {% elseif attribute.attribute_id == 17 and first_cat == 'Мужские трусы' %}
+                  {% set c = attribute.text|lower %}
+                  {% set cmap = {
+                    'красный': '/muzhskie-trusy/krasnye/',
+                    'оранжевый': '/muzhskie-trusy/oranzhevye/',
+                    'белый': '/muzhskie-trusy/belye/',
+                    'синий': '/muzhskie-trusy/sinie/',
+                    'серый': '/muzhskie-trusy/serye/',
+                    'черный': '/muzhskie-trusy/chernye/',
+                    'коричневый': '/muzhskie-trusy/korichnevye/',
+                    'бежевый': '/muzhskie-trusy/bezhevye/',
+                    'голубой': '/muzhskie-trusy/golybye/',
+                    'желтый': '/muzhskie-trusy/zheltye/',
+                    'розовый': '/muzhskie-trusy/rozovye/'
+                  } %}
+                  <li>
+                    <div class="hara_n">{{ attribute.name }}</div>
+                    <div class="hara_t">
+                      {% if cmap[c] is defined %}
+                        <a href="{{ cmap[c] }}">{{ attribute.text }}</a>
+                      {% else %}
+                        {{ attribute.text }}
+                      {% endif %}
+                    </div>
+                  </li>
+
+                {% elseif attribute.attribute_id == 23 and first_cat == 'Мужские плавки' %}
+                  <li>
+                    <div class="hara_n">{{ attribute.name }}</div>
+                    <div class="hara_t">
+                      {% if attribute.text|lower == 'шорты' %}
+                        <a href="/plyazhnaya-odezhda/shorty/">{{ attribute.text }}</a>
+                      {% else %}
+                        {{ attribute.text }}
+                      {% endif %}
+                    </div>
+                  </li>
+
+                {% else %}
+                  <li>
+                    <div class="hara_n">{{ attribute.name }}</div>
+                    <div class="hara_t">{{ attribute.text }}</div>
+                  </li>
+                {% endif %}
+
               {% endfor %}
             {% endfor %}
           </ul>
