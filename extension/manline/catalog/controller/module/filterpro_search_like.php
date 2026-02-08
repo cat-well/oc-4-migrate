@@ -225,7 +225,7 @@ class FilterproSearchLike extends \Opencart\System\Engine\Controller {
 			}
 
 			// Limit number of attribute blocks on search (as per OC2 feel)
-			$max_attr_blocks = 6; // + manufacturer + price = ~8 total blocks max
+			$max_attr_blocks = 5; // + manufacturer + price = up to 7 blocks total (as agreed)
 			$blocks_list[] = ['key' => 'manufacturer', 'sort_order' => 10, 'display' => 'checkbox', 'expanded' => 1];
 
 			$sort = 20;
