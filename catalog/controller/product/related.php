@@ -57,6 +57,34 @@ class Related extends \Opencart\System\Engine\Controller {
 				$tax = false;
 			}
 
+			// Extend for OC2-like related carousel (Manline)
+			$date_added_num = 0;
+			if (!empty($result['date_added'])) {
+				$date_added_num = strtotime((string)$result['date_added']);
+			}
+			$is_new = false;
+			if ($date_added_num) {
+				$is_new = ((time() - $date_added_num) / (60 * 60 * 24)) <= 60;
+			}
+
+			// In-stock sizes list for option_id=14
+			$product_polt_options = '';
+			$size_q = $this->db->query(
+				"SELECT ovd.name " .
+				"FROM `" . DB_PREFIX . "product_option_value` pov " .
+				"JOIN `" . DB_PREFIX . "option_value_description` ovd ON ovd.option_value_id=pov.option_value_id AND ovd.option_id='14' AND ovd.language_id='" . (int)$this->config->get('config_language_id') . "' " .
+				"WHERE pov.product_id='" . (int)$result['product_id'] . "' AND pov.option_id='14' AND pov.quantity > 0 " .
+				"ORDER BY ovd.name"
+			);
+			if (!empty($size_q->rows)) {
+				$names = [];
+				foreach ($size_q->rows as $r) {
+					if (!empty($r['name'])) $names[] = (string)$r['name'];
+				}
+				$names = array_values(array_unique($names));
+				$product_polt_options = implode(', ', $names);
+			}
+
 			$product_data = [
 				'thumb'       => $this->model_tool_image->resize($image, $this->config->get('config_image_related_width'), $this->config->get('config_image_related_height')),
 				'description' => $description,
@@ -64,10 +92,15 @@ class Related extends \Opencart\System\Engine\Controller {
 				'special'     => $special,
 				'tax'         => $tax,
 				'minimum'     => $result['minimum'] > 0 ? $result['minimum'] : 1,
-				'href'        => $this->url->link('product/product', 'language=' . $this->config->get('config_language') . '&product_id=' . $result['product_id'])
+				'href'        => $this->url->link('product/product', 'language=' . $this->config->get('config_language') . '&product_id=' . $result['product_id']),
+				'model'       => $result['model'] ?? '',
+				'date_added_num' => $date_added_num,
+				'is_new'      => $is_new,
+				'product_polt_options' => $product_polt_options
 			] + $result;
 
-			$data['products'][] = $this->load->controller('product/thumb', $product_data);
+			// For Manline theme related carousel we pass raw product data into twig
+			$data['products'][] = $product_data;
 		}
 
 		return $this->load->view('product/related', $data);

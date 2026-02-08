@@ -1,8 +1,45 @@
 {% if products %}
-  <h3>{{ text_related }}</h3>
-  <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-xl-4">
-    {% for product in products %}
-      <div class="col mb-3">{{ product }}</div>
-    {% endfor %}
+  <div class="container relative_prod prod_cont">
+    <div class="title mt-40">
+      <span>{% if lang == 'uk-ua' %}Схожі товари{% else %}Похожие товары{% endif %}</span>
+    </div>
+
+    <div class="relative carusel_prod">
+      {% for product in products %}
+        <div class="product_w noimgs">
+          <div class="product_in">
+            <div class="prod_info">
+              <a class="prod_image" href="{{ product.href }}">
+                {% if product.is_new %}
+                  <div class="new">{% if lang == 'uk-ua' %}Новинка{% else %}Новинка{% endif %}</div>
+                {% endif %}
+                <img src="{{ product.thumb }}" title="{{ product.name }}" alt="{{ product.name }}" />
+              </a>
+
+              <div class="prod_name_w">
+                <a class="prod_name" href="{{ product.href }}">{{ product.name }}</a>
+              </div>
+
+              <div class="prod_stock">{% if lang == 'uk-ua' %}Є в наявності{% else %}Есть в наличии{% endif %}</div>
+
+              {% if product.price %}
+                <div class="prod_price">
+                  {% if not product.special %}
+                    {{ product.price }}
+                  {% else %}
+                    <span class="price-old">{{ product.price }}</span> <span class="price-new">{{ product.special }}</span>
+                  {% endif %}
+                </div>
+              {% endif %}
+
+              <div class="hover_tovar">
+                <div class="hover_t_b"><span class="hov_text">{% if lang == 'uk-ua' %}Код товару{% else %}Код товара{% endif %}:</span> <span class="hot_text">{{ product.model|default('') }}</span></div>
+                <div class="hover_t_b"><span class="hov_text">{% if lang == 'uk-ua' %}Розміри в наявності{% else %}Размеры в наличии{% endif %}:</span> <span class="hot_text">{{ product.product_polt_options|default('') }}</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
   </div>
 {% endif %}
