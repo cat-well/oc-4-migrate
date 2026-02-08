@@ -308,6 +308,15 @@ class Product extends \Opencart\System\Engine\Controller {
 			$data['wishlist_add'] = $this->url->link('account/wishlist.add', 'language=' . $this->config->get('config_language'));
 			$data['compare_add'] = $this->url->link('product/compare.add', 'language=' . $this->config->get('config_language'));
 
+			// Manline: helpers used by OC2-like product template
+			$data['lang'] = (string)$this->config->get('config_language');
+			$data['current_url'] = $this->url->link('product/product', 'language=' . $this->config->get('config_language') . '&product_id=' . $product_id);
+			$data['is_new'] = !empty($product_info['date_added']) ? ((time() - strtotime((string)$product_info['date_added'])) / (60 * 60 * 24)) <= 60 : false;
+			$data['dost_oplata_info_url'] = $this->url->link('information/information', 'language=' . $this->config->get('config_language') . '&information_id=10');
+			$data['set_block'] = '';
+			$data['colors_cfg'] = [];
+			$data['colors'] = [];
+
 			// Image
 			$this->load->model('tool/image');
 
@@ -323,11 +332,16 @@ class Product extends \Opencart\System\Engine\Controller {
 
 			$results = $this->model_catalog_product->getImages($product_id);
 
+			// OC2-like additional thumb for the first image (used in thumbnail strip)
+			$data['thumb_thumb'] = $data['thumb'] ? $this->model_tool_image->resize($product_info['image'], $this->config->get('config_image_additional_width'), $this->config->get('config_image_additional_height')) : '';
+
 			foreach ($results as $result) {
 				if ($result['image'] && is_file(DIR_IMAGE . html_entity_decode($result['image'], ENT_QUOTES, 'UTF-8'))) {
 					$data['images'][] = [
 						'popup' => $this->model_tool_image->resize($result['image'], $this->config->get('config_image_popup_width'), $this->config->get('config_image_popup_height')),
-						'thumb' => $this->model_tool_image->resize($result['image'], $this->config->get('config_image_additional_width'), $this->config->get('config_image_additional_height'))
+						'thumb' => $this->model_tool_image->resize($result['image'], $this->config->get('config_image_additional_width'), $this->config->get('config_image_additional_height')),
+						// hover image for lazy loading in main slider (use same as thumb as fallback)
+						'hover' => $this->model_tool_image->resize($result['image'], $this->config->get('config_image_thumb_width'), $this->config->get('config_image_thumb_height'))
 					];
 				}
 			}

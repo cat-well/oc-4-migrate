@@ -1,351 +1,397 @@
 {{ header }}
-<div id="product-info" class="container">
-  <ul class="breadcrumb">
-    {% for breadcrumb in breadcrumbs %}
-      <li class="breadcrumb-item"><a href="{{ breadcrumb.href }}">{{ breadcrumb.text }}</a></li>
-    {% endfor %}
-  </ul>
-  <div class="row">{{ column_left }}
-    <div id="content" class="col">
-      {{ content_top }}
-      <div class="row mb-3">
-        {% if thumb or images %}
-          <div class="col-sm">
-            <div class="image magnific-popup">
-              {% if thumb %}
-                <a href="{{ popup }}" title="{{ heading_title }}"><img src="{{ thumb }}" title="{{ heading_title }}" alt="{{ heading_title }}" class="img-thumbnail mb-3"/></a>
-              {% endif %}
-              {% if images %}
-                <div>
-                  {% for image in images %}
-                    <a href="{{ image.popup }}" title="{{ heading_title }}"><img src="{{ image.thumb }}" title="{{ heading_title }}" alt="{{ heading_title }}" class="img-thumbnail"/></a>&nbsp;
-                  {% endfor %}
-                </div>
-              {% endif %}
+
+<!--this_is_product-->
+<div class="breadcrumb container">
+  {# OC2-like breadcrumbs. We keep the OC4 breadcrumbs list but render as plain links with separators. #}
+  {% for breadcrumb in breadcrumbs %}
+    {% if not loop.last %}
+      <div style="display:inline"><a href="{{ breadcrumb.href }}"><span>{{ breadcrumb.text }}</span></a></div>
+      <div class="text_separator"></div>
+    {% else %}
+      <div><span>{{ breadcrumb.text }}</span></div>
+    {% endif %}
+  {% endfor %}
+</div>
+
+<div class="container">
+  <div class="row">
+
+    {# Left: gallery #}
+    <div class="col-xs-12 col-md-5 relative">
+
+      {% if is_new %}
+        <div class="new">{% if lang == 'uk-ua' %}Новинка{% else %}Новинка{% endif %}</div>
+      {% endif %}
+
+      {% if thumb %}
+        <div class="thumbnails">
+          <div class="big_image_wrap">
+            <a href="{{ popup }}" title="{{ heading_title }}" class="big_image gal" rel="gal">
+              <img data-zoom-image="{{ popup }}" src="{{ thumb }}" alt="{{ heading_title }}" />
+            </a>
+          </div>
+
+          {% for image in images %}
+            <div class="big_image_wrap">
+              <a class="big_image gal" rel="gal" href="{{ image.popup }}" title="{{ heading_title }}">
+                <img data-zoom-image="{{ image.popup }}" {% if image.hover %}data-lazy="{{ image.hover }}"{% endif %} title="{{ heading_title }}" alt="{{ heading_title }}" />
+              </a>
             </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      <div class="additional_w">
+        {% if thumb_thumb %}
+          <div class="thumbnail_sm thumbnail_small"><img src="{{ thumb_thumb }}" title="{{ heading_title }}" alt="{{ heading_title }}" /></div>
+        {% elseif thumb %}
+          <div class="thumbnail_sm thumbnail_small"><img src="{{ thumb }}" title="{{ heading_title }}" alt="{{ heading_title }}" /></div>
+        {% endif %}
+
+        {% set count = 0 %}
+        {% for image in images %}
+          {% if image.thumb %}
+            <div class="thumbnail_sm thumbnail_small">
+              <img src="{{ image.thumb }}" title="{{ heading_title }} - Фото {{ count + 1 }}" alt="{{ heading_title }} - Фото {{ count + 1 }}" />
+            </div>
+          {% endif %}
+          {% set count = count + 1 %}
+        {% endfor %}
+      </div>
+
+    </div>
+
+    {# Middle: short info / attributes #}
+    <div class="col-xs-12 col-md-4 tovar_middle">
+      <h1>{{ heading_title }}</h1>
+
+      <div class="prod_short">
+        <div class="psw">
+          <div class="pst">{% if lang == 'uk-ua' %}Код товару:{% else %}Код товара:{% endif %}</div>
+          <div class="pstext">{{ model }}</div>
+        </div>
+
+        <div class="hara">
+          <ul class="hara_list">
+            {% for attribute_group in attribute_groups %}
+              {% for attribute in attribute_group.attribute %}
+                <li>
+                  <div class="hara_n">{{ attribute.name }}</div>
+                  <div class="hara_t">{{ attribute.text }}</div>
+                </li>
+              {% endfor %}
+            {% endfor %}
+          </ul>
+
+          <a href="{{ current_url }}#description" class="all_opis">{% if lang == 'uk-ua' %}Переглянути повний опис{% else %}Смотреть полное описание{% endif %}</a>
+        </div>
+
+        <div class="dozakaz" data-free-deliv="1500">
+          <div class="free">{% if lang == 'uk-ua' %}<span class="red">Вітаємо!</span> Ви отримали безкоштовну доставку{% else %}<span class="red">Поздравляем!</span> Вы получили бесплатную доставку{% endif %}</div>
+          <div class="dozakaz_in">{% if lang == 'uk-ua' %}<span class="dozak_word">Замовте</span> на <span class="rd">1500 грн</span> та отримайте <span class="rb">безкоштовну доставку</span>{% else %}<span class="dozak_word">Закажите</span> на <span class="rd">1500 грн</span> и получите <span class="rb">бесплатную доставку</span>{% endif %}</div>
+        </div>
+
+      </div>
+    </div>
+
+    {# Right: buy box #}
+    <div class="col-xs-12 col-md-3 product-info">
+      <div class="cart_r">
+
+        {% if quantity > 0 %}
+          <div class="nal">{% if lang == 'uk-ua' %}Є в наявності{% else %}Есть в наличии{% endif %}</div>
+        {% else %}
+          <div style="color:#ff0000;font-weight:bold">{% if lang == 'uk-ua' %}Немає в наявності{% else %}Нет в наличии{% endif %}</div>
+        {% endif %}
+
+        {% if price %}
+          <div class="price">
+            {% if not special %}
+              {% if lang == 'uk-ua' %}Ціна: {{ price }}{% else %}Цена: {{ price }}{% endif %}
+            {% else %}
+              <span>{% if lang == 'uk-ua' %}Ціна{% else %}Цена{% endif %}: </span>
+              <span class="price-old">{{ price }}</span>
+              <span class="price-new">{{ special }}</span>
+            {% endif %}
           </div>
         {% endif %}
-        <div class="col-sm">
-          <h1>{{ heading_title }}</h1>
-          <ul class="list-unstyled">
-            {% if manufacturer %}
-              <li>{{ text_manufacturer }} <a href="{{ manufacturers }}">{{ manufacturer }}</a></li>
-            {% endif %}
-            <li>{{ text_model }} {{ model }}</li>
-            {% for product_code in product_codes %}
-              <li>{{ product_code.code }}: {{ product_code.value }}</li>
-            {% endfor %}
-            {% if reward %}
-              <li>{{ text_reward }} {{ reward }}</li>
-            {% endif %}
-            <li>{{ text_stock }} {{ stock }}</li>
-          </ul>
-          {% if review_status %}
-            <div class="rating">
-              <p>
-                {% for i in 1..5 %}
-                  {% if rating < i %}
-                    <span class="fa-stack"><i class="fa-regular fa-star fa-stack-1x"></i></span>
+
+        <div class="qnt_w">
+          <div class="option_title">{% if lang == 'uk-ua' %}Кількість{% else %}Количество{% endif %}</div>
+          <div class="qnt">
+            <input id="quantity" type="text" name="quantity" size="2" value="{{ minimum }}" />
+            <input type="hidden" name="product_id" value="{{ product_id }}" />
+            <div class="minus"></div>
+            <div class="plus"></div>
+          </div>
+        </div>
+        <div class="clearfix"></div>
+
+        {# Color kit block (optional; controller can fill later) #}
+        {% if colors is defined and colors %}
+          <div class="color styled">
+            <div class="option_title">{% if lang == 'uk-ua' %}Колір{% else %}Цвет{% endif %}:</div>
+            <div class="color_in">
+              <div id="color_options">
+                {% for color in colors %}
+                  {% if color.product_id == product_id %}
+                    <div class="color_option active {{ color.tpl }} {{ color.quantity }}" {% if color.color %}style="border-color: {{ color.color }};"{% endif %}>
+                      {% if color.quantity %}<div class="hideQuantity">{% if lang == 'uk-ua' %}Немає в наявності{% else %}Нет в наличии{% endif %}</div>{% endif %}
+                      {% if color.tpl == 'color' %}
+                        <span class="color_block" style="background:{{ color.color }}"></span>
+                      {% elseif color.tpl == 'photos' %}
+                        <span class="color_block"><img src="{{ color.ico_photo }}" /></span>
+                      {% else %}
+                        <span class="color_block"><img src="{{ color.ico_color }}" /></span>
+                      {% endif %}
+                      {% if colors_cfg is defined and colors_cfg.name == 1 %}
+                        <span class="color_name">{{ color.color_name }}</span>
+                      {% endif %}
+                    </div>
                   {% else %}
-                    <span class="fa-stack"><i class="fa-solid fa-star fa-stack-1x"></i><i class="fa-regular fa-star fa-stack-1x"></i></span>
+                    <div class="color_option {{ color.tpl }} {{ color.quantity }}">
+                      {% if color.quantity %}<div class="hideQuantity">{% if lang == 'uk-ua' %}Немає в наявності{% else %}Нет в наличии{% endif %}</div>{% endif %}
+                      <a href="{{ color.href }}">
+                        {% if color.tpl == 'color' %}
+                          <span class="color_block" style="background:{{ color.color }}"></span>
+                        {% elseif color.tpl == 'photos' %}
+                          <span class="color_block"><img src="{{ color.ico_photo }}" /></span>
+                        {% else %}
+                          <span class="color_block"><img src="{{ color.ico_color }}" /></span>
+                        {% endif %}
+                        {% if colors_cfg is defined and colors_cfg.name == 1 %}
+                          <span class="color_name">{{ color.color_name }}</span>
+                        {% endif %}
+                      </a>
+                    </div>
                   {% endif %}
                 {% endfor %}
-                <a href="#" onclick="$('a[href=\'#tab-review\']').tab('show'); return false;">{{ text_reviews }}</a> / <a href="#" onclick="$('a[href=\'#tab-review\']').tab('show'); return false;">{{ text_write }}</a></p>
-            </div>
-          {% endif %}
-          {% if price %}
-            <ul class="list-unstyled">
-              {% if not special %}
-                <li><h2><span class="price-new">{{ price }}</span></h2></li>
-              {% else %}
-                <li><span class="price-old">{{ price }}</span></li>
-                <li><h2><span class="price-new">{{ special }}</span></h2></li>
-              {% endif %}
-              {% if tax %}
-                <li>{{ text_tax }} {{ tax }}</li>
-              {% endif %}
-              {% if points %}
-                <li>{{ text_points }} {{ points }}</li>
-              {% endif %}
-              {% if discounts %}
-                <li>
-                  <hr>
-                </li>
-                {% for discount in discounts %}
-                  <li>{{ discount.quantity }}{{ text_discount }}{{ discount.price }}</li>
-                {% endfor %}
-              {% endif %}
-            </ul>
-          {% endif %}
-          <form method="post" data-oc-toggle="ajax">
-            <div class="btn-group">
-              <button type="submit" formaction="{{ wishlist_add }}" data-bs-toggle="tooltip" class="btn btn-light btn-lg" title="{{ button_wishlist }}"><i class="fa-solid fa-heart"></i></button>
-              <button type="submit" formaction="{{ compare_add }}" data-bs-toggle="tooltip" class="btn btn-light btn-lg" title="{{ button_compare }}"><i class="fa-solid fa-arrow-right-arrow-left"></i></button>
-            </div>
-            <input type="hidden" name="product_id" value="{{ product_id }}"/>
-          </form>
-          <br/>
-          <div id="product">
-            <form id="form-product">
-              {% if options %}
-                <hr>
-                <h3>{{ text_option }}</h3>
-                <div>
-                  {% for option in options %}
-
-                    {% if option.type == 'select' %}
-                      <div class="mb-3{% if option.required %} required{% endif %}">
-                        <label for="input-option-{{ option.product_option_id }}" class="form-label">{{ option.name }}</label>
-                        <select name="option[{{ option.product_option_id }}]" id="input-option-{{ option.product_option_id }}" class="form-select">
-                          <option value="">{{ text_select }}</option>
-                          {% for option_value in option.product_option_value %}
-                            <option value="{{ option_value.product_option_value_id }}">{{ option_value.name }}
-                              {% if option_value.price %}
-                                ({{ option_value.price_prefix }}{{ option_value.price }})
-                              {% endif %}</option>
-                          {% endfor %}
-                        </select>
-                        <div id="error-option-{{ option.product_option_id }}" class="invalid-feedback"></div>
-                      </div>
-                    {% endif %}
-
-                    {% if option.type == 'radio' %}
-                      <div class="mb-3{% if option.required %} required{% endif %}">
-                        <label class="form-label">{{ option.name }}</label>
-                        <div id="input-option-{{ option.product_option_id }}">
-                          {% for option_value in option.product_option_value %}
-                            <div class="form-check">
-                              <input type="radio" name="option[{{ option.product_option_id }}]" value="{{ option_value.product_option_value_id }}" id="input-option-value-{{ option_value.product_option_value_id }}" class="form-check-input"/>
-                              <label for="input-option-value-{{ option_value.product_option_value_id }}" class="form-check-label">
-                                {% if option_value.image %}
-                                  <img src="{{ option_value.image }}" alt="{{ option_value.name }} {% if option_value.price %}{{ option_value.price_prefix }} {{ option_value.price }}{% endif %}" class="img-thumbnail"/>{% endif %}
-                                {{ option_value.name }}
-                                {% if option_value.price %}
-                                  ({{ option_value.price_prefix }}{{ option_value.price }})
-                                {% endif %}</label>
-                            </div>
-                          {% endfor %}
-                        </div>
-                        <div id="error-option-{{ option.product_option_id }}" class="invalid-feedback"></div>
-                      </div>
-                    {% endif %}
-
-                    {% if option.type == 'checkbox' %}
-                      <div class="mb-3{% if option.required %} required{% endif %}">
-                        <label class="form-label">{{ option.name }}</label>
-                        <div id="input-option-{{ option.product_option_id }}">
-                          {% for option_value in option.product_option_value %}
-                            <div class="form-check">
-                              <input type="checkbox" name="option[{{ option.product_option_id }}][]" value="{{ option_value.product_option_value_id }}" id="input-option-value-{{ option_value.product_option_value_id }}" class="form-check-input"/> 
-							                <label for="input-option-value-{{ option_value.product_option_value_id }}" class="form-check-label">
-                                {% if option_value.image %}
-                                  <img src="{{ option_value.image }}" alt="{{ option_value.name }} {% if option_value.price %}{{ option_value.price_prefix }} {{ option_value.price }}{% endif %}" class="img-thumbnail"/>{% endif %}
-                                {{ option_value.name }}
-                                {% if option_value.price %}
-                                  ({{ option_value.price_prefix }}{{ option_value.price }})
-                                {% endif %}</label>
-                            </div>
-                          {% endfor %}
-                        </div>
-                        <div id="error-option-{{ option.product_option_id }}" class="invalid-feedback"></div>
-                      </div>
-                    {% endif %}
-
-                    {% if option.type == 'text' %}
-                      <div class="mb-3{% if option.required %} required{% endif %}">
-                        <label for="input-option-{{ option.product_option_id }}" class="form-label">{{ option.name }}</label> <input type="text" name="option[{{ option.product_option_id }}]" value="{{ option.value }}" placeholder="{{ option.name }}" id="input-option-{{ option.product_option_id }}" class="form-control"/>
-                        <div id="error-option-{{ option.product_option_id }}" class="invalid-feedback"></div>
-                      </div>
-                    {% endif %}
-
-                    {% if option.type == 'textarea' %}
-                      <div class="mb-3{% if option.required %} required{% endif %}">
-                        <label for="input-option-{{ option.product_option_id }}" class="form-label">{{ option.name }}</label> <textarea name="option[{{ option.product_option_id }}]" rows="5" placeholder="{{ option.name }}" id="input-option-{{ option.product_option_id }}" class="form-control">{{ option.value }}</textarea>
-                        <div id="error-option-{{ option.product_option_id }}" class="invalid-feedback"></div>
-                      </div>
-                    {% endif %}
-
-                    {% if option.type == 'file' %}
-                      <div class="mb-3{% if option.required %} required{% endif %}">
-                        <label for="button-upload-{{ option.product_option_id }}" class="form-label">{{ option.name }}</label>
-                        <div>
-                          <button type="button" id="button-upload-{{ option.product_option_id }}" data-oc-toggle="upload" data-oc-url="{{ upload }}" data-oc-target="#input-option-{{ option.product_option_id }}" data-oc-size-max="{{ config_file_max_size }}" data-oc-size-error="{{ error_upload_size }}" class="btn btn-light btn-block"><i class="fa-solid fa-upload"></i> {{ button_upload }}</button>
-                          <input type="hidden" name="option[{{ option.product_option_id }}]" value="" id="input-option-{{ option.product_option_id }}"/>
-                        </div>
-                        <div id="error-option-{{ option.product_option_id }}" class="invalid-feedback"></div>
-                      </div>
-                    {% endif %}
-
-                    {% if option.type == 'date' %}
-                      <div class="mb-3{% if option.required %} required{% endif %}">
-                        <label for="input-option-{{ option.product_option_id }}" class="form-label">{{ option.name }}</label>
-                        <input type="date" name="option[{{ option.product_option_id }}]" value="{{ option.value }}" id="input-option-{{ option.product_option_id }}" class="form-control"/>
-                        <div id="error-option-{{ option.product_option_id }}" class="invalid-feedback"></div>
-                      </div>
-                    {% endif %}
-
-                    {% if option.type == 'time' %}
-                      <div class="mb-3{% if option.required %} required{% endif %}">
-                        <label for="input-option-{{ option.product_option_id }}" class="form-label">{{ option.name }}</label>
-                        <input type="time" name="option[{{ option.product_option_id }}]" value="{{ option.value }}" id="input-option-{{ option.product_option_id }}" class="form-control"/>
-                        <div id="error-option-{{ option.product_option_id }}" class="invalid-feedback"></div>
-                      </div>
-                    {% endif %}
-
-                    {% if option.type == 'datetime' %}
-                      <div class="mb-3{% if option.required %} required{% endif %}">
-                        <label for="input-option-{{ option.product_option_id }}" class="form-label">{{ option.name }}</label>
-                        <input type="datetime-local" name="option[{{ option.product_option_id }}]" value="{{ option.value }}" id="input-option-{{ option.product_option_id }}" class="form-control"/>
-                        <div id="error-option-{{ option.product_option_id }}" class="invalid-feedback"></div>
-                      </div>
-                    {% endif %}
-                  {% endfor %}
-                </div>
-              {% endif %}
-
-              {% if subscription_plans %}
-                <hr/>
-                <h3>{{ text_subscription }}</h3>
-                <div class="mb-3 required">
-                  <select name="subscription_plan_id" id="input-subscription" class="form-select">
-                    <option value="">{{ text_select }}</option>
-                    {% for subscription_plan in subscription_plans %}
-                      <option value="{{ subscription_plan.subscription_plan_id }}">{{ subscription_plan.name }}</option>
-                    {% endfor %}
-                  </select>
-                  {% for subscription_plan in subscription_plans %}
-                    <div id="subscription-description-{{ subscription_plan.subscription_plan_id }}" class="form-text subscription d-none">{{ subscription_plan.description }}</div>
-                  {% endfor %}
-                  <div id="error-subscription" class="invalid-feedback"></div>
-                </div>
-              {% endif %}
-              <div class="mb-3">
-                <div class="input-group">
-                  <div class="input-group-text">{{ entry_qty }}</div>
-                  <input type="text" name="quantity" value="{{ minimum }}" size="2" id="input-quantity" class="form-control"/>
-                  <button type="submit" id="button-cart" class="btn btn-primary btn-lg btn-block">{{ button_cart }}</button>
-                </div>
-                <input type="hidden" name="product_id" value="{{ product_id }}" id="input-product-id"/>
-                <div id="error-quantity" class="form-text"></div>
               </div>
-              {% if minimum > 1 %}
-                <div class="alert alert-warning"><i class="fa-solid fa-circle-info"></i> {{ text_minimum }}</div>
-              {% endif %}
-            </form>
+            </div>
+            <div class="clearfix"></div>
           </div>
-        </div>
-      </div>
-      <ul class="nav nav-tabs">
-        <li class="nav-item"><a href="#tab-description" data-bs-toggle="tab" class="nav-link active">{{ tab_description }}</a></li>
-        {% if attribute_groups %}
-          <li class="nav-item"><a href="#tab-specification" data-bs-toggle="tab" class="nav-link">{{ tab_attribute }}</a></li>
         {% endif %}
-        {% if review_status %}
-          <li class="nav-item"><a href="#tab-review" data-bs-toggle="tab" class="nav-link">{{ tab_review }}</a></li>
-        {% endif %}
-      </ul>
-      <div class="tab-content">
-        <div id="tab-description" class="tab-pane fade show active mb-4">{{ description }}
-          {% if tags %}
-            <p>{{ text_tags }}
-              {% for tag in tags %}
-                <a href="{{ tag.href }}">{{ tag.tag }}</a>{% if not loop.last %},{% endif %}
-              {% endfor %}
-            </p>
+
+        <div class="razmer styled">
+          {% if options %}
+            {% for option in options %}
+              {% if option.option_id == 14 and option.type == 'radio' %}
+                <div id="option-{{ option.product_option_id }}" class="option">
+                  <div class="option_title">{% if option.required %}<span class="required">*</span>{% endif %}{{ option.name }}:</div>
+                  <a href="{{ current_url }}#description" class="tabl_r">{% if lang == 'uk-ua' %}Дивитись таблицю розмірів{% else %}Смотреть таблицу размеров{% endif %}</a>
+                  <div class="clearfix"></div>
+                  <div class="row_wr">
+                    {% for option_value in option.product_option_value %}
+                      <div class="wr">
+                        <label class="option_box_cont" for="option-value-{{ option_value.product_option_value_id }}">
+                          <input type="radio" name="option[{{ option.product_option_id }}]" value="{{ option_value.product_option_value_id }}" id="option-value-{{ option_value.product_option_value_id }}" />
+                          {{ option_value.name }}
+                        </label>
+                      </div>
+                    {% endfor %}
+                    <div class="clearfix"></div>
+                  </div>
+                </div>
+              {% endif %}
+            {% endfor %}
           {% endif %}
         </div>
-        {% if attribute_groups %}
-          <div id="tab-specification" class="tab-pane fade">
-            <div class="table-responsive">
-              <table class="table table-bordered">
-                {% for attribute_group in attribute_groups %}
-                  <thead>
-                    <tr>
-                      <td colspan="2"><strong>{{ attribute_group.name }}</strong></td>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {% for attribute in attribute_group.attribute %}
-                      <tr>
-                        <td>{{ attribute.name }}</td>
-                        <td>{{ attribute.text }}</td>
-                      </tr>
-                    {% endfor %}
-                  </tbody>
-                {% endfor %}
-              </table>
-            </div>
+
+        <button class="button" id="button-cart" type="button"><span>{% if lang == 'uk-ua' %}Купити{% else %}Купить{% endif %}</span></button>
+
+        <div class="doopl">
+          <span data-tooltip-content="#dost_opl_tip" class="doopl_href">{% if lang == 'uk-ua' %}Доставка і оплата{% else %}Доставка и оплата{% endif %}</span>
+          <div class="none">
+            <span id="dost_opl_tip">
+              <div class="bold mb-5">{% if lang == 'uk-ua' %}Доставка{% else %}Доставка{% endif %}</div>
+              <ul class="wd">
+                <li><a class="anim_href" href="#dost_oplata">{% if lang == 'uk-ua' %}Доставка кур'єром{% else %}Доставка курьером{% endif %}</a></li>
+                <li><a class="anim_href" href="#dost_oplata">{% if lang == 'uk-ua' %}Нова Пошта по Україні{% else %}Новая Почта по Украине{% endif %}</a></li>
+                <li><a class="anim_href" href="#dost_oplata">{% if lang == 'uk-ua' %}Вартість доставки{% else %}Стоимость доставки{% endif %}</a></li>
+                <li class="bold yel">{% if lang == 'uk-ua' %}При замовленні від 1500 грн безкоштовно{% else %}При заказе от 1500 грн бесплатно{% endif %}</li>
+              </ul>
+              <div class="bold mt-10 mb-5">{% if lang == 'uk-ua' %}Оплата{% else %}Оплата{% endif %}</div>
+              {% if lang == 'uk-ua' %}Оплата при отриманні{% else %}Наложенным платежом{% endif %}<br />
+              Visa/MasterCard,
+            </span>
           </div>
-        {% endif %}
-        {% if review_status %}
-          <div id="tab-review" class="tab-pane fade mb-4">{{ review }}</div>
-        {% endif %}
+        </div>
+
       </div>
-      {{ related }}
-      {{ content_bottom }}
     </div>
-    {{ column_right }}
+
   </div>
 </div>
-<script type="text/javascript"><!--
-$('#input-subscription').on('change', function(e) {
-    var element = this;
 
-    $('.subscription').addClass('d-none');
+<div class="prod_de_w sets_w">
+  {{ set_block|default('')|raw }}
 
-    $('#subscription-description-' + $(element).val()).removeClass('d-none');
-});
+  <div class="container descr prod_cont" id="description">
+    <div class="product_menu_w">
+      <ul class="product_menu">
+        <li class="active_menu"><a href="#description">{% if lang == 'uk-ua' %}Опис{% else %}Описание{% endif %}</a></li>
+        <li><a href="#dost_oplata">{% if lang == 'uk-ua' %}Доставка і оплата{% else %}Доставка и оплата{% endif %}</a></li>
+        <li><a href="#otzivi">{% if lang == 'uk-ua' %}Відгуки{% else %}Отзывы{% endif %}</a></li>
+      </ul>
 
-$('#form-product').on('submit', function(e) {
-    e.preventDefault();
+      <div class="description_w">
+        {{ description|raw }}
+      </div>
+    </div>
+  </div>
 
-    $.ajax({
-        url: 'index.php?route=checkout/cart.add&language={{ language }}',
-        type: 'post',
-        data: $('#form-product').serialize(),
-        dataType: 'json',
-        contentType: 'application/x-www-form-urlencoded',
-        cache: false,
-        processData: false,
-        beforeSend: function() {
-            $('#button-cart').button('loading');
-        },
-        complete: function() {
-            $('#button-cart').button('reset');
-        },
-        success: function(json) {
-            console.log(json);
+  <div class="container descr prod_cont" id="dost_oplata">
+    <div class="product_menu_w">
+      <ul class="product_menu">
+        <li><a href="#description">{% if lang == 'uk-ua' %}Опис{% else %}Описание{% endif %}</a></li>
+        <li class="active_menu"><a class="dost_oplata_href" href="#dost_oplata">{% if lang == 'uk-ua' %}Доставка і оплата{% else %}Доставка и оплата{% endif %} <span class="more_dost_op">{% if lang == 'uk-ua' %}читати докладніше{% else %}читать подробнее{% endif %}</span></a></li>
+        <li><a href="#otzivi">{% if lang == 'uk-ua' %}Відгуки{% else %}Отзывы{% endif %}</a></li>
+      </ul>
+      <div class="description_w" id="dost_oplata_d"></div>
+    </div>
+  </div>
 
-            $('#form-product').find('.is-invalid').removeClass('is-invalid');
-            $('#form-product').find('.invalid-feedback').removeClass('d-block');
+  <div class="container descr prod_cont" id="otzivi">
+    <div class="product_menu_w">
+      <ul class="product_menu">
+        <li><a href="#description">{% if lang == 'uk-ua' %}Опис{% else %}Описание{% endif %}</a></li>
+        <li><a href="#dost_oplata">{% if lang == 'uk-ua' %}Доставка і оплата{% else %}Доставка и оплата{% endif %}</a></li>
+        <li class="active_menu"><a href="#otzivi">{% if lang == 'uk-ua' %}Відгуки{% else %}Отзывы{% endif %}</a></li>
+      </ul>
+      <div class="description_w">
+        <div id="hypercomments_widget"></div>
+        <script type="text/javascript">
+          window._hcwp = window._hcwp || [];
+          window._hcwp.push({widget:"Stream", widget_id: 79564});
+          (function() {
+            if("HC_LOAD_INIT" in window) return;
+            window.HC_LOAD_INIT = true;
+            var lang = (navigator.language || navigator.systemLanguage || navigator.userLanguage || "en").substr(0, 2).toLowerCase();
+            var hcc = document.createElement("script"); hcc.type = "text/javascript"; hcc.async = true;
+            hcc.src = (("https:" == document.location.protocol ? "https" : "http") + "://w.hypercomments.com/widget/hc/79564/" + lang + "/widget.js");
+            var s = document.getElementsByTagName("script")[0];
+            s.parentNode.insertBefore(hcc, s.nextSibling);
+          })();
+        </script>
+      </div>
+    </div>
+  </div>
+</div>
 
-            if (json['error']) {
-                for (key in json['error']) {
-                    $('#input-' + key.replaceAll('_', '-')).addClass('is-invalid').find('.form-control, .form-select, .form-check-input, .form-check-label').addClass('is-invalid');
-                    $('#error-' + key.replaceAll('_', '-')).html(json['error'][key]).addClass('d-block');
-                }
-            }
+{{ related|raw }}
 
-            if (json['success']) {
-                $('#alert').prepend('<div class="alert alert-success alert-dismissible"><i class="fa-solid fa-circle-check"></i> ' + json['success'] + ' <button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>');
+{{ content_bottom }}
 
-                $('#cart').load('index.php?route=common/cart.info&language={{ language }}');
-            }
-        },
-        error: function(xhr, ajaxOptions, thrownError) {
-            console.log(thrownError + "\r\n" + xhr.statusText + "\r\n" + xhr.responseText);
+<script>
+  (function($){
+    if (!$) return;
+
+    // Load delivery/payment content from information page (OC2: information_id=10 #dost_op_w)
+    $(function(){
+      var $d = $('#dost_oplata_d');
+      if ($d.length) {
+        var url = '{{ dost_oplata_info_url|e('js') }}';
+        if (url) {
+          $d.load(url + ' #dost_op_w', function(){
+            try {
+              $('.btn_pop').magnificPopup({
+                removalDelay: 500,
+                tClose: 'Закрыть (Esc)',
+                tLoading: 'Загрузка...',
+                callbacks: {
+                  beforeOpen: function () { this.st.mainClass = this.st.el.attr('data-effect'); }
+                },
+                midClick: true
+              });
+            } catch(e) {}
+            $('#dost_oplata_d .title').remove();
+            $('#dost_oplata_d .col-lg-4').addClass('col-md-3').removeClass('col-lg-4');
+          });
         }
-    });
-});
+      }
 
-$(document).ready(function() {
-    $('.magnific-popup').magnificPopup({
-        type: 'image',
-        delegate: 'a',
-        gallery: {
-            enabled: true
+      // slick gallery
+      if ($('.thumbnails').length && $('.additional_w').length && $.fn.slick) {
+        $('.thumbnails').slick({
+          slidesToShow: 1,
+          lazyLoad: 'progressive',
+          slidesToScroll: 1,
+          asNavFor: '.additional_w',
+          arrows: false,
+          touchMove: false,
+          touchThreshold: 12,
+          responsive: [{ breakpoint: 991, settings: { dots: true } }]
+        });
+        $('.additional_w').slick({
+          slidesToShow: 5,
+          slidesToScroll: 1,
+          asNavFor: '.thumbnails',
+          focusOnSelect: true
+        });
+      }
+
+      // zoom
+      $(document).on('mouseenter', '.big_image img', function(){
+        try {
+          $('.zoomContainer').remove();
+          var data_zoom_image = $(this).attr('data-zoom-image');
+          $(this).data('zoom-image', data_zoom_image).elevateZoom({ zoomType : 'lens', lensShape : 'round', lensSize : 200 });
+        } catch(e) {}
+      });
+
+      // qty +/-
+      function btnminus(minQty){
+        var $q = $('#quantity');
+        var v = parseInt($q.val() || '0', 10);
+        if (v > minQty) $q.val(v - 1);
+        else $q.val(minQty);
+      }
+      function btnplus(){
+        var $q = $('#quantity');
+        var v = parseInt($q.val() || '0', 10);
+        $q.val(v + 1);
+      }
+      $(document).on('click', '.qnt .plus', function(){ btnplus(); });
+      $(document).on('click', '.qnt .minus', function(){ btnminus({{ minimum|default(1) }}); });
+
+      // styled radio check class
+      $('.styled input').each(function(){
+        if ($(this).prop('checked')) {
+          $(this).closest('div.styled').find('label').removeClass('checked');
+          $(this).closest('label').addClass('checked');
         }
+      });
+      $(document).on('change', '.styled input', function(){
+        $(this).closest('div.styled').find('label').removeClass('checked');
+        if ($(this).prop('checked')) $(this).closest('label').addClass('checked');
+      });
+
+      // Add to cart (OC4 endpoint)
+      $(document).on('click', '#button-cart', function(){
+        var data = {
+          product_id: {{ product_id }},
+          quantity: $('#quantity').val() || {{ minimum|default(1) }}
+        };
+        // collect option radios
+        $('input[name^="option["]:checked').each(function(){
+          data[$(this).attr('name')] = $(this).val();
+        });
+
+        $.ajax({
+          url: 'index.php?route=checkout/cart.add&language={{ language }}',
+          type: 'post',
+          data: data,
+          dataType: 'json',
+          success: function(json){
+            if (json && json.success) {
+              $('#cart').load('index.php?route=common/cart.info&language={{ language }}');
+            }
+          }
+        });
+      });
+
     });
-});
-//--></script>
+  })(window.jQuery);
+</script>
+
 {{ footer }}
