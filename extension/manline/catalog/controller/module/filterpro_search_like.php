@@ -162,12 +162,28 @@ class FilterproSearchLike extends \Opencart\System\Engine\Controller {
 			// Build a baseline product set for this search WITH current selection applied.
 			// Note: we intentionally include currently selected facets here; each block is computed with facet_where(exclude=that facet)
 			// later when generating its items.
+			// Baseline discovery query: approximate search match in name/tag (without other facet filters)
+			$term = trim($search !== '' ? $search : $tag);
+			$base_where = "";
+			if ($term !== '') {
+				$words = preg_split('/\s+/', $term, -1, PREG_SPLIT_NO_EMPTY);
+				$conds = [];
+				foreach ($words as $w) {
+					$w = $this->db->escape((string)$w);
+					$conds[] = "pd.name LIKE '%" . $w . "%'";
+					$conds[] = "pd.tag LIKE '%" . $w . "%'";
+				}
+				if ($conds) {
+					$base_where = " AND pd.language_id='" . (int)$language_id . "' AND (" . implode(' OR ', $conds) . ")";
+				}
+			}
+
 			$base_rows = $cacheRows(
 				"SELECT DISTINCT p.product_id " .
 				"FROM `" . DB_PREFIX . "product` p " .
 				"JOIN `" . DB_PREFIX . "product_description` pd ON pd.product_id=p.product_id " .
 				" WHERE p.status='1' AND p.date_available<=NOW() " .
-				$search_where() .
+				$base_where .
 				" LIMIT 5000"
 			);
 			$pids = [];
