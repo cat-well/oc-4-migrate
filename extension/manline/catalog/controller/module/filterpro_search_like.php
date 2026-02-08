@@ -65,6 +65,24 @@ class FilterproSearchLike extends \Opencart\System\Engine\Controller {
 
 		$language_id = (int)$this->config->get('config_language_id');
 
+		// Micro-cache for facet queries (kept in session for a few seconds)
+		$fp_cache_ttl = 5;
+		if (!isset($this->session->data['fp_cache']) || !is_array($this->session->data['fp_cache'])) {
+			$this->session->data['fp_cache'] = [];
+		}
+		$cacheRows = function (string $sql) use ($fp_cache_ttl) {
+			$key = 'fps.' . md5($sql);
+			$now = time();
+			$store = &$this->session->data['fp_cache'];
+			if (isset($store[$key]) && is_array($store[$key]) && isset($store[$key]['t']) && ($now - (int)$store[$key]['t']) <= $fp_cache_ttl) {
+				return $store[$key]['rows'] ?? [];
+			}
+			$q = $this->db->query($sql);
+			$rows = $q->rows ?? [];
+			$store[$key] = ['t' => $now, 'rows' => $rows];
+			return $rows;
+		};
+
 		// Blocks config from admin module (reuse same blocks list)
 		$blocks_list = [];
 		$blocks_map = [];
@@ -333,23 +351,7 @@ class FilterproSearchLike extends \Opencart\System\Engine\Controller {
 		$data['selected_min_price'] = ($min_price !== null) ? (string)$min_price : '';
 		$data['selected_max_price'] = ($max_price !== null) ? (string)$max_price : '';
 
-		// Micro-cache function shared with category filter
-		$fp_cache_ttl = 5;
-		if (!isset($this->session->data['fp_cache']) || !is_array($this->session->data['fp_cache'])) {
-			$this->session->data['fp_cache'] = [];
-		}
-		$cacheRows = function (string $sql) use ($fp_cache_ttl) {
-			$key = 'fps.' . md5($sql);
-			$now = time();
-			$store = &$this->session->data['fp_cache'];
-			if (isset($store[$key]) && is_array($store[$key]) && isset($store[$key]['t']) && ($now - (int)$store[$key]['t']) <= $fp_cache_ttl) {
-				return $store[$key]['rows'] ?? [];
-			}
-			$q = $this->db->query($sql);
-			$rows = $q->rows ?? [];
-			$store[$key] = ['t' => $now, 'rows' => $rows];
-			return $rows;
-		};
+		// Micro-cache is defined earlier (before facet discovery)
 
 		// Build base search SQL WHERE used by facet queries
 		$search_where = function () use ($search, $tag, $language_id): string {
