@@ -438,11 +438,15 @@
             $('span.error').remove();
 
             if (json && json.error) {
-              if (json.error.option) {
-                for (var i in json.error.option) {
-                  $('#option-' + i).after('<span class="error">' + json.error.option[i] + '</span>');
+              // OC4 returns option errors like: { error: { option_<product_option_id>: "..." } }
+              for (var k in json.error) {
+                if (!Object.prototype.hasOwnProperty.call(json.error, k)) continue;
+                if (String(k).indexOf('option_') === 0) {
+                  var optId = String(k).replace('option_', '');
+                  $('#option-' + optId).after('<span class="error">' + json.error[k] + '</span>');
                 }
               }
+
               if (json.error.quantity) {
                 $('.qnt_w').after('<span class="error">' + json.error.quantity + '</span>');
               }
