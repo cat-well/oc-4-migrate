@@ -166,7 +166,7 @@ class FilterproSearchLike extends \Opencart\System\Engine\Controller {
 				"SELECT DISTINCT p.product_id " .
 				"FROM `" . DB_PREFIX . "product` p " .
 				"JOIN `" . DB_PREFIX . "product_description` pd ON pd.product_id=p.product_id " .
-				$facet_where('none') .
+				" WHERE p.status='1' AND p.date_available<=NOW() " .
 				$search_where() .
 				" LIMIT 5000"
 			);
