@@ -948,7 +948,7 @@ class FilterproLike extends \Opencart\System\Engine\Controller {
 				$opt_slug = $get_option_slug($option_id);
 				if ($opt_slug !== '') {
 					$items = [];
-					$q = $this->db->query(
+					$opt_rows = $cacheRows(
 						"SELECT pov.option_value_id, ov.image, ovd.name, ovd.slug, COUNT(DISTINCT pov.product_id) total " .
 						"FROM `" . DB_PREFIX . "product_to_category` p2c " .
 						"JOIN `" . DB_PREFIX . "product` p ON p.product_id=p2c.product_id AND p.status='1' AND p.date_available<=NOW() " .
@@ -958,7 +958,7 @@ class FilterproLike extends \Opencart\System\Engine\Controller {
 						"WHERE p2c.category_id='" . (int)$category_id . "' AND ovd.slug != '' " .
 						"GROUP BY pov.option_value_id ORDER BY ovd.name"
 					);
-					foreach ($q->rows as $r) {
+					foreach ($opt_rows as $r) {
 						$slug = (string)$r['slug'];
 						$cur = $sel_slug;
 						$cur_vals = $cur[$opt_slug] ?? [];
@@ -1006,7 +1006,7 @@ class FilterproLike extends \Opencart\System\Engine\Controller {
 				$attr_slug = $get_attribute_slug($attribute_id);
 				if ($attr_slug !== '') {
 					$items = [];
-					$q = $this->db->query(
+					$attr_rows = $cacheRows(
 						"SELECT pa.slug, pa.text, COUNT(DISTINCT pa.product_id) total " .
 						"FROM `" . DB_PREFIX . "product_to_category` p2c " .
 						"JOIN `" . DB_PREFIX . "product` p ON p.product_id=p2c.product_id AND p.status='1' AND p.date_available<=NOW() " .
@@ -1014,7 +1014,7 @@ class FilterproLike extends \Opencart\System\Engine\Controller {
 						"WHERE p2c.category_id='" . (int)$category_id . "' AND pa.slug != '' AND pa.text != '' " .
 						"GROUP BY pa.slug, pa.text ORDER BY pa.text"
 					);
-					foreach ($q->rows as $r) {
+					foreach ($attr_rows as $r) {
 						$slug = (string)$r['slug'];
 						$cur = $sel_slug;
 						$cur_vals = $cur[$attr_slug] ?? [];
