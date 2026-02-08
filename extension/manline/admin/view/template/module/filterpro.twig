@@ -149,8 +149,19 @@
 </div>
 <script>
   (function() {
-    var addBtn = document.getElementById('fp-add-row');
-    if (!addBtn) return;
+    function matches(el, selector) {
+      if (!el) return false;
+      var fn = el.matches || el.msMatchesSelector || el.webkitMatchesSelector;
+      return fn ? fn.call(el, selector) : false;
+    }
+
+    function closest(el, selector) {
+      while (el && el.nodeType === 1) {
+        if (matches(el, selector)) return el;
+        el = el.parentElement;
+      }
+      return null;
+    }
 
     function nextIndex() {
       var rows = document.querySelectorAll('tr[data-fp-row]');
@@ -213,18 +224,24 @@
       );
     }
 
-    addBtn.addEventListener('click', function() {
-      var i = nextIndex();
-      var tbody = addBtn.closest('tbody') || document.querySelector('table tbody');
-      // insert before the last row (which contains the Add button)
-      var addRow = document.getElementById('fp-add-row').closest('tr');
-      addRow.insertAdjacentHTML('beforebegin', rowTemplate(i));
-    });
-
     document.addEventListener('click', function(e) {
-      var btn = e.target.closest && e.target.closest('[data-fp-remove]');
+      var t = e.target;
+
+      // Add block
+      var addBtn = closest(t, '#fp-add-row');
+      if (addBtn) {
+        var i = nextIndex();
+        var addRowTr = closest(addBtn, 'tr');
+        if (addRowTr) {
+          addRowTr.insertAdjacentHTML('beforebegin', rowTemplate(i));
+        }
+        return;
+      }
+
+      // Remove block
+      var btn = closest(t, '[data-fp-remove]');
       if (!btn) return;
-      var tr = btn.closest('tr');
+      var tr = closest(btn, 'tr');
       if (tr) tr.remove();
     });
   })();
