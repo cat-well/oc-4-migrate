@@ -437,24 +437,24 @@
         var limit = parseInt(a.getAttribute('data-fp-limit') || '10', 10);
         var step = parseInt(a.getAttribute('data-fp-step') || String(limit), 10);
 
-        // get all items in this group
-        var items = Array.from(group.querySelectorAll('.fp_more_item'));
-        if (!items.length) return;
+        // fp_more_item marks ONLY the extra (initially hidden) items.
+        var extras = Array.from(group.querySelectorAll('.fp_more_item'));
+        if (!extras.length) return;
 
-        function showUpTo(n) {
-          items.forEach(function(it, idx){
-            if (idx < n) it.classList.remove('fp_hidden');
-            else it.classList.add('fp_hidden');
-          });
+        function showMoreBatch() {
+          var hidden = extras.filter(function(it){ return it.classList.contains('fp_hidden'); });
+          var toShow = hidden.slice(0, step);
+          toShow.forEach(function(it){ it.classList.remove('fp_hidden'); });
+          return extras.filter(function(it){ return it.classList.contains('fp_hidden'); }).length;
         }
 
-        var shownNow = items.filter(function(it){ return !it.classList.contains('fp_hidden'); }).length;
+        function collapseAll() {
+          extras.forEach(function(it){ it.classList.add('fp_hidden'); });
+        }
 
         if (state === 'more') {
-          var target = Math.min(items.length, Math.max(shownNow, limit) + step);
-          showUpTo(target);
-
-          if (target >= items.length) {
+          var remaining = showMoreBatch();
+          if (remaining <= 0) {
             a.setAttribute('data-fp-state', 'less');
             a.textContent = ({{ is_ua ? 'true' : 'false' }} ? 'Згорнути' : 'Скрыть');
           } else {
@@ -462,8 +462,7 @@
             a.textContent = ({{ is_ua ? 'true' : 'false' }} ? 'Показати ще' : 'Показать еще');
           }
         } else {
-          // collapse back to initial limit
-          showUpTo(limit);
+          collapseAll();
           a.setAttribute('data-fp-state', 'more');
           a.textContent = ({{ is_ua ? 'true' : 'false' }} ? 'Показати ще' : 'Показать еще');
         }
