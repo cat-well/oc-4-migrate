@@ -35,11 +35,11 @@ class Related extends \Opencart\System\Engine\Controller {
 			$manufacturer_id = $man_q->num_rows ? (int)$man_q->row['manufacturer_id'] : 0;
 			if ($manufacturer_id) {
 				$q = $this->db->query(
-					"SELECT p.product_id, pd.name, pd.description, p.image, p.price, p.tax_class_id, p.model, p.date_added, p.minimum, p.quantity, p.status, p.sort_order, p.viewed, 0 special " .
+					"SELECT p.product_id, pd.name, pd.description, p.image, p.price, p.tax_class_id, p.model, p.date_added, p.minimum, p.quantity, p.status, p.sort_order, 0 special " .
 					"FROM `" . DB_PREFIX . "product` p " .
 					"JOIN `" . DB_PREFIX . "product_description` pd ON pd.product_id=p.product_id AND pd.language_id='" . (int)$this->config->get('config_language_id') . "' " .
 					"WHERE p.product_id != '" . (int)$product_id . "' AND p.manufacturer_id='" . (int)$manufacturer_id . "' AND p.status='1' AND p.date_available<=NOW() " .
-					"ORDER BY p.viewed DESC, p.date_added DESC LIMIT 12"
+					"ORDER BY p.date_added DESC LIMIT 12"
 				);
 				$results = $q->rows;
 			}
