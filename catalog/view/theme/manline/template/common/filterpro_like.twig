@@ -13,7 +13,7 @@
   {% for b in blocks %}
     <div class="f_group {% if not b.expanded %}fp_collapsed{% endif %}" data-fp-group>
       <div class="f_title" data-fp-toggle>
-        {{ b.label }}
+        {{ b.label|trim(' :') }}
         {% if b.tooltip %}<span class="fp_tip" title="{{ b.tooltip }}">?</span>{% endif %}
       </div>
 
@@ -79,9 +79,10 @@
             </div>
 
           {% elseif b.display == 'checkbox' %}
+            {% set more_limit = 10 %}
             <ul class="f_list fp_checks">
               {% for it in b.items %}
-                <li class="f_item">
+                <li class="f_item {% if loop.index > more_limit %}fp_more_item fp_hidden{% endif %}">
                   <label class="fp_check">
                     <input type="checkbox" {% if it.selected %}checked{% endif %} data-fp-key="{{ it.fp_key|default(b.slug_key|default(b.key)) }}" data-fp-val="{{ it.fp_val|default('') }}" />
                     <span class="fp_check_text">{{ it.label }} <span class="f_cnt">({{ it.total }})</span></span>
@@ -89,17 +90,28 @@
                 </li>
               {% endfor %}
             </ul>
+            {% if b.items|length > more_limit %}
+              <a href="#" class="fp_more" data-fp-more data-fp-state="more">
+                {% if is_ua %}Показати ще{% else %}Показать еще{% endif %}
+              </a>
+            {% endif %}
 
           {% else %}
+            {% set more_limit = 10 %}
             <ul class="f_list" data-fp-list-group data-fp-key="{{ b.slug_key|default(b.key) }}">
               {% for it in b.items %}
-                <li class="f_item">
+                <li class="f_item {% if loop.index > more_limit %}fp_more_item fp_hidden{% endif %}">
                   <a href="{{ it.url }}" class="{% if it.selected %}active{% endif %}" data-fp-list data-fp-key="{{ it.fp_key|default(b.slug_key|default(b.key)) }}" data-fp-val="{{ it.fp_val|default('') }}">
                     {{ it.label }} <span class="f_cnt">({{ it.total }})</span>
                   </a>
                 </li>
               {% endfor %}
             </ul>
+            {% if b.items|length > more_limit %}
+              <a href="#" class="fp_more" data-fp-more data-fp-state="more">
+                {% if is_ua %}Показати ще{% else %}Показать еще{% endif %}
+              </a>
+            {% endif %}
           {% endif %}
 
         {% endif %}
@@ -358,6 +370,7 @@
             oldFp.outerHTML = String(payload.filter_html);
             // re-init handlers for newly inserted DOM (price slider)
             fpInitPrice();
+            fpInitMore();
           }
         }
 
@@ -395,6 +408,32 @@
       scheduleApply(0);
     }
   });
+
+  function fpInitMore() {
+    // Expand/collapse long lists
+    document.querySelectorAll('#filterpro a.fp_more[data-fp-more]').forEach(function(a){
+      if (a.getAttribute('data-fp-inited') === '1') return;
+      a.setAttribute('data-fp-inited', '1');
+      a.addEventListener('click', function(e){
+        e.preventDefault();
+        var group = a.closest && a.closest('.f_group[data-fp-group]');
+        if (!group) return;
+        var state = a.getAttribute('data-fp-state') || 'more';
+        var hidden = group.querySelectorAll('.fp_more_item');
+        if (!hidden.length) return;
+
+        if (state === 'more') {
+          hidden.forEach(function(li){ li.classList.remove('fp_hidden'); });
+          a.setAttribute('data-fp-state', 'less');
+          a.textContent = ({{ is_ua ? 'true' : 'false' }} ? 'Згорнути' : 'Скрыть');
+        } else {
+          hidden.forEach(function(li){ li.classList.add('fp_hidden'); });
+          a.setAttribute('data-fp-state', 'more');
+          a.textContent = ({{ is_ua ? 'true' : 'false' }} ? 'Показати ще' : 'Показать еще');
+        }
+      });
+    });
+  }
 
   function fpInitPrice() {
     // Price slider sync (re-init after sidebar replacement)
@@ -468,6 +507,7 @@
 
   // init once
   fpInitPrice();
+  fpInitMore();
 
   // Pagination link hijack (AJAX)
   document.addEventListener('click', function(e){
