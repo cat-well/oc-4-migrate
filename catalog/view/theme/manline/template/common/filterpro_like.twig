@@ -1,6 +1,6 @@
 {# FilterPro-like sidebar (temporary, driven by admin blocks config) #}
 
-<div id="filterpro" class="filterpro_like" data-fp-base-path="{{ fp_base_path }}" data-fp-base-query="{{ fp_base_query }}" data-fp-base-url="{{ base_url }}">
+<div id="filterpro" class="filterpro_like" data-fp-mode="{{ fp_mode|default('category') }}" data-fp-base-path="{{ fp_base_path }}" data-fp-base-query="{{ fp_base_query }}" data-fp-base-url="{{ base_url }}">
 
   <div class="f_group">
     <div class="f_title">{% if is_ua %}Фільтр{% else %}Фильтр{% endif %}</div>
@@ -195,6 +195,27 @@
     var q = baseQuery ? baseQuery : '';
     if (qMin) q += (q ? '&' : '') + 'min_price=' + encodeURIComponent(qMin);
     if (qMax) q += (q ? '&' : '') + 'max_price=' + encodeURIComponent(qMax);
+
+    var mode = fpRoot.getAttribute('data-fp-mode') || 'category';
+
+    if (mode === 'search') {
+      // Search mode: keep everything as query params (no /f/)
+      // baseQuery already contains language+search(+other safe params).
+      var qq = baseQuery ? baseQuery : '';
+      // manufacturer uses dedicated param for compatibility
+      if (sel.manufacturer && sel.manufacturer.length) {
+        qq += (qq ? '&' : '') + 'manufacturer=' + encodeURIComponent(sel.manufacturer.join(','));
+      }
+      // add all other keys as-is (e.g. f_material=...)
+      keys.forEach(function(k){
+        if (k === 'manufacturer') return;
+        qq += (qq ? '&' : '') + encodeURIComponent(k) + '=' + encodeURIComponent(sel[k].join(','));
+      });
+      if (qMin) qq += (qq ? '&' : '') + 'min_price=' + encodeURIComponent(qMin);
+      if (qMax) qq += (qq ? '&' : '') + 'max_price=' + encodeURIComponent(qMax);
+
+      return String(basePath).replace(/\/+$/, '') + (qq ? ('?' + qq) : '');
+    }
 
     if (!parts.length) {
       // price-only (or cleared) selection
