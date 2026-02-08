@@ -57,9 +57,10 @@
         {% else %}
 
           {% if b.display == 'image' %}
+            {% set more_limit = 10 %}
             <div class="f_colors" data-fp-image-group data-fp-key="{{ b.slug_key|default(b.key) }}">
               {% for it in b.items %}
-                <a class="f_color {% if it.selected %}active{% endif %}" href="{{ it.url }}" title="{{ it.label }} ({{ it.total }})" data-fp-val="{{ it.fp_val|default('') }}">
+                <a class="f_color {% if it.selected %}active{% endif %} {% if loop.index > more_limit %}fp_more_item fp_hidden{% endif %}" href="{{ it.url }}" title="{{ it.label }} ({{ it.total }})" data-fp-val="{{ it.fp_val|default('') }}">
                   {% if it.image %}
                     <img src="image/{{ it.image }}" alt="{{ it.label }}" />
                   {% else %}
@@ -68,15 +69,26 @@
                 </a>
               {% endfor %}
             </div>
+            {% if b.items|length > more_limit %}
+              <a href="#" class="fp_more" data-fp-more data-fp-state="more" data-fp-limit="{{ more_limit }}" data-fp-step="{{ more_limit }}">
+                {% if is_ua %}Показати ще{% else %}Показать еще{% endif %}
+              </a>
+            {% endif %}
 
           {% elseif b.display == 'tiles' %}
+            {% set more_limit = 10 %}
             <div class="fp_tiles" data-fp-list-group data-fp-key="{{ b.slug_key|default(b.key) }}">
               {% for it in b.items %}
-                <a href="{{ it.url }}" class="fp_tile {% if it.selected %}active{% endif %}" data-fp-list data-fp-key="{{ it.fp_key|default(b.slug_key|default(b.key)) }}" data-fp-val="{{ it.fp_val|default('') }}">
+                <a href="{{ it.url }}" class="fp_tile {% if it.selected %}active{% endif %} {% if loop.index > more_limit %}fp_more_item fp_hidden{% endif %}" data-fp-list data-fp-key="{{ it.fp_key|default(b.slug_key|default(b.key)) }}" data-fp-val="{{ it.fp_val|default('') }}">
                   {{ it.label }}
                 </a>
               {% endfor %}
             </div>
+            {% if b.items|length > more_limit %}
+              <a href="#" class="fp_more" data-fp-more data-fp-state="more" data-fp-limit="{{ more_limit }}" data-fp-step="{{ more_limit }}">
+                {% if is_ua %}Показати ще{% else %}Показать еще{% endif %}
+              </a>
+            {% endif %}
 
           {% elseif b.display == 'checkbox' %}
             {% set more_limit = 10 %}
@@ -91,7 +103,7 @@
               {% endfor %}
             </ul>
             {% if b.items|length > more_limit %}
-              <a href="#" class="fp_more" data-fp-more data-fp-state="more">
+              <a href="#" class="fp_more" data-fp-more data-fp-state="more" data-fp-limit="{{ more_limit }}" data-fp-step="{{ more_limit }}">
                 {% if is_ua %}Показати ще{% else %}Показать еще{% endif %}
               </a>
             {% endif %}
@@ -108,7 +120,7 @@
               {% endfor %}
             </ul>
             {% if b.items|length > more_limit %}
-              <a href="#" class="fp_more" data-fp-more data-fp-state="more">
+              <a href="#" class="fp_more" data-fp-more data-fp-state="more" data-fp-limit="{{ more_limit }}" data-fp-step="{{ more_limit }}">
                 {% if is_ua %}Показати ще{% else %}Показать еще{% endif %}
               </a>
             {% endif %}
@@ -422,12 +434,36 @@
         var hidden = group.querySelectorAll('.fp_more_item');
         if (!hidden.length) return;
 
+        var limit = parseInt(a.getAttribute('data-fp-limit') || '10', 10);
+        var step = parseInt(a.getAttribute('data-fp-step') || String(limit), 10);
+
+        // get all items in this group
+        var items = Array.from(group.querySelectorAll('.fp_more_item'));
+        if (!items.length) return;
+
+        function showUpTo(n) {
+          items.forEach(function(it, idx){
+            if (idx < n) it.classList.remove('fp_hidden');
+            else it.classList.add('fp_hidden');
+          });
+        }
+
+        var shownNow = items.filter(function(it){ return !it.classList.contains('fp_hidden'); }).length;
+
         if (state === 'more') {
-          hidden.forEach(function(li){ li.classList.remove('fp_hidden'); });
-          a.setAttribute('data-fp-state', 'less');
-          a.textContent = ({{ is_ua ? 'true' : 'false' }} ? 'Згорнути' : 'Скрыть');
+          var target = Math.min(items.length, Math.max(shownNow, limit) + step);
+          showUpTo(target);
+
+          if (target >= items.length) {
+            a.setAttribute('data-fp-state', 'less');
+            a.textContent = ({{ is_ua ? 'true' : 'false' }} ? 'Згорнути' : 'Скрыть');
+          } else {
+            a.setAttribute('data-fp-state', 'more');
+            a.textContent = ({{ is_ua ? 'true' : 'false' }} ? 'Показати ще' : 'Показать еще');
+          }
         } else {
-          hidden.forEach(function(li){ li.classList.add('fp_hidden'); });
+          // collapse back to initial limit
+          showUpTo(limit);
           a.setAttribute('data-fp-state', 'more');
           a.textContent = ({{ is_ua ? 'true' : 'false' }} ? 'Показати ще' : 'Показать еще');
         }
