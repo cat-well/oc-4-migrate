@@ -15,6 +15,8 @@ class Related extends \Opencart\System\Engine\Controller {
 	 */
 	public function index(): string {
 		$this->load->language('product/related');
+		$this->load->model('catalog/product');
+		$this->load->model('tool/image');
 
 		if (isset($this->request->get['product_id'])) {
 			$product_id = (int)$this->request->get['product_id'];
