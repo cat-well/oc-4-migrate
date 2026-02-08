@@ -425,6 +425,41 @@ class FilterproLike extends \Opencart\System\Engine\Controller {
 			return $w ? (' WHERE ' . implode(' AND ', $w)) : '';
 		};
 
+		// Micro-cache for facet queries (session-based, 5s TTL)
+		$fp_cache_ttl = 5;
+		if (!isset($this->session->data['fp_cache']) || !is_array($this->session->data['fp_cache'])) {
+			$this->session->data['fp_cache'] = [];
+		}
+		$cacheRows = function (string $sql) use ($fp_cache_ttl) {
+			$key = 'fpq.' . md5($sql);
+			$now = time();
+			$store = &$this->session->data['fp_cache'];
+
+			if (isset($store[$key]) && is_array($store[$key]) && isset($store[$key]['t']) && ($now - (int)$store[$key]['t']) <= $fp_cache_ttl) {
+				return $store[$key]['rows'] ?? [];
+			}
+
+			$q = $this->db->query($sql);
+			$rows = $q->rows ?? [];
+			$store[$key] = ['t' => $now, 'rows' => $rows];
+
+			// keep cache bounded
+			if (is_array($store) && count($store) > 200) {
+				// drop oldest ~50
+				$keys = array_keys($store);
+				usort($keys, function ($a, $b) use ($store) {
+					$ta = (int)($store[$a]['t'] ?? 0);
+					$tb = (int)($store[$b]['t'] ?? 0);
+					return $ta <=> $tb;
+				});
+				for ($i = 0; $i < 50 && $i < count($keys); $i++) {
+					unset($store[$keys[$i]]);
+				}
+			}
+
+			return $rows;
+		};
+
 		// Child categories (Category block)
 		$data['child_category_items'] = [];
 		try {
@@ -459,7 +494,7 @@ class FilterproLike extends \Opencart\System\Engine\Controller {
 		// Manufacturers available in category (counts reflect current selection except manufacturer facet)
 		$data['manufacturers'] = [];
 		$data['manufacturer_items'] = [];
-		$m_q = $this->db->query(
+		$m_rows = $cacheRows(
 			"SELECT p.manufacturer_id, m.name, COUNT(DISTINCT p.product_id) total " .
 			"FROM `" . DB_PREFIX . "product_to_category` p2c " .
 			"JOIN `" . DB_PREFIX . "product` p ON p.product_id=p2c.product_id " .
@@ -468,7 +503,7 @@ class FilterproLike extends \Opencart\System\Engine\Controller {
 			" AND p.manufacturer_id > 0 " .
 			" GROUP BY p.manufacturer_id ORDER BY m.name"
 		);
-		foreach ($m_q->rows as $row) {
+		foreach ($m_rows as $row) {
 			$id = (int)$row['manufacturer_id'];
 			$name = (string)$row['name'];
 			$total = (int)$row['total'];
@@ -530,7 +565,7 @@ class FilterproLike extends \Opencart\System\Engine\Controller {
 		$color_option_slug = 'tsvet-o';
 		$data['colors'] = [];
 		$data['color_items'] = [];
-		$c_q = $this->db->query(
+		$c_rows = $cacheRows(
 			"SELECT pov.option_value_id, ov.image, ovd.name, ovd.slug, COUNT(DISTINCT p.product_id) total " .
 			"FROM `" . DB_PREFIX . "product_to_category` p2c " .
 			"JOIN `" . DB_PREFIX . "product` p ON p.product_id=p2c.product_id " .
@@ -541,7 +576,7 @@ class FilterproLike extends \Opencart\System\Engine\Controller {
 			" AND ovd.slug != '' " .
 			" GROUP BY pov.option_value_id ORDER BY ovd.name"
 		);
-		foreach ($c_q->rows as $row) {
+		foreach ($c_rows as $row) {
 			$slug = (string)$row['slug'];
 			$name = (string)$row['name'];
 			$total = (int)$row['total'];
@@ -590,7 +625,7 @@ class FilterproLike extends \Opencart\System\Engine\Controller {
 		$size_option_id = 14;
 		$size_option_slug = 'razmer-o';
 		$data['size_items'] = [];
-		$siz_q = $this->db->query(
+		$siz_rows = $cacheRows(
 			"SELECT pov.option_value_id, ovd.name, ovd.slug, COUNT(DISTINCT p.product_id) total " .
 			"FROM `" . DB_PREFIX . "product_to_category` p2c " .
 			"JOIN `" . DB_PREFIX . "product` p ON p.product_id=p2c.product_id " .
@@ -600,7 +635,7 @@ class FilterproLike extends \Opencart\System\Engine\Controller {
 			" AND ovd.slug != '' " .
 			" GROUP BY pov.option_value_id ORDER BY ovd.name"
 		);
-		foreach ($siz_q->rows as $row) {
+		foreach ($siz_rows as $row) {
 			$slug = (string)$row['slug'];
 			$name = (string)$row['name'];
 			$total = (int)$row['total'];
@@ -638,7 +673,7 @@ class FilterproLike extends \Opencart\System\Engine\Controller {
 		$style_attr_slug = 'stil';
 		$data['styles'] = [];
 		$data['style_items'] = [];
-		$s_q = $this->db->query(
+		$s_rows = $cacheRows(
 			"SELECT pa.slug, pa.text, COUNT(DISTINCT p.product_id) total " .
 			"FROM `" . DB_PREFIX . "product_to_category` p2c " .
 			"JOIN `" . DB_PREFIX . "product` p ON p.product_id=p2c.product_id " .
@@ -647,7 +682,7 @@ class FilterproLike extends \Opencart\System\Engine\Controller {
 			" AND pa.slug != '' AND pa.text != '' " .
 			" GROUP BY pa.slug, pa.text ORDER BY pa.text"
 		);
-		foreach ($s_q->rows as $row) {
+		foreach ($s_rows as $row) {
 			$slug = (string)$row['slug'];
 			$text = (string)$row['text'];
 			$total = (int)$row['total'];

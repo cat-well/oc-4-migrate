@@ -311,10 +311,14 @@
         if (!payload) throw { kind: 'empty' };
 
         if (payload.products_html != null) {
-          list.innerHTML = String(payload.products_html);
+          var html = String(payload.products_html);
+          if (html.trim() === '') {
+            html = '<div class="fp_empty">' + ({{ is_ua ? 'true' : 'false' }} ? 'Товарів не знайдено' : 'Товаров не найдено') + '</div>';
+          }
+          list.innerHTML = html;
         }
         if (payload.pagination_html != null) {
-          pag.innerHTML = String(payload.pagination_html);
+          pag.innerHTML = String(payload.pagination_html || '');
         }
 
         var curSort = document.getElementById('input-sort');
@@ -494,6 +498,7 @@
   .filterpro_like .f_actions{margin:-6px 0 10px;display:flex;gap:10px;align-items:center;}
   .filterpro_like .fp_apply{background:#fed700;border:1px solid #e8c800;color:#000;padding:2px 10px;border-radius:3px;}
   .filterpro_like .fp_apply[disabled]{opacity:.5;cursor:not-allowed;}
+  .filterpro_like .fp_empty{padding:14px 10px;border:1px dashed #ddd;border-radius:6px;color:#666;background:#fafafa;}
   .filterpro_like .f_clear{font-size:12px;color:#666;text-decoration:underline;}
 
   .filterpro_like .fp_collapsed .f_body{display:none;}
