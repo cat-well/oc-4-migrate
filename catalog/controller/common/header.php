@@ -127,7 +127,8 @@ class Header extends \Opencart\System\Engine\Controller {
 				parse_str((string)$info['query'], $q);
 			}
 			$q['language'] = $lang_code;
-			$query = http_build_query($q);
+			// Force '&' separator (some hosts set arg_separator.output to "&;" which breaks URLs)
+			$query = http_build_query($q, '', '&');
 			return $path . ($query ? ('?' . $query) : '');
 		};
 
