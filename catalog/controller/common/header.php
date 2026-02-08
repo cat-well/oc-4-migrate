@@ -126,6 +126,26 @@ class Header extends \Opencart\System\Engine\Controller {
 			if (!empty($info['query'])) {
 				parse_str((string)$info['query'], $q);
 			}
+
+			// Normalize broken keys if arg_separator output/input misconfigured (e.g. "&;search" becomes key ";search")
+			foreach (array_keys($q) as $k) {
+				if (is_string($k) && $k !== '' && ($k[0] === ';')) {
+					$kk = ltrim($k, ';');
+					if ($kk !== '' && !isset($q[$kk])) {
+						$q[$kk] = $q[$k];
+					}
+					unset($q[$k]);
+				}
+				// also normalize common html-entity leftovers
+				if (is_string($k) && str_starts_with($k, 'amp;')) {
+					$kk = substr($k, 4);
+					if ($kk !== '' && !isset($q[$kk])) {
+						$q[$kk] = $q[$k];
+					}
+					unset($q[$k]);
+				}
+			}
+
 			$q['language'] = $lang_code;
 			// Force '&' separator (some hosts set arg_separator.output to "&;" which breaks URLs)
 			$query = http_build_query($q, '', '&');
