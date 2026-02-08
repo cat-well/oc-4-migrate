@@ -69,6 +69,15 @@
               {% endfor %}
             </div>
 
+          {% elseif b.display == 'tiles' %}
+            <div class="fp_tiles" data-fp-list-group data-fp-key="{{ b.slug_key|default(b.key) }}">
+              {% for it in b.items %}
+                <a href="{{ it.url }}" class="fp_tile {% if it.selected %}active{% endif %}" data-fp-list data-fp-key="{{ it.fp_key|default(b.slug_key|default(b.key)) }}" data-fp-val="{{ it.fp_val|default('') }}">
+                  {{ it.label }}
+                </a>
+              {% endfor %}
+            </div>
+
           {% elseif b.display == 'checkbox' %}
             <ul class="f_list fp_checks">
               {% for it in b.items %}
@@ -505,6 +514,10 @@
   .filterpro_like .f_color{display:inline-block;border:1px solid #ddd;padding:2px;border-radius:3px;}
   .filterpro_like .f_color.active{border-color:#fed700;}
   .filterpro_like .f_color img{display:block;width:22px;height:22px;object-fit:contain;}
+
+  .filterpro_like .fp_tiles{display:flex;flex-wrap:wrap;gap:8px;}
+  .filterpro_like .fp_tile{display:inline-block;min-width:44px;text-align:center;padding:6px 10px;border:1px solid #ddd;border-radius:4px;color:#333;text-decoration:none;background:#fff;}
+  .filterpro_like .fp_tile.active{border-color:#fed700;box-shadow:0 0 0 2px rgba(254,215,0,.25) inset;}
 
   .filterpro_like .f_price .f_row{display:flex;gap:6px;align-items:center;margin:0 0 6px;}
   .filterpro_like .f_price input{width:100%;}

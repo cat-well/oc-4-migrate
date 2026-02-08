@@ -101,6 +101,7 @@ class FilterPro extends \Opencart\System\Engine\Controller {
 			['value' => 'checkbox', 'text' => $this->language->get('text_display_checkbox')],
 			['value' => 'list', 'text' => $this->language->get('text_display_list')],
 			['value' => 'image', 'text' => $this->language->get('text_display_image')],
+			['value' => 'tiles', 'text' => $this->language->get('text_display_tiles') ?? 'Tiles'],
 			['value' => 'slider', 'text' => $this->language->get('text_display_slider')],
 		];
 
@@ -137,6 +138,9 @@ class FilterPro extends \Opencart\System\Engine\Controller {
 
 		$data['blocks'] = $blocks;
 
+		// Popular queries (optional): per-language raw text (one per line: label|url)
+		$data['popular_queries'] = $module_info['popular_queries'] ?? [];
+
 		// Languages
 		$this->load->model('localisation/language');
 		$data['languages'] = $this->model_localisation_language->getLanguages();
@@ -168,6 +172,7 @@ class FilterPro extends \Opencart\System\Engine\Controller {
 			'name' => '',
 			'status' => 0,
 			'blocks' => [],
+			'popular_queries' => [],
 			'use_globally' => 0
 		];
 
@@ -261,6 +266,14 @@ class FilterPro extends \Opencart\System\Engine\Controller {
 		unset($row);
 
 		$post_info['blocks'] = $norm;
+
+		// Normalize popular queries (keep as per-language raw text)
+		if (!is_array($post_info['popular_queries'] ?? null)) {
+			$post_info['popular_queries'] = ['' => (string)($post_info['popular_queries'] ?? '')];
+		}
+		foreach ($post_info['popular_queries'] as $code => $txt) {
+			$post_info['popular_queries'][(string)$code] = (string)$txt;
+		}
 
 		if (!$json) {
 			$this->load->model('setting/module');

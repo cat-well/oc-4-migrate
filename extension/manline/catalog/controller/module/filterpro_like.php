@@ -768,6 +768,42 @@ class FilterproLike extends \Opencart\System\Engine\Controller {
 				continue;
 			}
 
+			if ($key === 'popular_queries') {
+				$meta = $block_meta('popular_queries', ($data['is_ua'] ? 'Популярні запити' : 'Популярные запросы'));
+				$meta['type'] = 'nav';
+				$meta['display'] = 'list';
+
+				$raw = $setting['popular_queries'] ?? [];
+				if (!is_array($raw)) $raw = ['' => (string)$raw];
+
+				$txt = '';
+				if (isset($raw[$lang_code])) {
+					$txt = (string)$raw[$lang_code];
+				} elseif (isset($raw['ru-ru'])) {
+					$txt = (string)$raw['ru-ru'];
+				} elseif (isset($raw['uk-ua'])) {
+					$txt = (string)$raw['uk-ua'];
+				} elseif (isset($raw[''])) {
+					$txt = (string)$raw[''];
+				}
+
+				$items = [];
+				foreach (preg_split('/\r?\n/', $txt) as $line) {
+					$line = trim((string)$line);
+					if ($line === '') continue;
+					if (strpos($line, '|') === false) continue;
+					[$label, $url] = array_map('trim', explode('|', $line, 2));
+					if ($label === '' || $url === '') continue;
+					$items[] = ['label' => $label, 'url' => $url, 'total' => 0];
+				}
+
+				$meta['items'] = $items;
+				if ($items) {
+					$data['blocks'][] = $meta;
+				}
+				continue;
+			}
+
 			if ($key === 'category' && !empty($data['child_category_items'])) {
 				$meta = $block_meta('category', ($data['is_ua'] ? 'Категорії' : 'Категории'));
 				$meta['type'] = 'nav';

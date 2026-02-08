@@ -115,12 +115,31 @@
                   <td colspan="4">
                     <button type="button" class="btn btn-outline-primary" id="fp-add-row">Add block</button>
                     <div class="form-text mt-2">
-                      Keys supported: <code>price</code>, <code>manufacturer</code>, <code>option:&lt;id&gt;</code>, <code>attribute:&lt;id&gt;</code>. Legacy keys: <code>color</code>, <code>style</code>, <code>size</code>.
+                      Keys supported: <code>price</code>, <code>manufacturer</code>, <code>option:&lt;id&gt;</code>, <code>attribute:&lt;id&gt;</code>, <code>popular_queries</code>.
+                      Legacy keys: <code>color</code>, <code>style</code>, <code>size</code>.
                     </div>
                   </td>
                 </tr>
               </tbody>
             </table>
+          </div>
+
+          <hr/>
+
+          <h3 class="mb-3">{{ text_popular_queries|default('Popular queries') }}</h3>
+          <div class="row mb-3">
+            <label class="col-sm-2 col-form-label">{{ entry_popular_queries|default('Links list') }}</label>
+            <div class="col-sm-10">
+              {% for language in languages %}
+                <div class="input-group mb-2">
+                  <span class="input-group-text"><img src="language/{{ language.code }}/{{ language.code }}.png" alt="{{ language.name }}" title="{{ language.name }}"></span>
+                  <textarea class="form-control" name="popular_queries[{{ language.code }}]" rows="6" placeholder="one per line: label|url">{{ popular_queries[language.code] ?? '' }}</textarea>
+                </div>
+              {% endfor %}
+              <div class="form-text">
+                One per line: <code>label|url</code>. Example: <code>купить мужское белье|https://example.com</code>
+              </div>
+            </div>
           </div>
 
         </form>
