@@ -136,17 +136,17 @@ class FilterproSearchLike extends \Opencart\System\Engine\Controller {
 				return $q->num_rows ? (int)$q->row['attribute_id'] : 0;
 			};
 
-			// Common facets (RU/UA)
-			$size_option_id = $findOptionId(['size','rozmir','razmer'], ['Размер', 'Розмір']);
-			$color_option_id = $findOptionId(['color','kolir','cvet'], ['Цвет', 'Колір']);
+			// Common facets (RU/UA) — on Manline these are ATTRIBUTES (not options)
+			$size_attr_id = $findAttributeId(['size','rozmir','razmer'], ['Размер', 'Розмір']);
+			$color_attr_id = $findAttributeId(['color','kolir','cvet'], ['Цвет', 'Колір']);
 			$style_attr_id = $findAttributeId(['stil','style'], ['Стиль']);
 			$delivery_attr_id = $findAttributeId(['srok-dostavki','delivery'], ['Срок доставки', 'Термін доставки']);
 
 			$blocks_list[] = ['key' => 'manufacturer', 'sort_order' => 10, 'display' => 'checkbox', 'expanded' => 1];
 			if ($style_attr_id) $blocks_list[] = ['key' => 'attribute:' . $style_attr_id, 'sort_order' => 20, 'display' => 'checkbox', 'expanded' => 1];
 			if ($delivery_attr_id) $blocks_list[] = ['key' => 'attribute:' . $delivery_attr_id, 'sort_order' => 30, 'display' => 'checkbox', 'expanded' => 1];
-			if ($size_option_id) $blocks_list[] = ['key' => 'option:' . $size_option_id, 'sort_order' => 40, 'display' => 'checkbox', 'expanded' => 1];
-			if ($color_option_id) $blocks_list[] = ['key' => 'option:' . $color_option_id, 'sort_order' => 50, 'display' => 'checkbox', 'expanded' => 1];
+			if ($size_attr_id) $blocks_list[] = ['key' => 'attribute:' . $size_attr_id, 'sort_order' => 40, 'display' => 'checkbox', 'expanded' => 1];
+			if ($color_attr_id) $blocks_list[] = ['key' => 'attribute:' . $color_attr_id, 'sort_order' => 50, 'display' => 'checkbox', 'expanded' => 1];
 			$blocks_list[] = ['key' => 'price', 'sort_order' => 60, 'display' => 'slider', 'expanded' => 1];
 		}
 
@@ -206,6 +206,31 @@ class FilterproSearchLike extends \Opencart\System\Engine\Controller {
 			if (!isset($blocks_map[$key]) || !is_array($blocks_map[$key])) return $default;
 			$display = (string)($blocks_map[$key]['display'] ?? '');
 			return $display !== '' ? $display : $default;
+		};
+
+		$getAttributeName = function (int $attribute_id) use ($language_id): string {
+			$q = $this->db->query("SELECT name FROM `" . DB_PREFIX . "attribute_description` WHERE attribute_id='" . (int)$attribute_id . "' AND language_id='" . (int)$language_id . "' LIMIT 1");
+			return $q->num_rows ? (string)$q->row['name'] : '';
+		};
+
+		$getOptionName = function (int $option_id) use ($language_id): string {
+			$q = $this->db->query("SELECT name FROM `" . DB_PREFIX . "option_description` WHERE option_id='" . (int)$option_id . "' AND language_id='" . (int)$language_id . "' LIMIT 1");
+			return $q->num_rows ? (string)$q->row['name'] : '';
+		};
+
+		$limitItems = function (array $items, int $limit = 20): array {
+			// Remove empties + sort by total desc, then label asc
+			$items = array_values(array_filter($items, static fn($it) => is_array($it) && !empty($it['label'])));
+			usort($items, static function ($a, $b) {
+				$ta = (int)($a['total'] ?? 0);
+				$tb = (int)($b['total'] ?? 0);
+				if ($ta !== $tb) return $tb <=> $ta;
+				return strcmp((string)($a['label'] ?? ''), (string)($b['label'] ?? ''));
+			});
+			if ($limit > 0 && count($items) > $limit) {
+				$items = array_slice($items, 0, $limit);
+			}
+			return $items;
 		};
 
 		// Selection parsing (query params)
@@ -444,8 +469,8 @@ class FilterproSearchLike extends \Opencart\System\Engine\Controller {
 					];
 				}
 
-				$meta['items'] = $items;
-				if ($items) $data['blocks'][] = $meta;
+				$meta['items'] = $limitItems($items, 20);
+				if ($meta['items']) $data['blocks'][] = $meta;
 				continue;
 			}
 
@@ -507,12 +532,15 @@ class FilterproSearchLike extends \Opencart\System\Engine\Controller {
 				}
 
 				if ($items) {
-					$meta = $block_meta($key, $key);
+					$opt_name = $getOptionName($option_id);
+					$meta = $block_meta($key, $opt_name !== '' ? $opt_name : $key);
 					$meta['type'] = 'list';
 					$meta['display'] = $get_display($key, 'checkbox');
 					$meta['slug_key'] = 'f_' . $opt_slug;
-					$meta['items'] = $items;
-					$data['blocks'][] = $meta;
+					$meta['items'] = $limitItems($items, 20);
+					if ($meta['items']) {
+						$data['blocks'][] = $meta;
+					}
 				}
 				continue;
 			}
@@ -530,7 +558,7 @@ class FilterproSearchLike extends \Opencart\System\Engine\Controller {
 					"JOIN `" . DB_PREFIX . "product_attribute` pa ON pa.product_id=p.product_id AND pa.attribute_id='" . (int)$attribute_id . "' AND pa.language_id='" . (int)$language_id . "' " .
 					$facet_where('slug:' . $attr_slug) .
 					$search_where() .
-					" AND pa.slug != '' AND pa.text != '' GROUP BY pa.slug, pa.text ORDER BY pa.text"
+					" AND pa.slug != '' AND pa.text != '' GROUP BY pa.slug, pa.text ORDER BY total DESC, pa.text"
 				);
 
 				$items = [];
@@ -571,12 +599,15 @@ class FilterproSearchLike extends \Opencart\System\Engine\Controller {
 				}
 
 				if ($items) {
-					$meta = $block_meta($key, $key);
+					$attr_name = $getAttributeName($attribute_id);
+					$meta = $block_meta($key, $attr_name !== '' ? $attr_name : $key);
 					$meta['type'] = 'list';
 					$meta['display'] = $get_display($key, 'checkbox');
 					$meta['slug_key'] = 'f_' . $attr_slug;
-					$meta['items'] = $items;
-					$data['blocks'][] = $meta;
+					$meta['items'] = $limitItems($items, 20);
+					if ($meta['items']) {
+						$data['blocks'][] = $meta;
+					}
 				}
 				continue;
 			}
