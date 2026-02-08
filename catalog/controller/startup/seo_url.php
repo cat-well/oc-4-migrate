@@ -44,7 +44,13 @@ class SeoUrl extends \Opencart\System\Engine\Controller {
 				}
 
 				foreach ($parts as $key => $value) {
-					$seo_url_info = $this->model_design_seo_url->getSeoUrlByKeyword($value);
+					// Legacy OC2 SEOPro-style URLs often end with .html
+					$lookup = (string)$value;
+					if (str_ends_with($lookup, '.html')) {
+						$lookup = substr($lookup, 0, -5);
+					}
+
+					$seo_url_info = $this->model_design_seo_url->getSeoUrlByKeyword($lookup);
 
 					if ($seo_url_info) {
 						$this->request->get[$seo_url_info['key']] = html_entity_decode($seo_url_info['value'], ENT_QUOTES, 'UTF-8');
