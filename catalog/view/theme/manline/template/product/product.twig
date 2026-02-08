@@ -2,8 +2,16 @@
 
 <!--this_is_product-->
 <div class="breadcrumb container">
-  {# OC2-like breadcrumbs. We keep the OC4 breadcrumbs list but render as plain links with separators. #}
-  {% for breadcrumb in breadcrumbs %}
+  {# OC2-like breadcrumbs with optional injected "Стиль" crumb #}
+  {% set crumbs = breadcrumbs %}
+  {% if style_breadcrumb %}
+    {# Insert before last crumb (product) #}
+    {% set last = crumbs|last %}
+    {% set head = crumbs|slice(0, crumbs|length - 1) %}
+    {% set crumbs = head|merge([style_breadcrumb, last]) %}
+  {% endif %}
+
+  {% for breadcrumb in crumbs %}
     {% if not loop.last %}
       <div style="display:inline"><a href="{{ breadcrumb.href }}"><span>{{ breadcrumb.text }}</span></a></div>
       <div class="text_separator"></div>

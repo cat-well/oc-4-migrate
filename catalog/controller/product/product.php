@@ -317,6 +317,39 @@ class Product extends \Opencart\System\Engine\Controller {
 			$data['colors_cfg'] = [];
 			$data['colors'] = [];
 
+			// Manline OC2: extra breadcrumb injection based on attribute "Стиль" (RU only)
+			$data['style_breadcrumb'] = null;
+			if ($data['lang'] === 'ru-ru') {
+				$this->load->model('catalog/product');
+				$attr_groups = $this->model_catalog_product->getAttributes($product_id);
+				$style_value = '';
+				foreach ($attr_groups as $ag) {
+					if (empty($ag['attribute'])) continue;
+					foreach ($ag['attribute'] as $a) {
+						if (($a['name'] ?? '') === 'Стиль') {
+							$style_value = (string)($a['text'] ?? '');
+							break 2;
+						}
+					}
+				}
+
+				$style_value = trim($style_value);
+				$map = [
+					'Свободные боксеры' => '/muzhskie-trusy/svobodnye-boksery/',
+					'Слипы' => '/muzhskie-trusy/slipy/',
+					'Трусы боксеры' => '/muzhskie-trusy/trusy-boksery/',
+					'Майка' => '/majki-futbolki/mayki/',
+					'Футболка' => '/majki-futbolki/futbolki/',
+				];
+
+				if ($style_value !== '' && isset($map[$style_value])) {
+					$data['style_breadcrumb'] = [
+						'text' => $style_value,
+						'href' => $map[$style_value],
+					];
+				}
+			}
+
 			// Image
 			$this->load->model('tool/image');
 
