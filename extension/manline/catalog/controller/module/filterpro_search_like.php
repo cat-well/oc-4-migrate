@@ -389,6 +389,9 @@ class FilterproSearchLike extends \Opencart\System\Engine\Controller {
 		if ($data['selected_max_price'] === '') $data['selected_max_price'] = (string)$max_ceil;
 		$data['price_form_action'] = $data['base_url'];
 
+		// Only show price block when there is a meaningful range (avoid noise when no results)
+		$data['has_price_range'] = ($max_ceil > 0 && $max_ceil >= $min_floor);
+
 		// Build blocks
 		$data['blocks'] = [];
 		foreach ($blocks_list as $row) {
@@ -399,6 +402,9 @@ class FilterproSearchLike extends \Opencart\System\Engine\Controller {
 			if ($display === 'hide') continue;
 
 			if ($key === 'price') {
+				if (empty($data['has_price_range'])) {
+					continue;
+				}
 				$meta = $block_meta('price', ($data['is_ua'] ? 'Ціна' : 'Цена'));
 				$meta['type'] = 'price';
 				$meta['display'] = $get_display('price', 'slider');
