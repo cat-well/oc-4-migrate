@@ -560,6 +560,9 @@ class FilterproLike extends \Opencart\System\Engine\Controller {
 		$data['selected_max_price'] = ($selected['max_price'] !== null) ? (string)$selected['max_price'] : (string)$data['price_max_ceil'];
 		$data['price_form_action'] = $build_url($sel_slug);
 
+		// Only show price block when there is a meaningful range (reduce noise)
+		$data['has_price_range'] = ($data['price_max_ceil'] > 0 && $data['price_max_ceil'] > $data['price_min_floor']);
+
 		// Color option (option_id=13)
 		$color_option_id = 13;
 		$color_option_slug = 'tsvet-o';
@@ -854,7 +857,7 @@ class FilterproLike extends \Opencart\System\Engine\Controller {
 				continue;
 			}
 
-			if ($key === 'price' && $data['show_price']) {
+			if ($key === 'price' && $data['show_price'] && !empty($data['has_price_range'])) {
 				$meta = $block_meta('price', ($data['is_ua'] ? 'Ціна' : 'Цена'));
 				$meta['type'] = 'price';
 				$meta['display'] = $data['disp_price'];
