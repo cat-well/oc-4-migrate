@@ -95,6 +95,53 @@ class FilterproSearchLike extends \Opencart\System\Engine\Controller {
 			}
 		}
 
+		// If no blocks configured (like on OC2 search), auto-pick a sane subset based on common Manline facets.
+		// Goal: behave like "analyze results and show appropriate blocks".
+		if (!$blocks_list) {
+			$findOptionId = function (array $slugs, array $names) use ($language_id) : int {
+				$w = [];
+				foreach ($slugs as $s) {
+					$s = trim((string)$s);
+					if ($s !== '') $w[] = "slug='" . $this->db->escape($s) . "'";
+				}
+				foreach ($names as $n) {
+					$n = trim((string)$n);
+					if ($n !== '') $w[] = "name='" . $this->db->escape($n) . "'";
+				}
+				if (!$w) return 0;
+				$q = $this->db->query("SELECT option_id FROM `" . DB_PREFIX . "option_description` WHERE language_id='" . (int)$language_id . "' AND (" . implode(' OR ', $w) . ") LIMIT 1");
+				return $q->num_rows ? (int)$q->row['option_id'] : 0;
+			};
+
+			$findAttributeId = function (array $slugs, array $names) use ($language_id) : int {
+				$w = [];
+				foreach ($slugs as $s) {
+					$s = trim((string)$s);
+					if ($s !== '') $w[] = "slug='" . $this->db->escape($s) . "'";
+				}
+				foreach ($names as $n) {
+					$n = trim((string)$n);
+					if ($n !== '') $w[] = "name='" . $this->db->escape($n) . "'";
+				}
+				if (!$w) return 0;
+				$q = $this->db->query("SELECT attribute_id FROM `" . DB_PREFIX . "attribute_description` WHERE language_id='" . (int)$language_id . "' AND (" . implode(' OR ', $w) . ") LIMIT 1");
+				return $q->num_rows ? (int)$q->row['attribute_id'] : 0;
+			};
+
+			// Common facets (RU/UA)
+			$size_option_id = $findOptionId(['size','rozmir','razmer'], ['Размер', 'Розмір']);
+			$color_option_id = $findOptionId(['color','kolir','cvet'], ['Цвет', 'Колір']);
+			$style_attr_id = $findAttributeId(['stil','style'], ['Стиль']);
+			$delivery_attr_id = $findAttributeId(['srok-dostavki','delivery'], ['Срок доставки', 'Термін доставки']);
+
+			$blocks_list[] = ['key' => 'manufacturer', 'sort_order' => 10, 'display' => 'checkbox', 'expanded' => 1];
+			if ($style_attr_id) $blocks_list[] = ['key' => 'attribute:' . $style_attr_id, 'sort_order' => 20, 'display' => 'checkbox', 'expanded' => 1];
+			if ($delivery_attr_id) $blocks_list[] = ['key' => 'attribute:' . $delivery_attr_id, 'sort_order' => 30, 'display' => 'checkbox', 'expanded' => 1];
+			if ($size_option_id) $blocks_list[] = ['key' => 'option:' . $size_option_id, 'sort_order' => 40, 'display' => 'checkbox', 'expanded' => 1];
+			if ($color_option_id) $blocks_list[] = ['key' => 'option:' . $color_option_id, 'sort_order' => 50, 'display' => 'checkbox', 'expanded' => 1];
+			$blocks_list[] = ['key' => 'price', 'sort_order' => 60, 'display' => 'slider', 'expanded' => 1];
+		}
+
 		foreach ($blocks_list as $row) {
 			if (!is_array($row)) continue;
 			$k = trim((string)($row['key'] ?? ''));
