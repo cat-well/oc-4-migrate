@@ -88,7 +88,7 @@
                 {# OC2 special cases #}
                 {% if attribute.attribute_id == 26 and manufacturer %}
                   <li>
-                    <div class="hara_n">{{ text_manufacturer|default(attribute.name) }}</div>
+                    <div class="hara_n">{{ attribute.name }}</div>
                     <div class="hara_t">
                       <a href="{{ attribute.text }}">{{ manufacturer }}</a>
                     </div>
