@@ -95,7 +95,15 @@ class FilterproSearchLike extends \Opencart\System\Engine\Controller {
 			}
 		}
 
-		// If no blocks configured (like on OC2 search), auto-pick a sane subset based on common Manline facets.
+		// On OC2, search doesn't have explicit blocks config; it effectively auto-picks from the result set.
+		// Default behavior here: auto-pick unless module explicitly enables using configured blocks.
+		$search_use_blocks = !empty($setting['search_use_blocks']);
+		if (!$search_use_blocks) {
+			$blocks_list = [];
+			$blocks_map = [];
+		}
+
+		// If no blocks configured (or auto mode), auto-pick a sane subset based on common Manline facets.
 		// Goal: behave like "analyze results and show appropriate blocks".
 		if (!$blocks_list) {
 			$findOptionId = function (array $slugs, array $names) use ($language_id) : int {
