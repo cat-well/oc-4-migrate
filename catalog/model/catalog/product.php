@@ -83,6 +83,31 @@ class Product extends \Opencart\System\Engine\Model {
 	}
 
 	/**
+	 * Get Variants
+	 *
+	 * Return enabled variant products for a given master product.
+	 * Used by Manline theme to build OC2-like color switcher.
+	 *
+	 * @param int $master_id
+	 *
+	 * @return array<int, array<string, mixed>>
+	 */
+	public function getVariants(int $master_id): array {
+		$query = $this->db->query("SELECT `product_id`, `master_id`, `quantity`, `image`, `variant`, `override` FROM `" . DB_PREFIX . "product` WHERE `master_id` = '" . (int)$master_id . "' AND `status` = '1' AND `date_available` <= NOW() ORDER BY `sort_order` ASC, `product_id` ASC");
+
+		$variants = [];
+
+		foreach ($query->rows as $row) {
+			$row['variant'] = $row['variant'] ? json_decode($row['variant'], true) : [];
+			$row['override'] = $row['override'] ? json_decode($row['override'], true) : [];
+
+			$variants[] = $row;
+		}
+
+		return $variants;
+	}
+
+	/**
 	 * Get Products
 	 *
 	 * Get the record of the product records in the database.
