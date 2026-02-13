@@ -284,7 +284,10 @@
 </div>
 
 <div class="prod_de_w sets_w">
-  {{ set_block|default('')|raw }}
+  {# TECH-DEBT (Manline): OC2 "sets" / комплект блок. Сейчас не портировано в OC4.
+     В теме есть legacy JS (js/set.js) и placeholder set_block, но нет backend route/data.
+     Вернемся позже. #}
+  {# {{ set_block|default('')|raw }} #}
 
   <div class="container descr prod_cont" id="description">
     <div class="product_menu_w">
