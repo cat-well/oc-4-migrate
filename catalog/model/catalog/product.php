@@ -108,6 +108,58 @@ class Product extends \Opencart\System\Engine\Model {
 	}
 
 	/**
+	 * Get Products By Model Prefix
+	 *
+	 * Manline: many products encode color variants as model like "2664-xxx".
+	 * This helper returns all products that share a prefix (before '-') and are enabled.
+	 *
+	 * @param string $prefix
+	 * @param int    $limit
+	 *
+	 * @return array<int, array<string, mixed>>
+	 */
+	public function getProductsByModelPrefix(string $prefix, int $limit = 80): array {
+		$prefix = trim($prefix);
+
+		if ($prefix === '') {
+			return [];
+		}
+
+		$sql = "SELECT `product_id`, `model`, `image`, `quantity`, `status` FROM `" . DB_PREFIX . "product` WHERE `status` = '1' AND `date_available` <= NOW() AND `model` LIKE '" . $this->db->escape($prefix) . "-%' ORDER BY `model` ASC, `product_id` ASC LIMIT " . (int)$limit;
+
+		$query = $this->db->query($sql);
+
+		return $query->rows;
+	}
+
+	/**
+	 * Get Attribute Text Map for Products
+	 *
+	 * @param array<int,int> $product_ids
+	 * @param int            $attribute_id
+	 * @param int            $language_id
+	 *
+	 * @return array<int,string> map product_id => text
+	 */
+	public function getAttributeTextMap(array $product_ids, int $attribute_id, int $language_id): array {
+		$product_ids = array_values(array_unique(array_map('intval', $product_ids)));
+
+		if (!$product_ids) {
+			return [];
+		}
+
+		$query = $this->db->query("SELECT `product_id`, `text` FROM `" . DB_PREFIX . "product_attribute` WHERE `attribute_id` = '" . (int)$attribute_id . "' AND `language_id` = '" . (int)$language_id . "' AND `product_id` IN (" . implode(',', $product_ids) . ")");
+
+		$map = [];
+
+		foreach ($query->rows as $row) {
+			$map[(int)$row['product_id']] = (string)$row['text'];
+		}
+
+		return $map;
+	}
+
+	/**
 	 * Get Products
 	 *
 	 * Get the record of the product records in the database.

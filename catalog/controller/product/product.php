@@ -455,89 +455,66 @@ class Product extends \Opencart\System\Engine\Controller {
 				}
 			}
 
-			// Build Manline color switcher (variants)
+			// Build Manline color switcher (by attribute "Цвет/Колір")
+			// OC2 convention: color is stored as a product attribute (not an option).
+			// Variants are inferred by shared model prefix (before '-') e.g. 2664-xxx.
 			try {
-				$color_product_option_id = 0;
-				$color_value_map = [];
+				$current_pid = (int)($this->request->get['product_id'] ?? 0);
+				$language_id = (int)$this->config->get('config_language_id');
 
-				foreach ($data['options'] as $opt) {
-					$name = mb_strtolower((string)($opt['name'] ?? ''));
-					if (in_array($name, ['цвет', 'колір', 'color'], true)) {
-						$color_product_option_id = (int)$opt['product_option_id'];
-						foreach (($opt['product_option_value'] ?? []) as $pov) {
-							$color_value_map[(int)$pov['product_option_value_id']] = $pov;
+				$model = (string)($product_info['model'] ?? '');
+				$prefix = trim(explode('-', $model)[0]);
+
+				if ($prefix !== '' && preg_match('/^\d+$/', $prefix)) {
+					// Attribute id for Color/Колір in current dataset
+					$color_attribute_id = 17;
+
+					$group_products = $this->model_catalog_product->getProductsByModelPrefix($prefix);
+					$product_ids = array_map(fn($r) => (int)$r['product_id'], $group_products);
+					$color_map = $this->model_catalog_product->getAttributeTextMap($product_ids, $color_attribute_id, $language_id);
+
+					if (count($group_products) > 1) {
+						$data['colors_cfg'] = ['name' => 1];
+
+						$colors = [];
+
+						foreach ($group_products as $gp) {
+							$pid = (int)($gp['product_id'] ?? 0);
+							if (!$pid) continue;
+
+							$ico_photo = '';
+							if (!empty($gp['image']) && is_file(DIR_IMAGE . html_entity_decode((string)$gp['image'], ENT_QUOTES, 'UTF-8'))) {
+								$ico_photo = $this->model_tool_image->resize((string)$gp['image'], 40, 40);
+							}
+
+							$color_text = $color_map[$pid] ?? '';
+							$color_name = trim((string)$color_text);
+							// Often it's "черный, синий" — for tile name we keep first token.
+							if (str_contains($color_name, ',')) {
+								$color_name = trim(explode(',', $color_name)[0]);
+							}
+
+							$colors[] = [
+								'product_id' => $pid,
+								'href' => $this->url->link('product/product', 'language=' . $this->config->get('config_language') . '&product_id=' . $pid),
+								'tpl' => $ico_photo ? 'photos' : 'img',
+								'quantity' => ((int)($gp['quantity'] ?? 0) <= 0) ? 'disabled' : '',
+								'color' => '',
+								'ico_photo' => $ico_photo,
+								'ico_color' => $ico_photo,
+								'color_name' => $color_name,
+							];
 						}
-						break;
+
+						// Sort: active first? keep model order but ensure current exists.
+						usort($colors, function($a, $b) use ($current_pid) {
+							if ($a['product_id'] === $current_pid) return -1;
+							if ($b['product_id'] === $current_pid) return 1;
+							return $a['product_id'] <=> $b['product_id'];
+						});
+
+						$data['colors'] = $colors;
 					}
-				}
-
-				if ($color_product_option_id) {
-					$data['colors_cfg'] = ['name' => 1];
-
-					$current_pid = (int)($this->request->get['product_id'] ?? 0);
-					$variants = $this->model_catalog_product->getVariants($master_id);
-
-					// Include current product even if it's the master (some catalogs don't create variant rows)
-					$seen = [];
-					if ($current_pid) $seen[$current_pid] = true;
-
-					$colors = [];
-					foreach ($variants as $v) {
-						$vid = (int)($v['product_id'] ?? 0);
-						if (!$vid) continue;
-
-						$seen[$vid] = true;
-
-						$selected_value_id = 0;
-						if (!empty($v['variant']) && isset($v['variant'][$color_product_option_id])) {
-							$selected_value_id = (int)$v['variant'][$color_product_option_id];
-						} elseif (!empty($v['override']['variant']) && isset($v['override']['variant'][$color_product_option_id])) {
-							$selected_value_id = (int)$v['override']['variant'][$color_product_option_id];
-						}
-
-						$pov = $selected_value_id && isset($color_value_map[$selected_value_id]) ? $color_value_map[$selected_value_id] : null;
-						$color_name = $pov['name'] ?? '';
-
-						$ico_photo = '';
-						if (!empty($v['image']) && is_file(DIR_IMAGE . html_entity_decode((string)$v['image'], ENT_QUOTES, 'UTF-8'))) {
-							$ico_photo = $this->model_tool_image->resize((string)$v['image'], 40, 40);
-						}
-
-						$ico_color = '';
-						if (!empty($pov['image'])) {
-							// already resized to 50x50 in options builder
-							$ico_color = (string)$pov['image'];
-						}
-
-						$href = $this->url->link('product/product', 'language=' . $this->config->get('config_language') . '&product_id=' . $vid);
-
-						$colors[] = [
-							'product_id' => $vid,
-							'href' => $href,
-							'tpl' => $ico_photo ? 'photos' : 'img',
-							'quantity' => ((int)($v['quantity'] ?? 0) <= 0) ? 'disabled' : '',
-							'color' => '',
-							'ico_photo' => $ico_photo,
-							'ico_color' => $ico_color ?: $ico_photo,
-							'color_name' => $color_name,
-						];
-					}
-
-					// If current product isn't in variants list (e.g. master product), add it as a single "active" color tile.
-					if ($current_pid && empty($seen[$current_pid])) {
-						$colors[] = [
-							'product_id' => $current_pid,
-							'href' => $this->url->link('product/product', 'language=' . $this->config->get('config_language') . '&product_id=' . $current_pid),
-							'tpl' => 'photos',
-							'quantity' => ((int)$product_info['quantity'] <= 0) ? 'disabled' : '',
-							'color' => '',
-							'ico_photo' => $data['thumb_thumb'] ?: $data['thumb'],
-							'ico_color' => $data['thumb_thumb'] ?: $data['thumb'],
-							'color_name' => '',
-						];
-					}
-
-					$data['colors'] = $colors;
 				}
 			} catch (\Throwable $e) {
 				// fail silently; colors are optional
