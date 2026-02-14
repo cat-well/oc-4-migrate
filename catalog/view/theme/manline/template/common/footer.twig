@@ -118,13 +118,8 @@
 </script>
 <script>
   jQuery(document).ready(function($){
-    $.ajax({
-      url : '{{ simplecheckout_url|default("/simplecheckout/") }}',
-      success : function(data){
-        var header_ajax_icons = $(data).find('.cart-popup').html();
-        $('.cart-popup').html(header_ajax_icons);
-      }
-    });
+    // OC2 leftover: tried to pull icons from /simplecheckout. On OC4 it 404s.
+    // Keep cart popup block as-is (it is rendered server-side in header).
   });
 </script>
 <!-- END JIVOSITE CODE -->
