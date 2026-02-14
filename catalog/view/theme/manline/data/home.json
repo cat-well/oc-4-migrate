@@ -1,0 +1,15 @@
+{
+  "slider": [
+    {"image": "catalog/view/theme/manline/image/promo1.jpg", "href": "/sale/"},
+    {"image": "catalog/view/theme/manline/image/promo2.jpg", "href": "/muzhskie-trusy/"},
+    {"image": "catalog/view/theme/manline/image/promo3.jpg", "href": "/plyazhnaya-odezhda/"}
+  ],
+  "category_tiles": [
+    {"image": "catalog/view/theme/manline/image/cat1.jpg", "title_ua": "Чоловічі труси", "title_ru": "Мужские трусы", "href": "/muzhskie-trusy/"},
+    {"image": "catalog/view/theme/manline/image/cat2.jpg", "title_ua": "Чоловічі плавки", "title_ru": "Мужские плавки", "href": "/plyazhnaya-odezhda/"},
+    {"image": "catalog/view/theme/manline/image/cat3.jpg", "title_ua": "Носки", "title_ru": "Носки", "href": "/noski/"}
+  ],
+  "featured_title_ua": "Рекомендуємо",
+  "featured_title_ru": "Рекомендуем",
+  "featured_product_ids": [4637, 3315, 7015]
+}

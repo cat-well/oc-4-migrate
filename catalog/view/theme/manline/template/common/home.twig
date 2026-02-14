@@ -1,7 +1,67 @@
 {{ header }}
+
 <div id="common-home" class="container">
-  <div class="row">{{ column_left }}
-    <div id="content" class="col">{{ content_top }}{{ content_bottom }}</div>
-    {{ column_right }}</div>
+  <div class="row">
+
+    {# Home slider #}
+    {% if home_slider is defined and home_slider %}
+      <div class="col-xs-12">
+        <div class="slider_w">
+          {% for s in home_slider %}
+            <div>
+              <div class="slider_item">
+                <img src="/{{ s.image }}" alt="" loading="lazy" style="width:100%"/>
+                {% if s.href %}<a class="slider_link" href="{{ s.href }}"></a>{% endif %}
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    {% endif %}
+
+    {# Category tiles (OC2-like) #}
+    {% if home_category_tiles is defined and home_category_tiles %}
+      <div class="col-xs-12" style="margin-top:20px">
+        <div class="row">
+          {% for t in home_category_tiles %}
+            <div class="col-xs-12 col-sm-4">
+              <a class="cat_sub" href="{{ t.href }}">
+                <img src="/{{ t.image }}" alt="" loading="lazy"/>
+                <span class="cat_sub_name">
+                  {% if lang == 'uk-ua' %}
+                    {{ t.title_ua|default(t.title_ru|default('')) }}
+                  {% else %}
+                    {{ t.title_ru|default(t.title_ua|default('')) }}
+                  {% endif %}
+                </span>
+              </a>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    {% endif %}
+
+    {# Featured products carousel #}
+    {% if home_featured_products is defined and home_featured_products %}
+      <div class="col-xs-12" style="margin-top:35px">
+        <div class="title">
+          <h2>
+            {% if lang == 'uk-ua' %}{{ home_featured_title_ua|default('Рекомендуємо') }}{% else %}{{ home_featured_title_ru|default('Рекомендуем') }}{% endif %}
+          </h2>
+        </div>
+        <div class="carusel_prod">
+          {% for p in home_featured_products %}
+            {{ p }}
+          {% endfor %}
+        </div>
+      </div>
+    {% endif %}
+
+    {# Keep OC4 layout module positions (can be used later) #}
+    {{ content_top }}
+    {{ content_bottom }}
+
+  </div>
 </div>
+
 {{ footer }}

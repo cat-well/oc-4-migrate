@@ -23,6 +23,57 @@ class Home extends \Opencart\System\Engine\Controller {
 			$this->document->setKeywords($description[$language_id]['meta_keyword']);
 		}
 
+		// Manline: homepage content (OC2-like, hardcoded slider + tiles)
+		$data['lang'] = (string)$this->config->get('config_language');
+
+		$home_cfg_path = DIR_APPLICATION . 'view/theme/manline/data/home.json';
+		$home_cfg = [];
+
+		if (is_file($home_cfg_path)) {
+			$raw = file_get_contents($home_cfg_path);
+			$home_cfg = $raw ? (json_decode($raw, true) ?: []) : [];
+		}
+
+		$data['home_slider'] = $home_cfg['slider'] ?? [];
+		$data['home_category_tiles'] = $home_cfg['category_tiles'] ?? [];
+		$data['home_featured_title_ua'] = $home_cfg['featured_title_ua'] ?? 'Рекомендуємо';
+		$data['home_featured_title_ru'] = $home_cfg['featured_title_ru'] ?? 'Рекомендуем';
+
+		// Featured products carousel (best-effort; can be replaced by OC4 modules later)
+		$data['home_featured_products'] = [];
+		$product_ids = $home_cfg['featured_product_ids'] ?? [];
+
+		if (is_array($product_ids) && $product_ids) {
+			$this->load->model('catalog/product');
+			$this->load->model('tool/image');
+
+			foreach ($product_ids as $pid) {
+				$pid = (int)$pid;
+				if (!$pid) continue;
+
+				$product_info = $this->model_catalog_product->getProduct($pid);
+				if (!$product_info) continue;
+
+				$thumb = '';
+				if (!empty($product_info['image']) && is_file(DIR_IMAGE . html_entity_decode((string)$product_info['image'], ENT_QUOTES, 'UTF-8'))) {
+					$thumb = $this->model_tool_image->resize((string)$product_info['image'], (int)$this->config->get('config_image_product_width'), (int)$this->config->get('config_image_product_height'));
+				}
+
+				$data['home_featured_products'][] = $this->load->controller('product/thumb', [
+					'product_id' => $pid,
+					'images' => [],
+					'thumb' => $thumb,
+					'name' => $product_info['name'] ?? '',
+					'quantity' => (int)($product_info['quantity'] ?? 0),
+					'price' => !empty($product_info['price']) ? $this->currency->format((float)$product_info['price'], $this->session->data['currency']) : '',
+					'special' => !empty($product_info['special']) ? $this->currency->format((float)$product_info['special'], $this->session->data['currency']) : '',
+					'lang_code' => $data['lang'],
+					'model' => $product_info['model'] ?? '',
+					'href' => $this->url->link('product/product', 'language=' . $this->config->get('config_language') . '&product_id=' . $pid)
+				]);
+			}
+		}
+
 		$data['column_left'] = $this->load->controller('common/column_left');
 		$data['column_right'] = $this->load->controller('common/column_right');
 		$data['content_top'] = $this->load->controller('common/content_top');
