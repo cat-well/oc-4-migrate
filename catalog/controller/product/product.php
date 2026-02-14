@@ -577,9 +577,45 @@ class Product extends \Opencart\System\Engine\Controller {
 							return $a['product_id'] <=> $b['product_id'];
 						});
 
+						// Deduplicate by normalized color name: keep 1 tile per color.
+						// Priority: current product > in-stock > lowest model/product_id.
+						$by_color = [];
+						foreach ($colors as $c) {
+							$key = trim((string)($c['color_name'] ?? ''));
+							if ($key === '') {
+								$key = '__unknown__';
+							}
+
+							$is_current = ((int)$c['product_id'] === $current_pid);
+							$is_disabled = !empty($c['_disabled']);
+
+							$score = 0;
+							if ($is_current) $score += 1000;
+							if (!$is_disabled) $score += 100;
+
+							// prefer more informative tile (with photo)
+							if (!empty($c['ico_photo'])) $score += 10;
+
+							$existing = $by_color[$key] ?? null;
+							if ($existing === null || ($score > ($existing['_score'] ?? -1))) {
+								$c['_score'] = $score;
+								$by_color[$key] = $c;
+							}
+						}
+
+						$colors = array_values($by_color);
+						usort($colors, function($a, $b) use ($current_pid) {
+							$ad = !empty($a['_disabled']);
+							$bd = !empty($b['_disabled']);
+							if ($ad !== $bd) return $ad <=> $bd;
+							if ((int)$a['product_id'] === $current_pid) return -1;
+							if ((int)$b['product_id'] === $current_pid) return 1;
+							return strcmp((string)($a['color_name'] ?? ''), (string)($b['color_name'] ?? ''));
+						});
+
 						// Remove internal helper fields
 						foreach ($colors as &$c) {
-							unset($c['_model'], $c['_disabled']);
+							unset($c['_model'], $c['_disabled'], $c['_score']);
 						}
 						unset($c);
 
