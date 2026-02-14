@@ -280,6 +280,8 @@ class Product extends \Opencart\System\Engine\Controller {
 			$data['reward'] = $product_info['reward'];
 			$data['points'] = $product_info['points'];
 			$data['description'] = html_entity_decode($product_info['description'], ENT_QUOTES, 'UTF-8');
+			// Manline template expects numeric quantity for availability/Buy button.
+			$data['quantity'] = (int)$product_info['quantity'];
 
 			// Stock Status
 			if ($product_info['quantity'] <= 0) {
