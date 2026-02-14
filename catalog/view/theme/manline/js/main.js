@@ -274,7 +274,7 @@ $(document).ready(function () {
         e.preventDefault();
         const lang_pref = window.location.href.indexOf('/ua/') === -1 ? '' : '/ua/';
         $.magnificPopup.close();
-        $('#header #cart').load(lang_pref+'index.php?route=module/cart #cart > *');
+        $('#header #cart').load(lang_pref+'index.php?route=common/cart #cart > *');
     });
     if ($('#simplecheckout_cart').length) {
         cuponPolt();
@@ -476,7 +476,7 @@ function cuponPolt() {
 }
 function freeDelivery() {
     const lang_pref = window.location.href.indexOf('/ua/') === -1 ? '' : '/ua';
-    $.get(lang_pref+"/index.php?route=module/cart", function (data) {
+    $.get(lang_pref+"/index.php?route=common/cart", function (data) {
         var total_cart = parseInt($(data).find('.total_money').text());
         var free_deliv = parseInt($('.dozakaz').attr('data-free-deliv'));
         var dozakaz = (free_deliv > total_cart) ? free_deliv - total_cart : '';
