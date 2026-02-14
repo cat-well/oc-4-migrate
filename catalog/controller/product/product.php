@@ -473,6 +473,59 @@ class Product extends \Opencart\System\Engine\Controller {
 					$product_ids = array_map(fn($r) => (int)$r['product_id'], $group_products);
 					$color_map = $this->model_catalog_product->getAttributeTextMap($product_ids, $color_attribute_id, $language_id);
 
+					// Fallback to the other language if current language doesn't have color filled (data can be mixed)
+					$fallback_language_id = ($language_id === 3) ? 2 : (($language_id === 2) ? 3 : 0);
+					$color_map_fallback = $fallback_language_id ? $this->model_catalog_product->getAttributeTextMap($product_ids, $color_attribute_id, $fallback_language_id) : [];
+
+					$normalizeColor = function(string $name, string $lang): string {
+						$name = trim($name);
+						if ($name === '') return '';
+
+						// Keep first token ("черный, синий" → "черный")
+						if (str_contains($name, ',')) {
+							$name = trim(explode(',', $name)[0]);
+						}
+
+						$name_l = mb_strtolower($name);
+
+						if ($lang === 'uk-ua') {
+							$map = [
+								'черный' => 'чорний',
+								'белый' => 'білий',
+								'синий' => 'синій',
+								'голубой' => 'блакитний',
+								'красный' => 'червоний',
+								'желтый' => 'жовтий',
+								'оранжевый' => 'помаранчевий',
+								'зелёный' => 'зелений',
+								'зеленый' => 'зелений',
+								'серый' => 'сірий',
+								'коричневый' => 'коричневий',
+								'бежевый' => 'бежевий',
+								'розовый' => 'рожевий',
+								'фиолетовый' => 'фіолетовий',
+								'фіолетовий' => 'фіолетовий',
+								'чорний' => 'чорний',
+								'білий' => 'білий',
+								'синій' => 'синій',
+								'блакитний' => 'блакитний',
+								'червоний' => 'червоний',
+								'жовтий' => 'жовтий',
+								'помаранчевий' => 'помаранчевий',
+								'зелений' => 'зелений',
+								'сірий' => 'сірий',
+								'коричневий' => 'коричневий',
+								'бежевий' => 'бежевий',
+								'рожевий' => 'рожевий',
+							];
+							if (isset($map[$name_l])) {
+								return $map[$name_l];
+							}
+						}
+
+						return $name;
+					};
+
 					if (count($group_products) > 1) {
 						$data['colors_cfg'] = ['name' => 1];
 
@@ -482,36 +535,53 @@ class Product extends \Opencart\System\Engine\Controller {
 							$pid = (int)($gp['product_id'] ?? 0);
 							if (!$pid) continue;
 
+							$qty = (int)($gp['quantity'] ?? 0);
+							$is_disabled = $qty <= 0;
+
 							$ico_photo = '';
 							if (!empty($gp['image']) && is_file(DIR_IMAGE . html_entity_decode((string)$gp['image'], ENT_QUOTES, 'UTF-8'))) {
 								$ico_photo = $this->model_tool_image->resize((string)$gp['image'], 40, 40);
 							}
 
-							$color_text = $color_map[$pid] ?? '';
-							$color_name = trim((string)$color_text);
-							// Often it's "черный, синий" — for tile name we keep first token.
-							if (str_contains($color_name, ',')) {
-								$color_name = trim(explode(',', $color_name)[0]);
+							$color_text = (string)($color_map[$pid] ?? '');
+							if ($color_text === '' && isset($color_map_fallback[$pid])) {
+								$color_text = (string)$color_map_fallback[$pid];
 							}
+
+							$color_name = $normalizeColor($color_text, (string)$data['lang']);
 
 							$colors[] = [
 								'product_id' => $pid,
 								'href' => $this->url->link('product/product', 'language=' . $this->config->get('config_language') . '&product_id=' . $pid),
 								'tpl' => $ico_photo ? 'photos' : 'img',
-								'quantity' => ((int)($gp['quantity'] ?? 0) <= 0) ? 'disabled' : '',
+								'quantity' => $is_disabled ? 'disabled' : '',
 								'color' => '',
 								'ico_photo' => $ico_photo,
 								'ico_color' => $ico_photo,
 								'color_name' => $color_name,
+								'_model' => (string)($gp['model'] ?? ''),
+								'_disabled' => $is_disabled,
 							];
 						}
 
-						// Sort: active first? keep model order but ensure current exists.
+						// Sort (OC2-like): in-stock first, then by model; keep current product first within its stock group.
 						usort($colors, function($a, $b) use ($current_pid) {
+							if ($a['_disabled'] !== $b['_disabled']) return $a['_disabled'] <=> $b['_disabled'];
+
 							if ($a['product_id'] === $current_pid) return -1;
 							if ($b['product_id'] === $current_pid) return 1;
+
+							$am = $a['_model'] ?? '';
+							$bm = $b['_model'] ?? '';
+							if ($am !== '' && $bm !== '') return strcmp($am, $bm);
 							return $a['product_id'] <=> $b['product_id'];
 						});
+
+						// Remove internal helper fields
+						foreach ($colors as &$c) {
+							unset($c['_model'], $c['_disabled']);
+						}
+						unset($c);
 
 						$data['colors'] = $colors;
 					}
