@@ -211,7 +211,9 @@
                   {% else %}
                     <div class="color_option {{ color.tpl }} {{ color.quantity }}">
                       {% if color.quantity %}<div class="hideQuantity">{% if lang == 'uk-ua' %}Немає в наявності{% else %}Нет в наличии{% endif %}</div>{% endif %}
-                      <a href="{{ color.href }}">
+
+                      {# Don't allow clicking disabled variants (OC2-like) #}
+                      {% if color.quantity %}
                         {% if color.tpl == 'color' %}
                           <span class="color_block" style="background:{{ color.color }}"></span>
                         {% elseif color.tpl == 'photos' %}
@@ -222,7 +224,20 @@
                         {% if colors_cfg is defined and colors_cfg.name == 1 %}
                           <span class="color_name">{{ color.color_name }}</span>
                         {% endif %}
-                      </a>
+                      {% else %}
+                        <a href="{{ color.href }}">
+                          {% if color.tpl == 'color' %}
+                            <span class="color_block" style="background:{{ color.color }}"></span>
+                          {% elseif color.tpl == 'photos' %}
+                            <span class="color_block"><img src="{{ color.ico_photo }}" /></span>
+                          {% else %}
+                            <span class="color_block"><img src="{{ color.ico_color }}" /></span>
+                          {% endif %}
+                          {% if colors_cfg is defined and colors_cfg.name == 1 %}
+                            <span class="color_name">{{ color.color_name }}</span>
+                          {% endif %}
+                        </a>
+                      {% endif %}
                     </div>
                   {% endif %}
                 {% endfor %}
@@ -257,7 +272,11 @@
           {% endif %}
         </div>
 
-        <button class="button" id="button-cart" type="button"><span>{% if lang == 'uk-ua' %}Купити{% else %}Купить{% endif %}</span></button>
+        {% if quantity > 0 %}
+          <button class="button" id="button-cart" type="button"><span>{% if lang == 'uk-ua' %}Купити{% else %}Купить{% endif %}</span></button>
+        {% else %}
+          <button class="button" id="button-cart" type="button" disabled="disabled" style="opacity:.6;cursor:not-allowed"><span>{% if lang == 'uk-ua' %}Немає в наявності{% else %}Нет в наличии{% endif %}</span></button>
+        {% endif %}
 
         <div class="doopl">
           <span data-tooltip-content="#dost_opl_tip" class="doopl_href">{% if lang == 'uk-ua' %}Доставка і оплата{% else %}Доставка и оплата{% endif %}</span>
