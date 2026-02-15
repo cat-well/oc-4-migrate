@@ -208,8 +208,9 @@ article, section{display:block;}
 #cms-blog .breadcrumb,
 #product-category .breadcrumb{
   display:block !important;
-  width:100%;
-  overflow:hidden; /* contain floated children */
+  width:100% !important;
+  overflow:hidden !important; /* contain floated children */
+  height:auto !important;
 }
 
 #cms-blog.blog-info .blog-article{padding-bottom:1.5rem;}
