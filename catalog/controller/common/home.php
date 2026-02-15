@@ -36,7 +36,54 @@ class Home extends \Opencart\System\Engine\Controller {
 
 		$data['home_slider'] = $home_cfg['slider'] ?? [];
 		$data['home_features'] = $home_cfg['features'] ?? [];
-		$data['home_category_tiles'] = $home_cfg['category_tiles'] ?? [];
+
+		// Category tiles (OC2-like). Allow JSON to specify either:
+		// - keyword: legacy SEO keyword (will be resolved to actual route via seo_url table)
+		// - category_id: category id (href will be generated via product/category)
+		// - href: explicit href fallback
+		$data['home_category_tiles'] = [];
+		$raw_tiles = $home_cfg['category_tiles'] ?? [];
+
+		if (is_array($raw_tiles) && $raw_tiles) {
+			try {
+				$this->load->model('design/seo_url');
+			} catch (\Throwable $e) {
+				// ignore
+			}
+
+			foreach ($raw_tiles as $t) {
+				if (!is_array($t)) continue;
+
+				$href = (string)($t['href'] ?? '');
+
+				// Resolve by category_id
+				if (!empty($t['category_id'])) {
+					$href = $this->url->link('product/category', 'language=' . $this->config->get('config_language') . '&path=' . (int)$t['category_id']);
+				}
+
+				// Resolve by seo keyword (preferred; lets you keep OC2 keywords in JSON)
+				if (!empty($t['keyword']) && isset($this->model_design_seo_url)) {
+					$seo = $this->model_design_seo_url->getSeoUrlByKeyword((string)$t['keyword']);
+					if ($seo && !empty($seo['key']) && isset($seo['value'])) {
+						$key = (string)$seo['key'];
+						$value = (string)$seo['value'];
+
+						// Category keyword usually maps to key=path, value=<category_id>
+						if ($key === 'path' && ctype_digit($value)) {
+							$href = $this->url->link('product/category', 'language=' . $this->config->get('config_language') . '&path=' . (int)$value);
+						} else {
+							// Generic fallback for other mappings
+							$href = '/' . ltrim((string)$t['keyword'], '/') . '/';
+						}
+					} else {
+						$href = '/' . ltrim((string)$t['keyword'], '/') . '/';
+					}
+				}
+
+				$t['href'] = $href;
+				$data['home_category_tiles'][] = $t;
+			}
+		}
 
 		// Top categories grid (OC2 style: categories where top=1 and has image)
 		$data['home_top_categories'] = [];

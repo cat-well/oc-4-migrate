@@ -45,12 +45,24 @@
   ],
 
   "category_tiles": [
-    {"image": "catalog/view/theme/manline/image/cat1.jpg", "title_ua": "Чоловічі труси", "title_ru": "Мужские трусы", "href": "/muzhskie-trusy/"},
-    {"image": "catalog/view/theme/manline/image/cat2.jpg", "title_ua": "Чоловічі плавки", "title_ru": "Мужские плавки", "href": "/plyazhnaya-odezhda/"},
-    {"image": "catalog/view/theme/manline/image/cat3.jpg", "title_ua": "Носки", "title_ru": "Носки", "href": "/noski/"},
-    {"image": "catalog/view/theme/manline/image/model1.jpg", "title_ua": "Майки", "title_ru": "Майки", "href": "/majki/"},
-    {"image": "catalog/view/theme/manline/image/man2.png", "title_ua": "Термобілизна", "title_ru": "Термобелье", "href": "/termobele/"},
-    {"image": "catalog/view/theme/manline/image/man.png", "title_ua": "Розпродаж", "title_ru": "Распродажа", "href": "/sale/"}
+    {
+      "image": "catalog/view/theme/manline/image/style/bokseri.jpg",
+      "title_ua": "Боксери",
+      "title_ru": "Боксеры",
+      "keyword": "muzhskie-trusy/trusy-boksery"
+    },
+    {
+      "image": "catalog/view/theme/manline/image/style/slipi.jpg",
+      "title_ua": "Сліпи",
+      "title_ru": "Слипы",
+      "keyword": "muzhskie-trusy/slipy"
+    },
+    {
+      "image": "catalog/view/theme/manline/image/style/semeynie.jpg",
+      "title_ua": "Сімейні труси",
+      "title_ru": "Семейные трусы",
+      "keyword": "muzhskie-trusy/svobodnye-boksery"
+    }
   ],
 
   "featured_title_ua": "Рекомендуємо",
