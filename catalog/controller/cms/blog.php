@@ -300,6 +300,9 @@ class Blog extends \Opencart\System\Engine\Controller {
 
 		$data['language'] = $this->config->get('config_language');
 
+		// Assets
+		$this->document->addStyle('catalog/view/theme/' . $this->config->get('config_theme') . '/stylesheet/blog.css');
+
 		$data['column_left'] = $this->load->controller('common/column_left');
 		$data['column_right'] = $this->load->controller('common/column_right');
 		$data['content_top'] = $this->load->controller('common/content_top');
@@ -457,6 +460,7 @@ class Blog extends \Opencart\System\Engine\Controller {
 			}
 
 			// Assets
+			$this->document->addStyle('catalog/view/theme/' . $this->config->get('config_theme') . '/stylesheet/blog.css');
 			$this->document->addScript('catalog/view/theme/' . $this->config->get('config_theme') . '/js/blog.article.js');
 
 			$data['column_left'] = $this->load->controller('common/column_left');
