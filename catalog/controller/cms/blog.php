@@ -425,6 +425,40 @@ class Blog extends \Opencart\System\Engine\Controller {
 
 			$data['continue'] = $this->url->link('cms/blog', 'language=' . $this->config->get('config_language') . $url);
 
+			// Reading time (rough)
+			$plain_text = trim(strip_tags($data['description']));
+			$word_count = preg_split('/\s+/u', $plain_text, -1, PREG_SPLIT_NO_EMPTY);
+			$words = $word_count ? count($word_count) : 0;
+			$data['reading_time'] = (int)max(1, ceil($words / 180));
+
+			// Related articles (same topic)
+			$data['related_articles'] = [];
+
+			$filter_data = [
+				'filter_topic_id' => $topic_id,
+				'sort'            => 'date_added',
+				'order'           => 'DESC',
+				'start'           => 0,
+				'limit'           => 5
+			];
+
+			$related_results = $this->model_cms_article->getArticles($filter_data);
+
+			foreach ($related_results as $result) {
+				if ((int)$result['article_id'] === (int)$article_id) {
+					continue;
+				}
+
+				$data['related_articles'][] = [
+					'href'       => $this->url->link('cms/blog.info', 'language=' . $this->config->get('config_language') . '&article_id=' . (int)$result['article_id'] . $url),
+					'name'       => $result['name'],
+					'date_added' => date($this->language->get('date_format_short'), strtotime($result['date_added']))
+				];
+			}
+
+			// Assets
+			$this->document->addScript('catalog/view/theme/' . $this->config->get('config_theme') . '/js/blog.article.js');
+
 			$data['column_left'] = $this->load->controller('common/column_left');
 			$data['column_right'] = $this->load->controller('common/column_right');
 			$data['content_top'] = $this->load->controller('common/content_top');
