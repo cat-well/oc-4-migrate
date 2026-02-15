@@ -41,7 +41,52 @@ class Home extends \Opencart\System\Engine\Controller {
 		$data['home_featured_title_ru'] = $home_cfg['featured_title_ru'] ?? 'Рекомендуем';
 		$data['home_blog_title_ua'] = $home_cfg['blog_title_ua'] ?? 'Останнє з блогу';
 		$data['home_blog_title_ru'] = $home_cfg['blog_title_ru'] ?? 'Последнее из блога';
-		$data['home_blog_posts'] = $home_cfg['blog_posts'] ?? [];
+
+		// Blog teaser: prefer OC4 CMS articles (migrated from manline_src). Fallback to home.json.
+		$data['home_blog_posts'] = [];
+		try {
+			$this->load->model('cms/article');
+			$this->load->model('tool/image');
+
+			$articles = $this->model_cms_article->getArticles([
+				'filter_search'   => '',
+				'filter_topic_id' => 0,
+				'filter_author'   => '',
+				'filter_tag'      => '',
+				'sort'            => 'date_added',
+				'order'           => 'DESC',
+				'start'           => 0,
+				'limit'           => 3
+			]);
+
+			foreach ($articles as $a) {
+				$image = '';
+				if (!empty($a['image']) && is_file(DIR_IMAGE . html_entity_decode((string)$a['image'], ENT_QUOTES, 'UTF-8'))) {
+					$image = $this->model_tool_image->resize((string)$a['image'], 380, 260);
+				}
+
+				$data['home_blog_posts'][] = [
+					'href' => $this->url->link('cms/blog.info', 'language=' . $this->config->get('config_language') . '&article_id=' . (int)$a['article_id']),
+					'image' => $image,
+					'title_ru' => $a['name'] ?? '',
+					'title_ua' => $a['name'] ?? '',
+					'desc_ru' => '',
+					'desc_ua' => '',
+					'date_day' => date('d', strtotime((string)($a['date_added'] ?? 'now'))),
+					'date_month_ru' => '',
+					'date_month_ua' => '',
+					'date_year' => date('Y', strtotime((string)($a['date_added'] ?? 'now'))),
+					'read_more_ru' => 'Читать статью',
+					'read_more_ua' => 'Читати статтю'
+				];
+			}
+		} catch (\Throwable $e) {
+			// ignore (fallback below)
+		}
+
+		if (!$data['home_blog_posts']) {
+			$data['home_blog_posts'] = $home_cfg['blog_posts'] ?? [];
+		}
 
 		// Featured products carousel (best-effort; can be replaced by OC4 modules later)
 		$data['home_featured_products'] = [];
