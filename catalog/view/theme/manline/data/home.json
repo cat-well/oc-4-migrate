@@ -46,22 +46,34 @@
 
   "category_tiles": [
     {
-      "image": "catalog/view/theme/manline/image/style/bokseri.jpg",
-      "title_ua": "Боксери",
-      "title_ru": "Боксеры",
-      "keyword": "muzhskie-trusy/trusy-boksery"
+      "keyword": "plyazhnaya-odezhda",
+      "image_ru": "catalog/view/theme/manline/image/home_tiles/ru/pliaznaia_odezda.png",
+      "image_ua": "catalog/view/theme/manline/image/home_tiles/ua/shorty.png"
     },
     {
-      "image": "catalog/view/theme/manline/image/style/slipi.jpg",
-      "title_ua": "Сліпи",
-      "title_ru": "Слипы",
-      "keyword": "muzhskie-trusy/slipy"
+      "keyword": "noski",
+      "image_ru": "catalog/view/theme/manline/image/home_tiles/ru/noski.png",
+      "image_ua": "catalog/view/theme/manline/image/home_tiles/ua/shkarpetky.png"
     },
     {
-      "image": "catalog/view/theme/manline/image/style/semeynie.jpg",
-      "title_ua": "Сімейні труси",
-      "title_ru": "Семейные трусы",
-      "keyword": "muzhskie-trusy/svobodnye-boksery"
+      "keyword": "futbolki",
+      "image_ru": "catalog/view/theme/manline/image/home_tiles/ru/futbolki.png",
+      "image_ua": "catalog/view/theme/manline/image/home_tiles/ua/futbolky.png"
+    },
+    {
+      "keyword": "termobelio",
+      "image_ru": "catalog/view/theme/manline/image/home_tiles/ru/termobelio.png",
+      "image_ua": "catalog/view/theme/manline/image/home_tiles/ua/termo.png"
+    },
+    {
+      "keyword": "muzhskie-trusy",
+      "image_ru": "catalog/view/theme/manline/image/home_tiles/ru/muzhskie-trusy.jpg",
+      "image_ua": "catalog/view/theme/manline/image/home_tiles/ua/trusy.png"
+    },
+    {
+      "keyword": "majki",
+      "image_ru": "catalog/view/theme/manline/image/home_tiles/ru/mayki.png",
+      "image_ua": "catalog/view/theme/manline/image/home_tiles/ua/Group 20.png"
     }
   ],
 
