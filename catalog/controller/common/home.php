@@ -62,21 +62,22 @@ class Home extends \Opencart\System\Engine\Controller {
 				}
 
 				// Resolve by seo keyword (preferred; lets you keep OC2 keywords in JSON)
-				if (!empty($t['keyword']) && isset($this->model_design_seo_url)) {
-					$seo = $this->model_design_seo_url->getSeoUrlByKeyword((string)$t['keyword']);
-					if ($seo && !empty($seo['key']) && isset($seo['value'])) {
-						$key = (string)$seo['key'];
-						$value = (string)$seo['value'];
+				if (!empty($t['keyword'])) {
+					// Always have a non-empty fallback
+					$href = '/' . ltrim((string)$t['keyword'], '/') . '/';
 
-						// Category keyword usually maps to key=path, value=<category_id>
-						if ($key === 'path' && ctype_digit($value)) {
-							$href = $this->url->link('product/category', 'language=' . $this->config->get('config_language') . '&path=' . (int)$value);
-						} else {
-							// Generic fallback for other mappings
-							$href = '/' . ltrim((string)$t['keyword'], '/') . '/';
+					// If OC4 SEO table knows this keyword, generate route-based link
+					if (isset($this->model_design_seo_url)) {
+						$seo = $this->model_design_seo_url->getSeoUrlByKeyword((string)$t['keyword']);
+						if ($seo && !empty($seo['key']) && isset($seo['value'])) {
+							$key = (string)$seo['key'];
+							$value = (string)$seo['value'];
+
+							// Category keyword usually maps to key=path, value=<category_id>
+							if ($key === 'path' && ctype_digit($value)) {
+								$href = $this->url->link('product/category', 'language=' . $this->config->get('config_language') . '&path=' . (int)$value);
+							}
 						}
-					} else {
-						$href = '/' . ltrim((string)$t['keyword'], '/') . '/';
 					}
 				}
 
