@@ -35,9 +35,13 @@ class Home extends \Opencart\System\Engine\Controller {
 		}
 
 		$data['home_slider'] = $home_cfg['slider'] ?? [];
+		$data['home_features'] = $home_cfg['features'] ?? [];
 		$data['home_category_tiles'] = $home_cfg['category_tiles'] ?? [];
 		$data['home_featured_title_ua'] = $home_cfg['featured_title_ua'] ?? 'Рекомендуємо';
 		$data['home_featured_title_ru'] = $home_cfg['featured_title_ru'] ?? 'Рекомендуем';
+		$data['home_blog_title_ua'] = $home_cfg['blog_title_ua'] ?? 'Останнє з блогу';
+		$data['home_blog_title_ru'] = $home_cfg['blog_title_ru'] ?? 'Последнее из блога';
+		$data['home_blog_posts'] = $home_cfg['blog_posts'] ?? [];
 
 		// Featured products carousel (best-effort; can be replaced by OC4 modules later)
 		$data['home_featured_products'] = [];

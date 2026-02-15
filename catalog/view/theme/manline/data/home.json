@@ -4,12 +4,103 @@
     {"image": "catalog/view/theme/manline/image/promo2.jpg", "href": "/muzhskie-trusy/"},
     {"image": "catalog/view/theme/manline/image/promo3.jpg", "href": "/plyazhnaya-odezhda/"}
   ],
+
+  "features": [
+    {
+      "image": "catalog/view/theme/manline/image/pre1.png",
+      "alt_ru": "Бесплатная доставка",
+      "alt_ua": "Безкоштовна доставка",
+      "title_ru": "Бесплатная доставка",
+      "desc_ru": "от 1500 грн",
+      "title_ua": "Безкоштовна доставка",
+      "desc_ua": "від 1500 грн"
+    },
+    {
+      "image": "catalog/view/theme/manline/image/pre2.png",
+      "alt_ru": "Отзывы",
+      "alt_ua": "Відгуки",
+      "title_ru": "98% положительных",
+      "desc_ru": "отзывов",
+      "title_ua": "98% позитивних",
+      "desc_ua": "відгуків"
+    },
+    {
+      "image": "catalog/view/theme/manline/image/pre3.png",
+      "alt_ru": "Оплата онлайн",
+      "alt_ua": "Оплата онлайн",
+      "title_ru": "Безопасная оплата",
+      "desc_ru": "онлайн",
+      "title_ua": "Безпечна оплата",
+      "desc_ua": "онлайн"
+    },
+    {
+      "image": "catalog/view/theme/manline/image/pre4.png",
+      "alt_ru": "Только проверенные бренды",
+      "alt_ua": "Тільки перевірені бренди",
+      "title_ru": "Только проверенные",
+      "desc_ru": "бренды",
+      "title_ua": "Тільки перевірені",
+      "desc_ua": "бренди"
+    }
+  ],
+
   "category_tiles": [
     {"image": "catalog/view/theme/manline/image/cat1.jpg", "title_ua": "Чоловічі труси", "title_ru": "Мужские трусы", "href": "/muzhskie-trusy/"},
     {"image": "catalog/view/theme/manline/image/cat2.jpg", "title_ua": "Чоловічі плавки", "title_ru": "Мужские плавки", "href": "/plyazhnaya-odezhda/"},
-    {"image": "catalog/view/theme/manline/image/cat3.jpg", "title_ua": "Носки", "title_ru": "Носки", "href": "/noski/"}
+    {"image": "catalog/view/theme/manline/image/cat3.jpg", "title_ua": "Носки", "title_ru": "Носки", "href": "/noski/"},
+    {"image": "catalog/view/theme/manline/image/model1.jpg", "title_ua": "Майки", "title_ru": "Майки", "href": "/majki/"},
+    {"image": "catalog/view/theme/manline/image/man2.png", "title_ua": "Термобілизна", "title_ru": "Термобелье", "href": "/termobele/"},
+    {"image": "catalog/view/theme/manline/image/man.png", "title_ua": "Розпродаж", "title_ru": "Распродажа", "href": "/sale/"}
   ],
+
   "featured_title_ua": "Рекомендуємо",
   "featured_title_ru": "Рекомендуем",
-  "featured_product_ids": [4637, 3315, 7015]
+  "featured_product_ids": [4637, 3315, 7015],
+
+  "blog_title_ru": "Последнее из блога",
+  "blog_title_ua": "Останнє з блогу",
+  "blog_posts": [
+    {
+      "href": "/blog/",
+      "image": "catalog/view/theme/manline/image/blog.jpg",
+      "title_ru": "Как узнать характер мужчины по его трусам.",
+      "title_ua": "Як дізнатись характер чоловіка по його трусам.",
+      "desc_ru": "",
+      "desc_ua": "",
+      "date_day": "01",
+      "date_month_ru": "январь",
+      "date_month_ua": "січень",
+      "date_year": "2018",
+      "read_more_ru": "Читать статью",
+      "read_more_ua": "Читати статтю"
+    },
+    {
+      "href": "/blog/",
+      "image": "catalog/view/theme/manline/image/blog.jpg",
+      "title_ru": "История мужского белья",
+      "title_ua": "Історія чоловічої білизни",
+      "desc_ru": "",
+      "desc_ua": "",
+      "date_day": "01",
+      "date_month_ru": "январь",
+      "date_month_ua": "січень",
+      "date_year": "2018",
+      "read_more_ru": "Читать статью",
+      "read_more_ua": "Читати статтю"
+    },
+    {
+      "href": "/blog/",
+      "image": "catalog/view/theme/manline/image/blog.jpg",
+      "title_ru": "Новинки мужских трусов 2018",
+      "title_ua": "Новинки чоловічих трусів 2018",
+      "desc_ru": "",
+      "desc_ua": "",
+      "date_day": "01",
+      "date_month_ru": "январь",
+      "date_month_ua": "січень",
+      "date_year": "2018",
+      "read_more_ru": "Читать статью",
+      "read_more_ua": "Читати статтю"
+    }
+  ]
 }

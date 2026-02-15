@@ -19,6 +19,28 @@
       </div>
     {% endif %}
 
+    {# Benefits row (OC2-like) #}
+    {% if home_features is defined and home_features %}
+      <div class="col-xs-12">
+        <div class="pre_wrap mob_hid">
+          {% for f in home_features %}
+            <div class="col-xs-3 pre_w{% if loop.last %} bn{% endif %}">
+              <img src="/{{ f.image }}" alt="{% if lang == 'uk-ua' %}{{ f.alt_ua|default(f.alt_ru|default('')) }}{% else %}{{ f.alt_ru|default(f.alt_ua|default('')) }}{% endif %}" class="pre pre{{ loop.index }}"/>
+              <div class="pre_td">
+                <div class="pre_t">
+                  {% if lang == 'uk-ua' %}{{ f.title_ua|default(f.title_ru|default('')) }}{% else %}{{ f.title_ru|default(f.title_ua|default('')) }}{% endif %}
+                </div>
+                <div class="pre_d">
+                  {% if lang == 'uk-ua' %}{{ f.desc_ua|default(f.desc_ru|default('')) }}{% else %}{{ f.desc_ru|default(f.desc_ua|default('')) }}{% endif %}
+                </div>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+        <div class="clearfix"></div>
+      </div>
+    {% endif %}
+
     {# Category tiles (OC2-like) #}
     {% if home_category_tiles is defined and home_category_tiles %}
       <div class="col-xs-12" style="margin-top:20px">
@@ -53,6 +75,49 @@
           {% for p in home_featured_products %}
             {{ p }}
           {% endfor %}
+        </div>
+      </div>
+    {% endif %}
+
+    {# Blog: latest posts (fast path: from home.json) #}
+    {% if home_blog_posts is defined and home_blog_posts %}
+      <div class="col-xs-12">
+        <div class="blog_w mt-70">
+          <div class="container">
+            <div class="title mb-40">
+              <span>{% if lang == 'uk-ua' %}{{ home_blog_title_ua|default('Останнє з блогу') }}{% else %}{{ home_blog_title_ru|default('Последнее из блога') }}{% endif %}</span>
+            </div>
+            <div class="blog_items_w">
+              {% for b in home_blog_posts %}
+                <div class="col-xs-12 col-md-4 blog_item_w">
+                  <div class="blog_item_in">
+                    <a class="blog_img_w" href="{{ b.href }}"><img src="/{{ b.image }}" alt="" loading="lazy"/></a>
+                    <div class="blog_title_w">
+                      <a href="{{ b.href }}" class="blog_title">
+                        {% if lang == 'uk-ua' %}{{ b.title_ua|default(b.title_ru|default('')) }}{% else %}{{ b.title_ru|default(b.title_ua|default('')) }}{% endif %}
+                      </a>
+                      {% set blog_desc = (lang == 'uk-ua') ? (b.desc_ua|default(b.desc_ru|default(''))) : (b.desc_ru|default(b.desc_ua|default(''))) %}
+                      {% if blog_desc %}
+                        <div class="blog_desc">{{ blog_desc }}</div>
+                      {% endif %}
+                    </div>
+                  </div>
+                  <div class="blog_dop">
+                    <div class="blog_date">
+                      <div class="date_d">{{ b.date_day|default('') }}</div>
+                      <div class="date_m_y">
+                        {% if lang == 'uk-ua' %}{{ b.date_month_ua|default(b.date_month_ru|default('')) }}{% else %}{{ b.date_month_ru|default(b.date_month_ua|default('')) }}{% endif %} <br>
+                        {{ b.date_year|default('') }}
+                      </div>
+                    </div>
+                    <a href="{{ b.href }}" class="read_more">
+                      {% if lang == 'uk-ua' %}{{ b.read_more_ua|default(b.read_more_ru|default('Читати статтю')) }}{% else %}{{ b.read_more_ru|default(b.read_more_ua|default('Читать статью')) }}{% endif %}
+                    </a>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          </div>
         </div>
       </div>
     {% endif %}
