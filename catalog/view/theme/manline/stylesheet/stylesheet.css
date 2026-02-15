@@ -5805,6 +5805,34 @@ ul.list_none li {
     display: block;
 }
 
+/* Home category tiles (as on legacy OC2 homepage screenshots) */
+.home-cat-tiles .cat_sub{
+    border:none;
+    padding:0;
+    border-radius:0;
+    box-shadow:none;
+}
+.home-cat-tiles .cat_sub:hover{
+    box-shadow:none;
+}
+.home-cat-tiles .cat_sub img{
+    margin:0;
+}
+.home-cat-tiles .cat_sub_name{
+    margin-top:12px;
+    display:inline-block;
+    background:#fed700;
+    color:#111;
+    font-weight:600;
+    font-size:30px;
+    line-height:1.2;
+    padding:12px 32px;
+    border-radius:6px;
+}
+@media (max-width: 768px){
+  .home-cat-tiles .cat_sub_name{font-size:22px;padding:10px 22px;}
+}
+
 .slider_w .slick-arrow {
     position: absolute;
 }

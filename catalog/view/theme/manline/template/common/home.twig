@@ -63,6 +63,28 @@
       </div>
     {% endif %}
 
+    {# Category tiles (from home.json) - between benefits and brands (as on OC2 homepage) #}
+    {% if home_category_tiles is defined and home_category_tiles %}
+      <div class="col-xs-12 home-cat-tiles" style="margin-top:20px">
+        <div class="row">
+          {% for t in home_category_tiles %}
+            <div class="col-xs-12 col-sm-4">
+              <a class="cat_sub" href="{{ t.href }}">
+                <img src="/{{ t.image }}" alt="" loading="lazy"/>
+                <span class="cat_sub_name">
+                  {% if lang == 'uk-ua' %}
+                    {{ t.title_ua|default(t.title_ru|default('')) }}
+                  {% else %}
+                    {{ t.title_ru|default(t.title_ua|default('')) }}
+                  {% endif %}
+                </span>
+              </a>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    {% endif %}
+
     {# Popular brands carousel (OC2-like) #}
     {% if home_brands is defined and home_brands %}
       <div class="col-xs-12">
@@ -79,28 +101,6 @@
               </div>
             {% endfor %}
           </div>
-        </div>
-      </div>
-    {% endif %}
-
-    {# Legacy Category tiles (from home.json) #}
-    {% if home_category_tiles is defined and home_category_tiles %}
-      <div class="col-xs-12" style="margin-top:20px">
-        <div class="row">
-          {% for t in home_category_tiles %}
-            <div class="col-xs-12 col-sm-4">
-              <a class="cat_sub" href="{{ t.href }}">
-                <img src="/{{ t.image }}" alt="" loading="lazy"/>
-                <span class="cat_sub_name">
-                  {% if lang == 'uk-ua' %}
-                    {{ t.title_ua|default(t.title_ru|default('')) }}
-                  {% else %}
-                    {{ t.title_ru|default(t.title_ua|default('')) }}
-                  {% endif %}
-                </span>
-              </a>
-            </div>
-          {% endfor %}
         </div>
       </div>
     {% endif %}
