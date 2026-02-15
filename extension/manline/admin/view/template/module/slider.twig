@@ -1,0 +1,103 @@
+{{ header }}{{ column_left }}
+<div id="content" class="container-fluid">
+  <div class="page-header">
+    <div class="container-fluid">
+      <div class="float-end">
+        <button type="submit" form="form-module" data-bs-toggle="tooltip" title="{{ button_save }}" class="btn btn-primary"><i class="fa-solid fa-floppy-disk"></i></button>
+        <a href="{{ back }}" data-bs-toggle="tooltip" title="{{ button_back }}" class="btn btn-light"><i class="fa-solid fa-reply"></i></a>
+      </div>
+      <h1>{{ heading_title }}</h1>
+      <ol class="breadcrumb">
+        {% for breadcrumb in breadcrumbs %}
+          <li class="breadcrumb-item"><a href="{{ breadcrumb.href }}">{{ breadcrumb.text }}</a></li>
+        {% endfor %}
+      </ol>
+    </div>
+  </div>
+  <div class="container-fluid">
+    <div class="card">
+      <div class="card-header"><i class="fa-solid fa-pencil"></i> {{ text_edit }}</div>
+      <div class="card-body">
+        <form id="form-module" action="{{ save }}" method="post" data-oc-toggle="ajax">
+          <div class="row mb-3 required">
+            <label class="col-sm-2 col-form-label" for="input-name">{{ entry_name }}</label>
+            <div class="col-sm-10">
+              <input type="text" name="name" value="{{ name }}" placeholder="{{ entry_name }}" id="input-name" class="form-control"/>
+              <div id="error-name" class="invalid-feedback"></div>
+            </div>
+          </div>
+
+          <div class="row mb-3 required">
+            <label class="col-sm-2 col-form-label" for="input-banner">{{ entry_banner }}</label>
+            <div class="col-sm-10">
+              <select name="banner_id" id="input-banner" class="form-select">
+                <option value="0">{{ text_none }}</option>
+                {% for banner in banners %}
+                  <option value="{{ banner.banner_id }}"{% if banner.banner_id == banner_id %} selected{% endif %}>{{ banner.name }}</option>
+                {% endfor %}
+              </select>
+              <div id="error-banner_id" class="invalid-feedback"></div>
+            </div>
+          </div>
+
+          <div class="row mb-3 required">
+            <label class="col-sm-2 col-form-label" for="input-width">{{ entry_width }}</label>
+            <div class="col-sm-10">
+              <input type="text" name="width" value="{{ width }}" placeholder="{{ entry_width }}" id="input-width" class="form-control"/>
+              <div id="error-width" class="invalid-feedback"></div>
+            </div>
+          </div>
+
+          <div class="row mb-3 required">
+            <label class="col-sm-2 col-form-label" for="input-height">{{ entry_height }}</label>
+            <div class="col-sm-10">
+              <input type="text" name="height" value="{{ height }}" placeholder="{{ entry_height }}" id="input-height" class="form-control"/>
+              <div id="error-height" class="invalid-feedback"></div>
+            </div>
+          </div>
+
+          <div class="row mb-3">
+            <label class="col-sm-2 col-form-label" for="input-dots">{{ entry_dots }}</label>
+            <div class="col-sm-10">
+              <select name="dots" id="input-dots" class="form-select">
+                <option value="1"{% if dots %} selected{% endif %}>{{ text_enabled }}</option>
+                <option value="0"{% if not dots %} selected{% endif %}>{{ text_disabled }}</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="row mb-3">
+            <label class="col-sm-2 col-form-label" for="input-autoplay">{{ entry_autoplay }}</label>
+            <div class="col-sm-10">
+              <select name="autoplay" id="input-autoplay" class="form-select">
+                <option value="1"{% if autoplay %} selected{% endif %}>{{ text_enabled }}</option>
+                <option value="0"{% if not autoplay %} selected{% endif %}>{{ text_disabled }}</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="row mb-3 required">
+            <label class="col-sm-2 col-form-label" for="input-autoplay-speed">{{ entry_autoplay_speed }}</label>
+            <div class="col-sm-10">
+              <input type="text" name="autoplay_speed" value="{{ autoplay_speed }}" placeholder="{{ entry_autoplay_speed }}" id="input-autoplay-speed" class="form-control"/>
+              <div id="error-autoplay_speed" class="invalid-feedback"></div>
+            </div>
+          </div>
+
+          <div class="row mb-3">
+            <label class="col-sm-2 col-form-label" for="input-status">{{ entry_status }}</label>
+            <div class="col-sm-10">
+              <select name="status" id="input-status" class="form-select">
+                <option value="1"{% if status %} selected{% endif %}>{{ text_enabled }}</option>
+                <option value="0"{% if not status %} selected{% endif %}>{{ text_disabled }}</option>
+              </select>
+            </div>
+          </div>
+
+          <input type="hidden" name="module_id" value="{{ module_id }}"/>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{{ footer }}

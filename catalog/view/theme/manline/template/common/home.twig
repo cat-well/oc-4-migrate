@@ -3,14 +3,22 @@
 <div id="common-home" class="container">
   <div class="row">
 
-    {# Home slider #}
+    {# Allow modules to render at the top of home (place Manline Slider module here via Layouts) #}
+    {{ content_top }}
+
+    {# Legacy Home slider (from home.json) #}
     {% if home_slider is defined and home_slider %}
       <div class="col-xs-12">
         <div class="slider_w">
           {% for s in home_slider %}
             <div>
               <div class="slider_item">
-                <img src="/{{ s.image }}" alt="" loading="lazy" style="width:100%"/>
+                {% set img_src = s.image|default('') %}
+                {% if img_src and (img_src starts with 'http' or img_src starts with '/') %}
+                  <img src="{{ img_src }}" alt="" loading="lazy" style="width:100%"/>
+                {% else %}
+                  <img src="/{{ img_src }}" alt="" loading="lazy" style="width:100%"/>
+                {% endif %}
                 {% if s.href %}<a class="slider_link" href="{{ s.href }}"></a>{% endif %}
               </div>
             </div>
@@ -128,8 +136,7 @@
       </div>
     {% endif %}
 
-    {# Keep OC4 layout module positions (can be used later) #}
-    {{ content_top }}
+    {# Keep OC4 layout module positions (content_top moved to top) #}
     {{ content_bottom }}
 
   </div>

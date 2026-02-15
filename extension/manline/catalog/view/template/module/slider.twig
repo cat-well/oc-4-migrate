@@ -1,0 +1,13 @@
+<div class="slider_w"
+     data-dots="{{ dots ? 1 : 0 }}"
+     data-autoplay="{{ autoplay ? 1 : 0 }}"
+     data-autoplay-speed="{{ autoplay_speed }}">
+  {% for s in slides %}
+    <div>
+      <div class="slider_item">
+        <img src="{{ s.image }}" alt="{{ s.title|e }}" loading="lazy" style="width:100%"/>
+        {% if s.href %}<a class="slider_link" href="{{ s.href }}"></a>{% endif %}
+      </div>
+    </div>
+  {% endfor %}
+</div>

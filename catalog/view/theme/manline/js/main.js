@@ -32,12 +32,17 @@ $(document).ready(function () {
     });
     
     if ($('.slider_w').length) {
-        $('.slider_w').slick({
-            dots: true,
+        var $slider = $('.slider_w');
+        var dots = ($slider.data('dots') !== undefined) ? !!Number($slider.data('dots')) : true;
+        var autoplay = ($slider.data('autoplay') !== undefined) ? !!Number($slider.data('autoplay')) : true;
+        var autoplaySpeed = ($slider.data('autoplay-speed') !== undefined) ? Number($slider.data('autoplay-speed')) : 4000;
+
+        $slider.slick({
+            dots: dots,
             infinite: true,
             speed: 500,
-            autoplay: true,
-            autoplaySpeed: 4000,
+            autoplay: autoplay,
+            autoplaySpeed: autoplaySpeed,
         });
     }
     if ($('.carusel_prod').length) {
