@@ -46,10 +46,43 @@
           {% endfor %}
         </div>
         <div class="clearfix"></div>
+
+        {# Top categories grid (OC2: top categories with image) #}
+        {% if home_top_categories is defined and home_top_categories %}
+          <div class="row mt-40">
+            {% for c in home_top_categories %}
+              <div class="col-xs-6 col-md-4 mb-30">
+                <a href="{{ c.href }}">
+                  <img class="res_img" src="{{ c.image }}" alt="{{ c.name|e }}" loading="lazy"/>
+                </a>
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
       </div>
     {% endif %}
 
-    {# Category tiles (OC2-like) #}
+    {# Popular brands carousel (OC2-like) #}
+    {% if home_brands is defined and home_brands %}
+      <div class="col-xs-12">
+        <div class="container">
+          <div class="title mt-20"><span>{% if lang == 'uk-ua' %}Популярні бренди{% else %}Популярные бренды{% endif %}</span></div>
+          <div class="clearfix"></div>
+          <div class="brand_carousel">
+            {% for b in home_brands %}
+              <div class="brand_carousel_item">
+                <a href="{{ b.href }}" class="manuf_cat_href">
+                  <img src="{{ b.image starts with 'http' or b.image starts with '/' ? b.image : '/image/' ~ b.image }}" alt="" loading="lazy"/>
+                  <span class="manuf_cat_name">{{ b.name }}</span>
+                </a>
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    {% endif %}
+
+    {# Legacy Category tiles (from home.json) #}
     {% if home_category_tiles is defined and home_category_tiles %}
       <div class="col-xs-12" style="margin-top:20px">
         <div class="row">

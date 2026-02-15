@@ -23,7 +23,7 @@ class Home extends \Opencart\System\Engine\Controller {
 			$this->document->setKeywords($description[$language_id]['meta_keyword']);
 		}
 
-		// Manline: homepage content (OC2-like, hardcoded slider + tiles)
+		// Manline: homepage content (OC2-like)
 		$data['lang'] = (string)$this->config->get('config_language');
 
 		$home_cfg_path = DIR_APPLICATION . 'view/theme/manline/data/home.json';
@@ -37,6 +37,89 @@ class Home extends \Opencart\System\Engine\Controller {
 		$data['home_slider'] = $home_cfg['slider'] ?? [];
 		$data['home_features'] = $home_cfg['features'] ?? [];
 		$data['home_category_tiles'] = $home_cfg['category_tiles'] ?? [];
+
+		// Top categories grid (OC2 style: categories where top=1 and has image)
+		$data['home_top_categories'] = [];
+		try {
+			$this->load->model('catalog/category');
+			$this->load->model('tool/image');
+
+			$categories = $this->model_catalog_category->getCategories(0);
+
+			foreach ($categories as $category) {
+				if (empty($category['status']) || empty($category['top']) || empty($category['image'])) {
+					continue;
+				}
+
+				$image_path = html_entity_decode((string)$category['image'], ENT_QUOTES, 'UTF-8');
+				if (!is_file(DIR_IMAGE . $image_path)) {
+					continue;
+				}
+
+				// Keep aspect ratio similar to OC2 home.tpl logic
+				[$w, $h] = @getimagesize(DIR_IMAGE . $image_path) ?: [0, 0];
+				if (!$w || !$h) {
+					$w = 400;
+					$h = 400;
+				}
+
+				$ratio = $w / $h;
+				$thumb_w = 400;
+				$thumb_h = (int)round($thumb_w / $ratio);
+
+				$data['home_top_categories'][] = [
+					'name' => $category['name'] ?? '',
+					'href' => $this->url->link('product/category', 'language=' . $this->config->get('config_language') . '&path=' . (int)$category['category_id']),
+					'image' => $this->model_tool_image->resize($image_path, $thumb_w, $thumb_h)
+				];
+			}
+		} catch (\Throwable $e) {
+			// ignore
+		}
+
+		// Popular brands carousel (OC2-style static list)
+		$data['home_brands'] = [
+			[
+				'name' => 'Аtlantic',
+				'href' => '/muzhskie-trusy/atlantic/',
+				'image' => 'data/home_manuf/atlantic.jpg'
+			],
+			[
+				'name' => 'Calvin Klein',
+				'href' => '/muzhskie-trusy/calvin-klein/',
+				'image' => 'data/home_manuf/calvin_klein.png'
+			],
+			[
+				'name' => 'Jiber',
+				'href' => '/muzhskie-trusy/jiber/',
+				'image' => 'data/home_manuf/jiber.jpg'
+			],
+			[
+				'name' => 'DIM',
+				'href' => '/muzhskie-trusy/dim/',
+				'image' => 'data/home_manuf/dim.png'
+			],
+			[
+				'name' => 'Кey',
+				'href' => '/muzhskie-trusy/key/',
+				'image' => 'data/home_manuf/key.png'
+			],
+			[
+				'name' => 'Doreanse',
+				'href' => '/muzhskie-trusy/doreanse/',
+				'image' => 'data/home_manuf/doreanse.png'
+			],
+			[
+				'name' => 'Thermoform',
+				'href' => '/termobele/thermoform/',
+				'image' => 'data/home_manuf/thermoform.png'
+			],
+			[
+				'name' => 'Lacost',
+				'href' => '/muzhskie-trusy/f/manufacturer_102',
+				'image' => 'data/home_manuf/lacost.jpg'
+			],
+		];
 		$data['home_featured_title_ua'] = $home_cfg['featured_title_ua'] ?? 'Рекомендуємо';
 		$data['home_featured_title_ru'] = $home_cfg['featured_title_ru'] ?? 'Рекомендуем';
 		$data['home_blog_title_ua'] = $home_cfg['blog_title_ua'] ?? 'Останнє з блогу';
