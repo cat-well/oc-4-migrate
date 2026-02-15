@@ -4,3 +4,9 @@
 /system/storage/download/
 /system/storage/session/
 /system/storage/upload/
+
+# Local reference screenshots (keep out of repo)
+/index_page_img/
+
+# macOS
+.DS_Store
