@@ -1,10 +1,18 @@
 {{ header }}
 <div id="product-category" class="container">
-  <ul class="breadcrumb">
+  <div class="breadcrumb">
     {% for breadcrumb in breadcrumbs %}
-      <li class="breadcrumb-item"><a href="{{ breadcrumb.href }}">{{ breadcrumb.text }}</a></li>
+      <div>
+        {% if not loop.last %}
+          <a href="{{ breadcrumb.href }}">{{ breadcrumb.text }}</a>
+        {% else %}
+          <span>{{ breadcrumb.text }}</span>
+        {% endif %}
+      </div>
+      {% if not loop.last %}<div class="text_separator" aria-hidden="true"></div>{% endif %}
     {% endfor %}
-  </ul>
+    <div class="clearfix"></div>
+  </div>
   <div class="row">
     {{ column_left }}
     <div id="content" class="col">
