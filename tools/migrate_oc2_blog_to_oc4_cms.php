@@ -143,8 +143,24 @@ if (!$oc2Lang) {
 
 $mapLangId = []; // oc2_language_id -> oc4_language_id
 foreach ($oc2Lang as $oc2Id => $code) {
+    $code = strtolower(trim($code));
+
+    // OC2 dump may store short codes (ru/ua). Map to OC4 standard codes.
+    $alias = match ($code) {
+        'ru' => 'ru-ru',
+        'ua' => 'uk-ua',
+        'uk' => 'uk-ua',
+        default => $code,
+    };
+
     // Normalize a bit
-    $candidates = [$code, str_replace('_', '-', $code)];
+    $candidates = array_values(array_unique([
+        $code,
+        $alias,
+        str_replace('_', '-', $code),
+        str_replace('_', '-', $alias),
+    ]));
+
     $oc4Id = null;
     foreach ($candidates as $cand) {
         if (isset($langMap[$cand])) { $oc4Id = $langMap[$cand]; break; }
