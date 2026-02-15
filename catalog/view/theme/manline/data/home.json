@@ -58,49 +58,5 @@
   "featured_product_ids": [4637, 3315, 7015],
 
   "blog_title_ru": "Последнее из блога",
-  "blog_title_ua": "Останнє з блогу",
-  "blog_posts": [
-    {
-      "href": "/blog/",
-      "image": "catalog/view/theme/manline/image/blog.jpg",
-      "title_ru": "Как узнать характер мужчины по его трусам.",
-      "title_ua": "Як дізнатись характер чоловіка по його трусам.",
-      "desc_ru": "",
-      "desc_ua": "",
-      "date_day": "01",
-      "date_month_ru": "январь",
-      "date_month_ua": "січень",
-      "date_year": "2018",
-      "read_more_ru": "Читать статью",
-      "read_more_ua": "Читати статтю"
-    },
-    {
-      "href": "/blog/",
-      "image": "catalog/view/theme/manline/image/blog.jpg",
-      "title_ru": "История мужского белья",
-      "title_ua": "Історія чоловічої білизни",
-      "desc_ru": "",
-      "desc_ua": "",
-      "date_day": "01",
-      "date_month_ru": "январь",
-      "date_month_ua": "січень",
-      "date_year": "2018",
-      "read_more_ru": "Читать статью",
-      "read_more_ua": "Читати статтю"
-    },
-    {
-      "href": "/blog/",
-      "image": "catalog/view/theme/manline/image/blog.jpg",
-      "title_ru": "Новинки мужских трусов 2018",
-      "title_ua": "Новинки чоловічих трусів 2018",
-      "desc_ru": "",
-      "desc_ua": "",
-      "date_day": "01",
-      "date_month_ru": "январь",
-      "date_month_ua": "січень",
-      "date_year": "2018",
-      "read_more_ru": "Читать статью",
-      "read_more_ua": "Читати статтю"
-    }
-  ]
+  "blog_title_ua": "Останнє з блогу"
 }
