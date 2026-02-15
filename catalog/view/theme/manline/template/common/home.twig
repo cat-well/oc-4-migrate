@@ -6,8 +6,9 @@
     {# Allow modules to render at the top of home (place Manline Slider module here via Layouts) #}
     {{ content_top }}
 
-    {# Legacy Home slider (from home.json) #}
-    {% if home_slider is defined and home_slider %}
+    {# Legacy Home slider (from home.json) - render only if no module slider present in content_top #}
+    {% set content_top_html = content_top|default('') %}
+    {% if home_slider is defined and home_slider and ('slider_w' not in content_top_html) %}
       <div class="col-xs-12">
         <div class="slider_w">
           {% for s in home_slider %}

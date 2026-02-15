@@ -78,48 +78,43 @@ class Home extends \Opencart\System\Engine\Controller {
 		}
 
 		// Popular brands carousel (OC2-style static list)
-		$data['home_brands'] = [
-			[
-				'name' => 'Аtlantic',
-				'href' => '/muzhskie-trusy/atlantic/',
-				'image' => 'data/home_manuf/atlantic.jpg'
-			],
-			[
-				'name' => 'Calvin Klein',
-				'href' => '/muzhskie-trusy/calvin-klein/',
-				'image' => 'data/home_manuf/calvin_klein.png'
-			],
-			[
-				'name' => 'Jiber',
-				'href' => '/muzhskie-trusy/jiber/',
-				'image' => 'data/home_manuf/jiber.jpg'
-			],
-			[
-				'name' => 'DIM',
-				'href' => '/muzhskie-trusy/dim/',
-				'image' => 'data/home_manuf/dim.png'
-			],
-			[
-				'name' => 'Кey',
-				'href' => '/muzhskie-trusy/key/',
-				'image' => 'data/home_manuf/key.png'
-			],
-			[
-				'name' => 'Doreanse',
-				'href' => '/muzhskie-trusy/doreanse/',
-				'image' => 'data/home_manuf/doreanse.png'
-			],
-			[
-				'name' => 'Thermoform',
-				'href' => '/termobele/thermoform/',
-				'image' => 'data/home_manuf/thermoform.png'
-			],
-			[
-				'name' => 'Lacost',
-				'href' => '/muzhskie-trusy/f/manufacturer_102',
-				'image' => 'data/home_manuf/lacost.jpg'
-			],
-		];
+		$data['home_brands'] = [];
+		try {
+			$this->load->model('tool/image');
+
+			$brand_src = [
+				['name' => 'Аtlantic', 'href' => '/muzhskie-trusy/atlantic/', 'image' => 'data/home_manuf/atlantic.jpg'],
+				['name' => 'Calvin Klein', 'href' => '/muzhskie-trusy/calvin-klein/', 'image' => 'data/home_manuf/calvin_klein.png'],
+				['name' => 'Jiber', 'href' => '/muzhskie-trusy/jiber/', 'image' => 'data/home_manuf/jiber.jpg'],
+				['name' => 'DIM', 'href' => '/muzhskie-trusy/dim/', 'image' => 'data/home_manuf/dim.png'],
+				['name' => 'Кey', 'href' => '/muzhskie-trusy/key/', 'image' => 'data/home_manuf/key.png'],
+				['name' => 'Doreanse', 'href' => '/muzhskie-trusy/doreanse/', 'image' => 'data/home_manuf/doreanse.png'],
+				['name' => 'Thermoform', 'href' => '/termobele/thermoform/', 'image' => 'data/home_manuf/thermoform.png'],
+				['name' => 'Lacost', 'href' => '/muzhskie-trusy/f/manufacturer_102', 'image' => 'data/home_manuf/lacost.jpg'],
+			];
+
+			foreach ($brand_src as $b) {
+				$image_path = (string)$b['image'];
+				if (is_file(DIR_IMAGE . $image_path)) {
+					$b['image'] = $this->model_tool_image->resize($image_path, 100, 100);
+				} else {
+					$b['image'] = '';
+				}
+				$data['home_brands'][] = $b;
+			}
+		} catch (\Throwable $e) {
+			// fallback (raw images)
+			$data['home_brands'] = [
+				['name' => 'Аtlantic', 'href' => '/muzhskie-trusy/atlantic/', 'image' => 'data/home_manuf/atlantic.jpg'],
+				['name' => 'Calvin Klein', 'href' => '/muzhskie-trusy/calvin-klein/', 'image' => 'data/home_manuf/calvin_klein.png'],
+				['name' => 'Jiber', 'href' => '/muzhskie-trusy/jiber/', 'image' => 'data/home_manuf/jiber.jpg'],
+				['name' => 'DIM', 'href' => '/muzhskie-trusy/dim/', 'image' => 'data/home_manuf/dim.png'],
+				['name' => 'Кey', 'href' => '/muzhskie-trusy/key/', 'image' => 'data/home_manuf/key.png'],
+				['name' => 'Doreanse', 'href' => '/muzhskie-trusy/doreanse/', 'image' => 'data/home_manuf/doreanse.png'],
+				['name' => 'Thermoform', 'href' => '/termobele/thermoform/', 'image' => 'data/home_manuf/thermoform.png'],
+				['name' => 'Lacost', 'href' => '/muzhskie-trusy/f/manufacturer_102', 'image' => 'data/home_manuf/lacost.jpg'],
+			];
+		}
 		$data['home_featured_title_ua'] = $home_cfg['featured_title_ua'] ?? 'Рекомендуємо';
 		$data['home_featured_title_ru'] = $home_cfg['featured_title_ru'] ?? 'Рекомендуем';
 		$data['home_blog_title_ua'] = $home_cfg['blog_title_ua'] ?? 'Останнє з блогу';
