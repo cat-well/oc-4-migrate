@@ -91,7 +91,13 @@
               {% for b in home_blog_posts %}
                 <div class="col-xs-12 col-md-4 blog_item_w">
                   <div class="blog_item_in">
-                    <a class="blog_img_w" href="{{ b.href }}"><img src="/{{ b.image }}" alt="" loading="lazy"/></a>
+                    {# b.image may be a full URL (model_tool_image->resize) or a relative path #}
+                    {% set img_src = b.image|default('') %}
+                    {% if img_src and (img_src starts with 'http' or img_src starts with '/') %}
+                      <a class="blog_img_w" href="{{ b.href }}"><img src="{{ img_src }}" alt="" loading="lazy"/></a>
+                    {% else %}
+                      <a class="blog_img_w" href="{{ b.href }}"><img src="/{{ img_src }}" alt="" loading="lazy"/></a>
+                    {% endif %}
                     <div class="blog_title_w">
                       <a href="{{ b.href }}" class="blog_title">
                         {% if lang == 'uk-ua' %}{{ b.title_ua|default(b.title_ru|default('')) }}{% else %}{{ b.title_ru|default(b.title_ua|default('')) }}{% endif %}
