@@ -218,10 +218,10 @@ class Home extends \Opencart\System\Engine\Controller {
 		$data['home_featured_products'] = [];
 		$product_ids = $home_cfg['featured_product_ids'] ?? [];
 
-		if (is_array($product_ids) && $product_ids) {
-			$this->load->model('catalog/product');
-			$this->load->model('tool/image');
+		$this->load->model('catalog/product');
+		$this->load->model('tool/image');
 
+		if (is_array($product_ids) && $product_ids) {
 			foreach ($product_ids as $pid) {
 				$pid = (int)$pid;
 				if (!$pid) continue;
@@ -247,6 +247,112 @@ class Home extends \Opencart\System\Engine\Controller {
 					'href' => $this->url->link('product/product', 'language=' . $this->config->get('config_language') . '&product_id=' . $pid)
 				]);
 			}
+		}
+
+		// Home carousels (OC2-like): Specials (Sale) and Bestseller (Popular)
+		$data['home_special_products'] = [];
+		$data['home_bestseller_products'] = [];
+		$data['home_special_title_ru'] = $home_cfg['special_title_ru'] ?? 'Распродажа';
+		$data['home_special_title_ua'] = $home_cfg['special_title_ua'] ?? 'Розпродаж';
+		$data['home_bestseller_title_ru'] = $home_cfg['bestseller_title_ru'] ?? 'Популярные товары';
+		$data['home_bestseller_title_ua'] = $home_cfg['bestseller_title_ua'] ?? 'Популярні товари';
+
+		$limit_special = (int)($home_cfg['special_limit'] ?? 10);
+		$limit_best = (int)($home_cfg['bestseller_limit'] ?? 10);
+		if ($limit_special <= 0) $limit_special = 10;
+		if ($limit_best <= 0) $limit_best = 10;
+
+		try {
+			// Prefer dedicated specials query; fallback to getProducts(filter_special)
+			$specials = $this->model_catalog_product->getSpecials([
+				'sort' => 'p.sort_order',
+				'order' => 'ASC',
+				'start' => 0,
+				'limit' => $limit_special
+			]);
+
+			if (!$specials) {
+				$specials = $this->model_catalog_product->getProducts([
+					'filter_special' => 1,
+					'sort' => 'p.sort_order',
+					'order' => 'ASC',
+					'start' => 0,
+					'limit' => $limit_special
+				]);
+			}
+
+			foreach ($specials as $result) {
+				$pid = (int)($result['product_id'] ?? 0);
+				if (!$pid) continue;
+
+				$thumb = '';
+				if (!empty($result['image']) && is_file(DIR_IMAGE . html_entity_decode((string)$result['image'], ENT_QUOTES, 'UTF-8'))) {
+					$thumb = $this->model_tool_image->resize((string)$result['image'], (int)$this->config->get('config_image_product_width'), (int)$this->config->get('config_image_product_height'));
+				}
+
+				$data['home_special_products'][] = $this->load->controller('product/thumb', [
+					'product_id' => $pid,
+					'images' => [],
+					'thumb' => $thumb,
+					'name' => $result['name'] ?? '',
+					'quantity' => (int)($result['quantity'] ?? 0),
+					'price' => isset($result['price']) ? $this->currency->format((float)$result['price'], $this->session->data['currency']) : '',
+					'special' => isset($result['special']) ? $this->currency->format((float)$result['special'], $this->session->data['currency']) : '',
+					'lang_code' => $data['lang'],
+					'model' => $result['model'] ?? '',
+					'href' => $this->url->link('product/product', 'language=' . $this->config->get('config_language') . '&product_id=' . $pid)
+				]);
+			}
+		} catch (\Throwable $e) {
+			// ignore
+		}
+
+		try {
+			$this->load->model('extension/opencart/module/bestseller');
+			$bests = $this->model_extension_opencart_module_bestseller->getBestSellers($limit_best);
+
+			// Fallback: use most viewed products if bestseller table is empty
+			if (!$bests) {
+				$q = $this->db->query("SELECT p.product_id
+					FROM `" . DB_PREFIX . "product` p
+					LEFT JOIN `" . DB_PREFIX . "product_to_store` p2s ON (p2s.product_id = p.product_id AND p2s.store_id = '" . (int)$this->config->get('config_store_id') . "')
+					WHERE p.status = '1' AND p.date_available <= NOW() AND p2s.product_id IS NOT NULL
+					ORDER BY p.viewed DESC, p.sort_order ASC
+					LIMIT " . (int)$limit_best);
+
+				$bests = [];
+				foreach ($q->rows as $row) {
+					$pid = (int)($row['product_id'] ?? 0);
+					if ($pid) {
+						$bests[] = $this->model_catalog_product->getProduct($pid);
+					}
+				}
+			}
+
+			foreach ($bests as $result) {
+				$pid = (int)($result['product_id'] ?? 0);
+				if (!$pid) continue;
+
+				$thumb = '';
+				if (!empty($result['image']) && is_file(DIR_IMAGE . html_entity_decode((string)$result['image'], ENT_QUOTES, 'UTF-8'))) {
+					$thumb = $this->model_tool_image->resize((string)$result['image'], (int)$this->config->get('config_image_product_width'), (int)$this->config->get('config_image_product_height'));
+				}
+
+				$data['home_bestseller_products'][] = $this->load->controller('product/thumb', [
+					'product_id' => $pid,
+					'images' => [],
+					'thumb' => $thumb,
+					'name' => $result['name'] ?? '',
+					'quantity' => (int)($result['quantity'] ?? 0),
+					'price' => isset($result['price']) ? $this->currency->format((float)$result['price'], $this->session->data['currency']) : '',
+					'special' => !empty($result['special']) ? $this->currency->format((float)$result['special'], $this->session->data['currency']) : '',
+					'lang_code' => $data['lang'],
+					'model' => $result['model'] ?? '',
+					'href' => $this->url->link('product/product', 'language=' . $this->config->get('config_language') . '&product_id=' . $pid)
+				]);
+			}
+		} catch (\Throwable $e) {
+			// ignore
 		}
 
 		$data['column_left'] = $this->load->controller('common/column_left');
