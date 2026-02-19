@@ -117,6 +117,55 @@ class Footer extends \Opencart\System\Engine\Controller {
 			$this->model_tool_online->addOnline(oc_get_ip(), $this->customer->getId(), $url, $referer);
 		}
 
+		// SEOShield footer block (ТОП категории / города / теги / товары / предложения)
+		$data['seoshield_footer_html'] = '';
+		try {
+			$req_uri = (string)($this->request->server['REQUEST_URI'] ?? '/');
+			$info = parse_url($req_uri);
+			$path = (string)($info['path'] ?? '/');
+			if ($path === '') $path = '/';
+			if ($path[0] !== '/') $path = '/' . $path;
+
+			// SEOShield cache keys use //host/path (no scheme)
+			$http_host = (string)($this->request->server['HTTP_HOST'] ?? 'manline.com.ua');
+			$cache_host = $http_host;
+
+			$try_hosts = array_values(array_unique([
+				$cache_host,
+				'manline.com.ua'
+			]));
+
+			$try_paths = array_values(array_unique([
+				$path,
+				rtrim($path, '/'),
+				rtrim($path, '/') . '/',
+				'/'
+			]));
+
+			$cache_root = rtrim(DIR_OPENCART, '/\\') . '/seoshield-client/data/footers_cache';
+
+			foreach ($try_hosts as $h) {
+				foreach ($try_paths as $p) {
+					if ($p === '') $p = '/';
+					$key = '//' . $h . $p;
+
+					$hash = md5($key);
+					$dir = substr($hash, -2);
+					$file = $cache_root . '/' . $dir . '/' . $hash . '.cache.php';
+
+					if (is_file($file)) {
+						$map = include $file;
+						if (is_array($map) && !empty($map[$key])) {
+							$data['seoshield_footer_html'] = (string)$map[$key];
+							break 2;
+						}
+					}
+				}
+			}
+		} catch (\Throwable $e) {
+			// ignore
+		}
+
 		$data['bootstrap'] = 'catalog/view/javascript/bootstrap/js/bootstrap.bundle.min.js';
 		$data['scripts'] = $this->document->getScripts('footer');
 		$data['cookie'] = $this->load->controller('common/cookie');
