@@ -263,7 +263,9 @@ class Home extends \Opencart\System\Engine\Controller {
 		if ($limit_best <= 0) $limit_best = 10;
 
 		try {
-			// Prefer dedicated specials query; fallback to getProducts(filter_special)
+			// Prefer dedicated specials query; fallback to getProducts(filter_special).
+			// If the store has no specials configured, allow a manual fallback list from home.json:
+			// - special_product_ids: [4637, 3315, ...]
 			$specials = $this->model_catalog_product->getSpecials([
 				'sort' => 'p.sort_order',
 				'order' => 'ASC',
@@ -279,6 +281,19 @@ class Home extends \Opencart\System\Engine\Controller {
 					'start' => 0,
 					'limit' => $limit_special
 				]);
+			}
+
+			if (!$specials) {
+				$specialIds = $home_cfg['special_product_ids'] ?? [];
+				if (is_array($specialIds) && $specialIds) {
+					$specials = [];
+					foreach ($specialIds as $pid) {
+						$pid = (int)$pid;
+						if (!$pid) continue;
+						$p = $this->model_catalog_product->getProduct($pid);
+						if ($p) $specials[] = $p;
+					}
+				}
 			}
 
 			foreach ($specials as $result) {
@@ -310,6 +325,21 @@ class Home extends \Opencart\System\Engine\Controller {
 		try {
 			$this->load->model('extension/opencart/module/bestseller');
 			$bests = $this->model_extension_opencart_module_bestseller->getBestSellers($limit_best);
+
+			// If bestseller table is empty, allow a manual fallback list from home.json:
+			// - bestseller_product_ids: [4637, 3315, ...]
+			if (!$bests) {
+				$bestIds = $home_cfg['bestseller_product_ids'] ?? [];
+				if (is_array($bestIds) && $bestIds) {
+					$bests = [];
+					foreach ($bestIds as $pid) {
+						$pid = (int)$pid;
+						if (!$pid) continue;
+						$p = $this->model_catalog_product->getProduct($pid);
+						if ($p) $bests[] = $p;
+					}
+				}
+			}
 
 			// Fallback: use most viewed products if bestseller table is empty
 			if (!$bests) {
