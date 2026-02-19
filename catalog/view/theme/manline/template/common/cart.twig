@@ -2,8 +2,7 @@
 <div id="cart" class="cart-popup">
   <div class="heading">
     <a href="{{ checkout }}" class="cart_href" title="{{ heading_title|default('Корзина') }}">
-      <span aria-hidden="true" class="glyphicon glyphicon-shopping-cart"></span>
-      <span id="cart-total">{{ text_items }}</span>
+      <span id="cart-total">{{ text_items|raw }}</span>
     </a>
   </div>
 
