@@ -1,4 +1,4 @@
-{# Manline OC4 — SimpleCheckout-style one-page checkout scaffold #}
+{# Manline OC4 — SimpleCheckout-style one-page checkout #}
 {{ header }}
 
 <div class="container">
@@ -11,10 +11,40 @@
 
 <div class="container">
   <div class="simple-content">
-    <div class="simplecheckout">
-      <div class="content" style="padding:20px;background:#fff">
-        <h1 style="margin-top:0">Checkout (SimpleCheckout)</h1>
-        <p>Scaffold page. Next step: port OC2 SimpleCheckout blocks + AJAX reload flow.</p>
+    <div id="simplecheckout_form_0" data-logged="{{ customer_logged ? 'true' : 'false' }}">
+      <div class="simplecheckout">
+
+        {# Layout similar to OC2 template placeholders. We will refine into 2 columns later. #}
+        <div class="simplecheckout-three-column">
+          <div class="simplecheckout-left-column">
+            <div class="simplecheckout-block" id="simplecheckout_customer">
+              {{ register|raw }}
+            </div>
+
+            <div class="simplecheckout-block" id="simplecheckout_payment_address">
+              {{ payment_address|raw }}
+            </div>
+
+            <div class="simplecheckout-block" id="simplecheckout_shipping_address">
+              {{ shipping_address|raw }}
+            </div>
+
+            <div class="simplecheckout-block" id="simplecheckout_shipping">
+              {{ shipping_method|raw }}
+            </div>
+
+            <div class="simplecheckout-block" id="simplecheckout_payment">
+              {{ payment_method|raw }}
+            </div>
+          </div>
+
+          <div class="simplecheckout-right-column">
+            <div class="simplecheckout-block" id="simplecheckout_summary">
+              {{ confirm|raw }}
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
   </div>
