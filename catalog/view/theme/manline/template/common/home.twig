@@ -102,38 +102,38 @@
         </div>
       </div>
     {% endif %}
-+
-+    {# Sale carousel (Specials) #}
-+    {% if home_special_products is defined and home_special_products %}
-+      <div class="col-xs-12" style="margin-top:35px">
-+        <div class="title">
-+          <h2>
-+            {% if lang == 'uk-ua' %}{{ home_special_title_ua|default('Розпродаж') }}{% else %}{{ home_special_title_ru|default('Распродажа') }}{% endif %}
-+          </h2>
-+        </div>
-+        <div class="carusel_prod">
-+          {% for p in home_special_products %}
-+            {{ p }}
-+          {% endfor %}
-+        </div>
-+      </div>
-+    {% endif %}
-+
-+    {# Popular products carousel (BestSeller) #}
-+    {% if home_bestseller_products is defined and home_bestseller_products %}
-+      <div class="col-xs-12" style="margin-top:35px">
-+        <div class="title">
-+          <h2>
-+            {% if lang == 'uk-ua' %}{{ home_bestseller_title_ua|default('Популярні товари') }}{% else %}{{ home_bestseller_title_ru|default('Популярные товары') }}{% endif %}
-+          </h2>
-+        </div>
-+        <div class="carusel_prod">
-+          {% for p in home_bestseller_products %}
-+            {{ p }}
-+          {% endfor %}
-+        </div>
-+      </div>
-+    {% endif %}
+
+    {# Sale carousel (Specials) #}
+    {% if home_special_products is defined and home_special_products %}
+      <div class="col-xs-12" style="margin-top:35px">
+        <div class="title">
+          <h2>
+            {% if lang == 'uk-ua' %}{{ home_special_title_ua|default('Розпродаж') }}{% else %}{{ home_special_title_ru|default('Распродажа') }}{% endif %}
+          </h2>
+        </div>
+        <div class="carusel_prod">
+          {% for p in home_special_products %}
+            {{ p }}
+          {% endfor %}
+        </div>
+      </div>
+    {% endif %}
+
+    {# Popular products carousel (BestSeller) #}
+    {% if home_bestseller_products is defined and home_bestseller_products %}
+      <div class="col-xs-12" style="margin-top:35px">
+        <div class="title">
+          <h2>
+            {% if lang == 'uk-ua' %}{{ home_bestseller_title_ua|default('Популярні товари') }}{% else %}{{ home_bestseller_title_ru|default('Популярные товары') }}{% endif %}
+          </h2>
+        </div>
+        <div class="carusel_prod">
+          {% for p in home_bestseller_products %}
+            {{ p }}
+          {% endfor %}
+        </div>
+      </div>
+    {% endif %}
 
     {# Featured products carousel #}
     {% if home_featured_products is defined and home_featured_products %}
