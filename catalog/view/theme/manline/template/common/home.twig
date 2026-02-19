@@ -135,6 +135,81 @@
       </div>
     {% endif %}
 
+    {# Underwear category block (OC2-like) #}
+    {% if home_underwear_rows is defined and home_underwear_rows %}
+      <div class="col-xs-12" style="margin-top:35px">
+        <div class="container">
+          <div class="category">
+            <div class="title mt-40">
+              <h1>{% if lang == 'uk-ua' %}Купити чоловічу білизну{% else %}Купить мужское белье{% endif %}</h1>
+            </div>
+
+            <div class="mob_row">
+              {% for r in home_underwear_rows %}
+                <div class="row">
+                  <div class="col-xs-12 col-sm-12 col-md-3">
+                    <a href="{{ r.href }}" class="cat_href">
+                      <span class="bord">
+                        <span class="cat_text">
+                          <span class="cat_title">{% if lang == 'uk-ua' %}{{ r.title_ua }}{% else %}{{ r.title_ru }}{% endif %}</span>
+                          <span class="cat_desc">{% if lang == 'uk-ua' %}{{ r.desc_ua }}{% else %}{{ r.desc_ru }}{% endif %}</span>
+                          <span class="btn">{% if lang == 'uk-ua' %}Дивитись все{% else %}Смотреть все{% endif %}</span>
+                        </span>
+                      </span>
+                      <img class="cat_img_bg" src="{{ r.bg }}" alt="" loading="lazy"/>
+                      <span class="bl_o"></span>
+                    </a>
+                  </div>
+
+                  <div class="col-xs-9 mob_hid">
+                    <div class="row">
+                      {% for p in r.items %}
+                        <div class="col-xs-4 col-sm-3 product_w noimgs{% if loop.index0 == 3 %} mob_hid{% endif %}">
+                          <div class="product_in">
+                            <div class="prod_info">
+                              <a class="prod_image" href="{{ p.href }}">
+                                <img src="{{ p.image }}" title="{{ p.name|e }}" alt="{{ p.name|e }}" loading="lazy"/>
+                              </a>
+                              <div class="prod_name_w">
+                                <a class="prod_name" href="{{ p.href }}">{{ p.name }}</a>
+                              </div>
+
+                              {% if p.quantity > 0 %}
+                                <div class="prod_stock">{% if lang == 'uk-ua' %}Є в наявності{% else %}Есть в наличии{% endif %}</div>
+                              {% else %}
+                                <div class="prod_stock no_stock">{% if lang == 'uk-ua' %}Немає в наявності{% else %}Нет в наличии{% endif %}</div>
+                              {% endif %}
+
+                              <div class="prod_price">
+                                {% if p.special_raw %}
+                                  <span class="price-old">{{ p.price_raw|round(0, 'floor') }} грн.</span> <span class="price-new">{{ p.special_raw|round(0, 'floor') }} грн.</span>
+                                {% else %}
+                                  {{ p.price_raw|round(0, 'floor') }} грн.
+                                {% endif %}
+                              </div>
+
+                              <div class="hover_tovar">
+                                {% if p.model %}
+                                  <div class="hover_t_b"><span class="hov_text">{% if lang == 'uk-ua' %}Код товару:{% else %}Код товара:{% endif %}</span> <span class="hot_text">{{ p.model }}</span></div>
+                                {% endif %}
+                                {% if p.sizes %}
+                                  <div class="hover_t_b"><span class="hov_text">{% if lang == 'uk-ua' %}Розміри в наявності:{% else %}Размеры в наличии:{% endif %}</span> <span class="hot_text">{{ p.sizes }}</span></div>
+                                {% endif %}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      {% endfor %}
+                    </div>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+      </div>
+    {% endif %}
+
     {# Featured products carousel #}
     {% if home_featured_products is defined and home_featured_products %}
       <div class="col-xs-12" style="margin-top:35px">

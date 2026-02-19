@@ -257,6 +257,9 @@ class Home extends \Opencart\System\Engine\Controller {
 		$data['home_bestseller_title_ru'] = $home_cfg['bestseller_title_ru'] ?? 'Популярные товары';
 		$data['home_bestseller_title_ua'] = $home_cfg['bestseller_title_ua'] ?? 'Популярні товари';
 
+		// Underwear category block (OC2-like hardcoded rows)
+		$data['home_underwear_rows'] = [];
+
 		$limit_special = (int)($home_cfg['special_limit'] ?? 10);
 		$limit_best = (int)($home_cfg['bestseller_limit'] ?? 10);
 		if ($limit_special <= 0) $limit_special = 10;
@@ -380,6 +383,90 @@ class Home extends \Opencart\System\Engine\Controller {
 					'model' => $result['model'] ?? '',
 					'href' => $this->url->link('product/product', 'language=' . $this->config->get('config_language') . '&product_id=' . $pid)
 				]);
+			}
+		} catch (\Throwable $e) {
+			// ignore
+		}
+
+		// Underwear category rows (OC2-like): 3 categories + 4 hand-picked products each + sizes (option_id=14)
+		try {
+			$underwear_src = [
+				[
+					'href' => '/muzhskie-trusy/trusy-boksery/',
+					'bg' => '/catalog/view/theme/manline/image/style/bokseri.jpg',
+					'title_ru' => 'Боксеры',
+					'title_ua' => 'Боксери',
+					'desc_ru' => 'Комфортные, облегающие трусы-шорты, включая длинные и укороченные модели.',
+					'desc_ua' => 'Комфортні, облягаючі труси-шорти, включаючи довгі та вкорочені моделі.',
+					'product_ids' => [6130, 1467, 1555, 6027]
+				],
+				[
+					'href' => '/muzhskie-trusy/slipy/',
+					'bg' => '/catalog/view/theme/manline/image/style/slipi.jpg',
+					'title_ru' => 'Слипы',
+					'title_ua' => 'Сліпи',
+					'desc_ru' => 'Облегающие классические трусы-плавки для удобной фиксации, включая трусы-брифы.',
+					'desc_ua' => 'Облягаючі класичні труси-плавки для зручної фіксації, включаючи труси-брифи.',
+					'product_ids' => [6105, 1361, 500, 670]
+				],
+				[
+					'href' => '/muzhskie-trusy/#category_id=59&page=1&path=59&sort=p.sort_order&order=ASC&limit=23&route=product%2Fcategory&attribute_value%5B23%5D%5B%5D=%D0%A1%D0%B5%D0%BC%D0%B5%D0%B9%D0%BD%D1%8B%D0%B5+%D1%82%D1%80%D1%83c%D1%8B&min_price=99&max_price=2819',
+					'bg' => '/catalog/view/theme/manline/image/style/semeynie.jpg',
+					'title_ru' => 'Семейные трусы',
+					'title_ua' => 'Сімейні труси',
+					'desc_ru' => 'Свободные не облегающие трусы-шорты из хлопка и трикотажа. Всеми любимые “семейные” трусы.',
+					'desc_ua' => 'Вільні не облягаючі труси-шорти з бавовни та трикотажу. Усіма улюблені “сімейні” труси.',
+					'product_ids' => [683, 5595, 4605, 4511]
+				]
+			];
+
+			foreach ($underwear_src as $row) {
+				$items = [];
+
+				foreach (($row['product_ids'] ?? []) as $pid) {
+					$pid = (int)$pid;
+					if (!$pid) continue;
+
+					$p = $this->model_catalog_product->getProduct($pid);
+					if (!$p) continue;
+
+					// sizes from option_id=14
+					$sizes = [];
+					foreach ($this->model_catalog_product->getOptions($pid) as $opt) {
+						if ((int)($opt['option_id'] ?? 0) !== 14) continue;
+						foreach (($opt['product_option_value'] ?? []) as $ov) {
+							$name = trim((string)($ov['name'] ?? ''));
+							if ($name !== '') $sizes[] = $name;
+						}
+					}
+
+					$thumb = '';
+					if (!empty($p['image']) && is_file(DIR_IMAGE . html_entity_decode((string)$p['image'], ENT_QUOTES, 'UTF-8'))) {
+						$thumb = $this->model_tool_image->resize((string)$p['image'], (int)$this->config->get('config_image_product_width'), (int)$this->config->get('config_image_product_height'));
+					}
+
+					$items[] = [
+						'product_id' => $pid,
+						'href' => $this->url->link('product/product', 'language=' . $this->config->get('config_language') . '&product_id=' . $pid),
+						'image' => $thumb,
+						'name' => (string)($p['name'] ?? ''),
+						'model' => (string)($p['model'] ?? ''),
+						'quantity' => (int)($p['quantity'] ?? 0),
+						'price_raw' => isset($p['price']) ? (float)$p['price'] : 0.0,
+						'special_raw' => !empty($p['special']) ? (float)$p['special'] : 0.0,
+						'sizes' => implode(', ', $sizes)
+					];
+				}
+
+				$data['home_underwear_rows'][] = [
+					'href' => (string)($row['href'] ?? '#'),
+					'bg' => (string)($row['bg'] ?? ''),
+					'title_ru' => (string)($row['title_ru'] ?? ''),
+					'title_ua' => (string)($row['title_ua'] ?? ''),
+					'desc_ru' => (string)($row['desc_ru'] ?? ''),
+					'desc_ua' => (string)($row['desc_ua'] ?? ''),
+					'items' => $items
+				];
 			}
 		} catch (\Throwable $e) {
 			// ignore
