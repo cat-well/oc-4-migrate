@@ -162,6 +162,21 @@ class Footer extends \Opencart\System\Engine\Controller {
 					}
 				}
 			}
+
+			// Fallback: some cache dumps may not contain homepage ("//manline.com.ua/") entry.
+			// In that case, render any available footers_block so layout is 1:1.
+			if (!$data['seoshield_footer_html']) {
+				$files = glob($cache_root . '/*/*.cache.php');
+				if ($files) {
+					$map = include $files[0];
+					if (is_array($map) && $map) {
+						$first = reset($map);
+						if (is_string($first) && $first !== '') {
+							$data['seoshield_footer_html'] = $first;
+						}
+					}
+				}
+			}
 		} catch (\Throwable $e) {
 			// ignore
 		}
