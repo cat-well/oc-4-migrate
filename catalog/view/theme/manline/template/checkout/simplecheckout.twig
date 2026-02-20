@@ -1,5 +1,10 @@
 {# Manline OC4 — SimpleCheckout-style one-page checkout (OC2 markup inspired) #}
 {{ header }}
+<script>
+  // used by simplecheckout-lite.js
+  window.ocLanguage = '{{ lang }}';
+</script>
+<script src="catalog/view/theme/manline/js/simplecheckout-lite.js"></script>
 
 <div class="container">
   {# Breadcrumbs (OC2-like) #}
@@ -68,9 +73,11 @@
                     </td>
                     <td class="model"></td>
                     <td class="quantity">
-                      <img data-onclick="decreaseProductQuantity" src="catalog/view/theme/manline/image/minus.png" alt="-" title="-" />
-                      <input type="text" data-onchange="changeProductQuantity" name="quantity[{{ product.key }}]" value="{{ product.quantity }}" size="1" />
-                      <img data-onclick="increaseProductQuantity" src="catalog/view/theme/manline/image/plus.png" alt="+" title="+" />
+                      <span class="pl_min">
+                        <img class="pm_cart" data-onclick="decreaseProductQuantity" data-product-key="{{ product.key }}" src="catalog/view/theme/manline/image/minus.png" alt="-" title="-" />
+                        <input type="text" data-onchange="changeProductQuantity" data-product-key="{{ product.key }}" name="quantity[{{ product.key }}]" value="{{ product.quantity }}" size="1" />
+                        <img class="pm_cart" data-onclick="increaseProductQuantity" data-product-key="{{ product.key }}" src="catalog/view/theme/manline/image/plus.png" alt="+" title="+" />
+                      </span>
                     </td>
                     <td class="price">{{ product.price }}</td>
                     <td class="total">{{ product.total }}</td>
@@ -82,13 +89,22 @@
                 </tbody>
               </table>
 
-              {% for total in totals %}
-                <div class="simplecheckout-cart-total" id="total_{{ total.code }}">
-                  <span><b>{{ total.title }}:</b></span>
-                  <span class="simplecheckout-cart-total-value">{{ total.text }}</span>
+              {# Totals: show only Sub-total (Сумма) and Total (Итого) like on legacy checkout #}
+              {% if total_map.sub_total is defined %}
+                <div class="simplecheckout-cart-total" id="total_sub_total">
+                  <span><b>{{ total_map.sub_total.title }}:</b></span>
+                  <span class="simplecheckout-cart-total-value">{{ total_map.sub_total.text }}</span>
                   <span class="simplecheckout-cart-total-remove"></span>
                 </div>
-              {% endfor %}
+              {% endif %}
+
+              {% if total_map.total is defined %}
+                <div class="simplecheckout-cart-total" id="total_total">
+                  <span><b>{{ total_map.total.title }}:</b></span>
+                  <span class="simplecheckout-cart-total-value">{{ total_map.total.text }}</span>
+                  <span class="simplecheckout-cart-total-remove"></span>
+                </div>
+              {% endif %}
             </div>
 
             {# Free delivery hint (static placeholder, will be aligned with real rules) #}

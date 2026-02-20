@@ -73,8 +73,11 @@ class Simplecheckout extends \Opencart\System\Engine\Controller {
 		}
 
 		$data['totals'] = [];
+		$data['total_map'] = [];
 		foreach ($totals as $t) {
-			$data['totals'][] = ['code' => $t['code'], 'title' => $t['title'], 'text' => $this->currency->format($t['value'], $this->session->data['currency'])];
+			$text = $this->currency->format($t['value'], $this->session->data['currency']);
+			$data['totals'][] = ['code' => $t['code'], 'title' => $t['title'], 'text' => $text];
+			$data['total_map'][$t['code']] = ['title' => $t['title'], 'text' => $text, 'value' => $t['value']];
 		}
 
 		// Labels
