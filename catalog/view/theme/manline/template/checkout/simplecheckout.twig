@@ -2,11 +2,16 @@
 {{ header }}
 
 <div class="container">
-  <ul class="breadcrumb">
+  {# Breadcrumbs (OC2-like) #}
+  <div class="breadcrumb_w">
     {% for breadcrumb in breadcrumbs %}
-      <li><a href="{{ breadcrumb.href }}">{{ breadcrumb.text }}</a></li>
+      {% if not loop.last %}
+        <a href="{{ breadcrumb.href }}">{{ breadcrumb.text }}</a>
+      {% else %}
+        <span class="current">{{ breadcrumb.text }}</span>
+      {% endif %}
     {% endfor %}
-  </ul>
+  </div>
 </div>
 
 <div class="container">
@@ -16,7 +21,7 @@
     <div id="simplecheckout_form_0" data-logged="{{ customer_logged ? 'true' : 'false' }}">
       <div class="simplecheckout">
 
-        <div class="simplecheckout-three-column">
+        <div class="simplecheckout-left-column-w">
           <div class="simplecheckout-left-column">
 
             {# CART #}
@@ -25,17 +30,21 @@
                 <colgroup>
                   <col class="image">
                   <col class="name">
+                  <col class="model">
                   <col class="quantity">
                   <col class="price">
                   <col class="total">
+                  <col class="remove">
                 </colgroup>
                 <thead>
                   <tr>
                     <th class="image">{{ column_image }}</th>
                     <th class="name">{{ column_name }}</th>
+                    <th class="model"></th>
                     <th class="quantity">{{ column_quantity }}</th>
                     <th class="price">{{ column_price }}</th>
                     <th class="total">{{ column_total }}</th>
+                    <th class="remove"></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -45,6 +54,11 @@
                       {% if product.thumb %}<a href="{{ product.href }}"><img src="{{ product.thumb }}" alt="{{ product.name }}" title="{{ product.name }}" /></a>{% endif %}
                     </td>
                     <td class="name">
+                      {% if product.thumb %}
+                        <div class="image">
+                          <a href="{{ product.href }}"><img src="{{ product.thumb }}" alt="{{ product.name }}" title="{{ product.name }}" /></a>
+                        </div>
+                      {% endif %}
                       <a href="{{ product.href }}">{{ product.name }}</a>
                       <div class="options">
                         {% for option in product.option %}
@@ -52,13 +66,17 @@
                         {% endfor %}
                       </div>
                     </td>
+                    <td class="model"></td>
                     <td class="quantity">
-                      <img class="pm_cart" src="catalog/view/theme/manline/image/minus.png" alt="-" title="-" />
-                      <input type="text" name="quantity[{{ product.key }}]" value="{{ product.quantity }}" size="1" />
-                      <img class="pm_cart" src="catalog/view/theme/manline/image/plus.png" alt="+" title="+" />
+                      <img data-onclick="decreaseProductQuantity" src="catalog/view/theme/manline/image/minus.png" alt="-" title="-" />
+                      <input type="text" data-onchange="changeProductQuantity" name="quantity[{{ product.key }}]" value="{{ product.quantity }}" size="1" />
+                      <img data-onclick="increaseProductQuantity" src="catalog/view/theme/manline/image/plus.png" alt="+" title="+" />
                     </td>
                     <td class="price">{{ product.price }}</td>
                     <td class="total">{{ product.total }}</td>
+                    <td class="remove">
+                      <img data-onclick="removeProduct" data-product-key="{{ product.key }}" src="catalog/view/theme/manline/image/close.png" alt="x" title="x" />
+                    </td>
                   </tr>
                 {% endfor %}
                 </tbody>
@@ -79,8 +97,9 @@
             </div>
 
           </div>
+        </div>
 
-          <div class="simplecheckout-right-column">
+        <div class="simplecheckout-right-column">
 
             {# CUSTOMER #}
             <div class="simplecheckout-block" id="simplecheckout_customer">
