@@ -30,35 +30,77 @@ class Simplecheckout extends \Opencart\System\Engine\Controller {
 			'href' => $this->url->link('checkout/simplecheckout', 'language=' . $this->config->get('config_language'))
 		];
 
-		// Embed existing OC4 checkout controllers into SimpleCheckout page.
+		// Phase 1 rendering: use OC2-like markup with OC4 cart/totals data.
 		$data['customer_logged'] = $this->customer->isLogged();
 
-		if (!$data['customer_logged']) {
-			$data['register'] = $this->load->controller('checkout/register');
-		} else {
-			$data['register'] = '';
+		$this->load->language('checkout/cart');
+		$this->load->language('checkout/simplecheckout');
+
+		// Cart + totals
+		$totals = [];
+		$taxes = $this->cart->getTaxes();
+		$total = 0;
+
+		$this->load->model('checkout/cart');
+		$this->load->model('tool/image');
+
+		// Totals calculation (same approach as common/cart)
+		($this->model_checkout_cart->getTotals)($totals, $taxes, $total);
+
+		$data['products'] = [];
+
+		foreach ($this->model_checkout_cart->getProducts() as $product) {
+			if ($product['option']) {
+				foreach ($product['option'] as $key => $option) {
+					$value = $option['value'] ?? '';
+					$product['option'][$key]['value'] = (oc_strlen($value) > 40 ? oc_substr($value, 0, 40) . '..' : $value);
+				}
+			}
+
+			$data['products'][] = [
+				'key'      => !empty($product['cart_id']) ? $product['cart_id'] : $product['key'],
+				'product_id' => $product['product_id'],
+				'thumb'    => $this->model_tool_image->resize($product['image'], 80, 80),
+				'name'     => $product['name'],
+				'model'    => $product['model'],
+				'option'   => $product['option'],
+				'quantity' => $product['quantity'],
+				'stock'    => $product['stock'],
+				'price'    => $product['price_text'] ?? '',
+				'total'    => $product['total_text'] ?? '',
+				'href'     => $this->url->link('product/product', 'language=' . $this->config->get('config_language') . '&product_id=' . $product['product_id'])
+			];
 		}
 
-		if ($this->customer->isLogged() && $this->config->get('config_checkout_payment_address')) {
-			$data['payment_address'] = $this->load->controller('checkout/payment_address');
-		} else {
-			$data['payment_address'] = '';
+		$data['totals'] = [];
+		foreach ($totals as $t) {
+			$data['totals'][] = ['code' => $t['code'], 'title' => $t['title'], 'text' => $this->currency->format($t['value'], $this->session->data['currency'])];
 		}
 
-		if ($this->customer->isLogged() && $this->cart->hasShipping()) {
-			$data['shipping_address'] = $this->load->controller('checkout/shipping_address');
-		} else {
-			$data['shipping_address'] = '';
-		}
+		// Labels
+		$data['heading_title'] = $this->language->get('heading_title');
+		$data['text_customer'] = $this->language->get('text_customer');
+		$data['text_shipping_method'] = $this->language->get('text_shipping_method');
+		$data['text_shipping_address'] = $this->language->get('text_shipping_address');
+		$data['text_payment_method'] = $this->language->get('text_payment_method');
+		$data['button_order'] = $this->language->get('button_order');
 
-		if ($this->cart->hasShipping()) {
-			$data['shipping_method'] = $this->load->controller('checkout/shipping_method');
-		} else {
-			$data['shipping_method'] = '';
-		}
+		$data['column_image'] = $this->language->get('column_image');
+		$data['column_name'] = $this->language->get('column_name');
+		$data['column_quantity'] = $this->language->get('column_quantity');
+		$data['column_price'] = $this->language->get('column_price');
+		$data['column_total'] = $this->language->get('column_total');
 
-		$data['payment_method'] = $this->load->controller('checkout/payment_method');
-		$data['confirm'] = $this->load->controller('checkout/confirm');
+		// Shipping/payment placeholders (temporary; will be replaced by NP module)
+		$data['shipping_options'] = [
+			['code' => 'np_branch', 'title' => $this->language->get('text_shipping_np_branch'), 'desc' => $this->language->get('text_shipping_np_branch_desc')],
+			['code' => 'np_courier', 'title' => $this->language->get('text_shipping_np_courier'), 'desc' => $this->language->get('text_shipping_np_courier_desc')],
+			['code' => 'np_locker', 'title' => $this->language->get('text_shipping_np_locker'), 'desc' => $this->language->get('text_shipping_np_locker_desc')],
+		];
+
+		$data['payment_options'] = [
+			['code' => 'cod', 'title' => $this->language->get('text_payment_cod')]
+		];
 
 		$data['header'] = $this->load->controller('common/header');
 		$data['footer'] = $this->load->controller('common/footer');

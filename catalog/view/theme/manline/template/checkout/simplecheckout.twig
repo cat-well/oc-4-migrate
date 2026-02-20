@@ -1,4 +1,4 @@
-{# Manline OC4 — SimpleCheckout-style one-page checkout #}
+{# Manline OC4 — SimpleCheckout-style one-page checkout (OC2 markup inspired) #}
 {{ header }}
 
 <div class="container">
@@ -10,38 +10,174 @@
 </div>
 
 <div class="container">
+  <h1>{{ heading_title }}</h1>
+
   <div class="simple-content">
     <div id="simplecheckout_form_0" data-logged="{{ customer_logged ? 'true' : 'false' }}">
       <div class="simplecheckout">
 
-        {# Layout similar to OC2 template placeholders. We will refine into 2 columns later. #}
         <div class="simplecheckout-three-column">
           <div class="simplecheckout-left-column">
-            <div class="simplecheckout-block" id="simplecheckout_customer">
-              {{ register|raw }}
+
+            {# CART #}
+            <div class="simplecheckout-block" id="simplecheckout_cart">
+              <table class="simplecheckout-cart">
+                <colgroup>
+                  <col class="image">
+                  <col class="name">
+                  <col class="quantity">
+                  <col class="price">
+                  <col class="total">
+                </colgroup>
+                <thead>
+                  <tr>
+                    <th class="image">{{ column_image }}</th>
+                    <th class="name">{{ column_name }}</th>
+                    <th class="quantity">{{ column_quantity }}</th>
+                    <th class="price">{{ column_price }}</th>
+                    <th class="total">{{ column_total }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                {% for product in products %}
+                  <tr>
+                    <td class="image">
+                      {% if product.thumb %}<a href="{{ product.href }}"><img src="{{ product.thumb }}" alt="{{ product.name }}" title="{{ product.name }}" /></a>{% endif %}
+                    </td>
+                    <td class="name">
+                      <a href="{{ product.href }}">{{ product.name }}</a>
+                      <div class="options">
+                        {% for option in product.option %}
+                          <small> - {{ option.name }}: {{ option.value }}</small><br />
+                        {% endfor %}
+                      </div>
+                    </td>
+                    <td class="quantity">
+                      <img class="pm_cart" src="catalog/view/theme/manline/image/minus.png" alt="-" title="-" />
+                      <input type="text" name="quantity[{{ product.key }}]" value="{{ product.quantity }}" size="1" />
+                      <img class="pm_cart" src="catalog/view/theme/manline/image/plus.png" alt="+" title="+" />
+                    </td>
+                    <td class="price">{{ product.price }}</td>
+                    <td class="total">{{ product.total }}</td>
+                  </tr>
+                {% endfor %}
+                </tbody>
+              </table>
+
+              {% for total in totals %}
+                <div class="simplecheckout-cart-total" id="total_{{ total.code }}">
+                  <span><b>{{ total.title }}:</b></span>
+                  <span class="simplecheckout-cart-total-value">{{ total.text }}</span>
+                  <span class="simplecheckout-cart-total-remove"></span>
+                </div>
+              {% endfor %}
             </div>
 
-            <div class="simplecheckout-block" id="simplecheckout_payment_address">
-              {{ payment_address|raw }}
+            {# Free delivery hint (static placeholder, will be aligned with real rules) #}
+            <div class="dozakaz" data-free-deliv="900">
+              <div class="dozakaz_in"><span class="dozak_word">{{ text_dozak_word|default('Дозакажите') }}</span> {{ text_dozak_after|default('на') }} <span class="rd">900 грн</span> {{ text_dozak_and|default('и получите') }} <span class="rb">{{ text_dozak_free|default('бесплатную доставку') }}</span></div>
             </div>
 
-            <div class="simplecheckout-block" id="simplecheckout_shipping_address">
-              {{ shipping_address|raw }}
-            </div>
-
-            <div class="simplecheckout-block" id="simplecheckout_shipping">
-              {{ shipping_method|raw }}
-            </div>
-
-            <div class="simplecheckout-block" id="simplecheckout_payment">
-              {{ payment_method|raw }}
-            </div>
           </div>
 
           <div class="simplecheckout-right-column">
-            <div class="simplecheckout-block" id="simplecheckout_summary">
-              {{ confirm|raw }}
+
+            {# CUSTOMER #}
+            <div class="simplecheckout-block" id="simplecheckout_customer">
+              <div class="checkout-heading"><span>{{ text_customer }}</span></div>
+              <div class="simplecheckout-block-content">
+                <div class="simplecheckout-table-form">
+                  <div class="simplecheckout-table-form-left"><span class="simplecheckout-required">*</span> {{ entry_firstname }}</div>
+                  <div class="simplecheckout-table-form-right"><input type="text" name="firstname" value="" placeholder="{{ placeholder_firstname }}" /></div>
+
+                  <div class="simplecheckout-table-form-left"><span class="simplecheckout-required">*</span> {{ entry_lastname }}</div>
+                  <div class="simplecheckout-table-form-right"><input type="text" name="lastname" value="" placeholder="{{ placeholder_lastname }}" /></div>
+
+                  <div class="simplecheckout-table-form-left"><span class="simplecheckout-required">*</span> {{ entry_telephone }}</div>
+                  <div class="simplecheckout-table-form-right"><input type="text" name="telephone" value="" placeholder="{{ placeholder_telephone }}" /></div>
+
+                  <div class="simplecheckout-table-form-left"><span class="simplecheckout-required">*</span> {{ entry_email }}</div>
+                  <div class="simplecheckout-table-form-right"><input type="text" name="email" value="" placeholder="{{ placeholder_email }}" /></div>
+                </div>
+
+                <div class="simplecheckout-table-form">
+                  <div class="simplecheckout-table-form-right" style="width:100%">
+                    <textarea name="comment" placeholder="{{ entry_comment }}"></textarea>
+                  </div>
+                </div>
+              </div>
             </div>
+
+            {# SHIPPING #}
+            <div class="simplecheckout-block" id="simplecheckout_shipping">
+              <div class="checkout-heading"><span>{{ text_shipping_method }}</span></div>
+              <div class="simplecheckout-block-content">
+                <table class="simplecheckout-methods-table">
+                  {% for opt in shipping_options %}
+                    <tr>
+                      <td class="code"><input type="radio" name="shipping_method" value="{{ opt.code }}" {% if loop.first %}checked="checked"{% endif %}></td>
+                      <td class="title">
+                        <label>{{ opt.title }}</label>
+                        <div class="simplecheckout-methods-description">{{ opt.desc }}</div>
+                      </td>
+                      <td class="quote"></td>
+                    </tr>
+                  {% endfor %}
+                </table>
+              </div>
+            </div>
+
+            {# SHIPPING ADDRESS (static placeholder) #}
+            <div class="simplecheckout-block" id="simplecheckout_shipping_address">
+              <div class="checkout-heading"><span>{{ text_shipping_address }}</span></div>
+              <div class="simplecheckout-block-content">
+                <div class="simplecheckout-table-form">
+                  <div class="simplecheckout-table-form-left"><span class="simplecheckout-required">*</span> {{ entry_country }}</div>
+                  <div class="simplecheckout-table-form-right">
+                    <select name="country_id">
+                      <option value="">{{ text_select }}</option>
+                      <option value="220" selected="selected">Україна</option>
+                    </select>
+                  </div>
+
+                  <div class="simplecheckout-table-form-left"><span class="simplecheckout-required">*</span> {{ entry_zone }}</div>
+                  <div class="simplecheckout-table-form-right">
+                    <select name="zone_id">
+                      <option value="">{{ text_select }}</option>
+                    </select>
+                  </div>
+
+                  <div class="simplecheckout-table-form-left"><span class="simplecheckout-required">*</span> {{ entry_city }}</div>
+                  <div class="simplecheckout-table-form-right"><input type="text" name="city" value="" autocomplete="off" /></div>
+
+                  <div class="simplecheckout-table-form-left"><span class="simplecheckout-required">*</span> {{ entry_address_1 }}</div>
+                  <div class="simplecheckout-table-form-right"><input type="text" name="address_1" value="" /></div>
+                </div>
+              </div>
+            </div>
+
+            {# PAYMENT #}
+            <div class="simplecheckout-block" id="simplecheckout_payment">
+              <div class="checkout-heading"><span>{{ text_payment_method }}</span></div>
+              <div class="simplecheckout-block-content">
+                <table class="simplecheckout-methods-table">
+                  {% for opt in payment_options %}
+                    <tr>
+                      <td class="code"><input type="radio" name="payment_method" value="{{ opt.code }}" {% if loop.first %}checked="checked"{% endif %}></td>
+                      <td class="title"><label>{{ opt.title }}</label></td>
+                      <td class="quote"></td>
+                    </tr>
+                  {% endfor %}
+                </table>
+
+                <div class="simplecheckout-button-block buttons" id="buttons">
+                  <div class="simplecheckout-button-right">
+                    <a class="button btn-primary button_oc btn" href="#" id="simplecheckout_button_confirm"><span>{{ button_order }}</span></a>
+                  </div>
+                </div>
+              </div>
+            </div>
+
           </div>
         </div>
 
