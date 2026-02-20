@@ -30,7 +30,7 @@ class Simplecheckout extends \Opencart\System\Engine\Controller {
 			'href' => $this->url->link('checkout/simplecheckout', 'language=' . $this->config->get('config_language'))
 		];
 
-		// Phase 1 rendering: use OC2-like markup with OC4 cart/totals data.
+		// Phase 1 rendering: port OC2 markup (blocks) with OC4 cart/totals data.
 		$data['customer_logged'] = $this->customer->isLogged();
 
 		$this->load->language('checkout/cart');
@@ -44,11 +44,9 @@ class Simplecheckout extends \Opencart\System\Engine\Controller {
 		$this->load->model('checkout/cart');
 		$this->load->model('tool/image');
 
-		// Totals calculation (same approach as common/cart)
 		($this->model_checkout_cart->getTotals)($totals, $taxes, $total);
 
 		$data['products'] = [];
-
 		foreach ($this->model_checkout_cart->getProducts() as $product) {
 			if ($product['option']) {
 				foreach ($product['option'] as $key => $option) {
@@ -58,29 +56,30 @@ class Simplecheckout extends \Opencart\System\Engine\Controller {
 			}
 
 			$data['products'][] = [
-				'key'      => !empty($product['cart_id']) ? $product['cart_id'] : $product['key'],
+				'key'        => !empty($product['cart_id']) ? $product['cart_id'] : $product['key'],
 				'product_id' => $product['product_id'],
-				'thumb'    => $this->model_tool_image->resize($product['image'], 80, 80),
-				'name'     => $product['name'],
-				'model'    => $product['model'],
-				'option'   => $product['option'],
-				'quantity' => $product['quantity'],
-				'stock'    => $product['stock'],
-				'price'    => $product['price_text'] ?? '',
-				'total'    => $product['total_text'] ?? '',
-				'href'     => $this->url->link('product/product', 'language=' . $this->config->get('config_language') . '&product_id=' . $product['product_id'])
+				'thumb'      => $this->model_tool_image->resize($product['image'], 80, 80),
+				'name'       => $product['name'],
+				'model'      => $product['model'],
+				'option'     => $product['option'],
+				'quantity'   => $product['quantity'],
+				'stock'      => $product['stock'],
+				'price'      => $product['price_text'] ?? '',
+				'total'      => $product['total_text'] ?? '',
+				'href'       => $this->url->link('product/product', 'language=' . $this->config->get('config_language') . '&product_id=' . $product['product_id'])
 			];
 		}
 
 		$data['totals'] = [];
-		$data['total_map'] = [];
 		foreach ($totals as $t) {
-			$text = $this->currency->format($t['value'], $this->session->data['currency']);
-			$data['totals'][] = ['code' => $t['code'], 'title' => $t['title'], 'text' => $text];
-			$data['total_map'][$t['code']] = ['title' => $t['title'], 'text' => $text, 'value' => $t['value']];
+			$data['totals'][] = [
+				'code'  => $t['code'],
+				'title' => $t['title'],
+				'text'  => $this->currency->format($t['value'], $this->session->data['currency'])
+			];
 		}
 
-		// Labels
+		// Labels (used by templates)
 		$data['heading_title'] = $this->language->get('heading_title');
 		$data['text_customer'] = $this->language->get('text_customer');
 		$data['text_shipping_method'] = $this->language->get('text_shipping_method');
@@ -90,20 +89,20 @@ class Simplecheckout extends \Opencart\System\Engine\Controller {
 
 		$data['column_image'] = $this->language->get('column_image');
 		$data['column_name'] = $this->language->get('column_name');
+		$data['column_model'] = $this->language->get('column_model');
 		$data['column_quantity'] = $this->language->get('column_quantity');
 		$data['column_price'] = $this->language->get('column_price');
 		$data['column_total'] = $this->language->get('column_total');
 
-		// Shipping/payment placeholders (temporary; will be replaced by NP module)
-		$data['shipping_options'] = [
-			['code' => 'np_branch', 'title' => $this->language->get('text_shipping_np_branch'), 'desc' => $this->language->get('text_shipping_np_branch_desc')],
-			['code' => 'np_courier', 'title' => $this->language->get('text_shipping_np_courier'), 'desc' => $this->language->get('text_shipping_np_courier_desc')],
-			['code' => 'np_locker', 'title' => $this->language->get('text_shipping_np_locker'), 'desc' => $this->language->get('text_shipping_np_locker_desc')],
-		];
+		// Blocks (start by porting cart 1:1)
+		$data['simple_blocks'] = [];
+		$data['simple_blocks']['cart'] = $this->load->view('checkout/simplecheckout_cart', $data);
 
-		$data['payment_options'] = [
-			['code' => 'cod', 'title' => $this->language->get('text_payment_cod')]
-		];
+		// Placeholders for upcoming blocks
+		$data['simple_blocks']['customer'] = '';
+		$data['simple_blocks']['shipping'] = '';
+		$data['simple_blocks']['shipping_address'] = '';
+		$data['simple_blocks']['payment'] = '';
 
 		$data['header'] = $this->load->controller('common/header');
 		$data['footer'] = $this->load->controller('common/footer');
