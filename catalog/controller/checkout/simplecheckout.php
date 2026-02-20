@@ -98,8 +98,20 @@ class Simplecheckout extends \Opencart\System\Engine\Controller {
 		$data['simple_blocks'] = [];
 		$data['simple_blocks']['cart'] = $this->load->view('checkout/simplecheckout_cart', $data);
 
-		// Placeholders for upcoming blocks
+		// Placeholders for upcoming blocks (keep old temporary markup so page remains usable)
 		$data['simple_blocks']['customer'] = '';
+
+		// Shipping/payment placeholders (temporary; will be replaced by NP + payment modules)
+		$data['shipping_options'] = [
+			['code' => 'np_branch', 'title' => $this->language->get('text_shipping_np_branch'), 'desc' => $this->language->get('text_shipping_np_branch_desc')],
+			['code' => 'np_courier', 'title' => $this->language->get('text_shipping_np_courier'), 'desc' => $this->language->get('text_shipping_np_courier_desc')],
+			['code' => 'np_locker', 'title' => $this->language->get('text_shipping_np_locker'), 'desc' => $this->language->get('text_shipping_np_locker_desc')],
+		];
+
+		$data['payment_options'] = [
+			['code' => 'cod', 'title' => $this->language->get('text_payment_cod')]
+		];
+
 		$data['simple_blocks']['shipping'] = '';
 		$data['simple_blocks']['shipping_address'] = '';
 		$data['simple_blocks']['payment'] = '';
