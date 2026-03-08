@@ -27,6 +27,7 @@ class Novaposhta extends \Opencart\System\Engine\Controller {
 		];
 
 		$this->model_setting_setting->editSetting('shipping_novaposhta', $defaults);
+		$this->createOrderMetaTable();
 	}
 
 	public function index(): void {
@@ -133,5 +134,29 @@ class Novaposhta extends \Opencart\System\Engine\Controller {
 		}
 
 		return $value;
+	}
+
+	private function createOrderMetaTable(): void {
+		$this->db->query(
+			"CREATE TABLE IF NOT EXISTS `" . DB_PREFIX . "order_novaposhta` (
+				`order_id` INT(11) NOT NULL,
+				`shipping_code` VARCHAR(64) NOT NULL DEFAULT '',
+				`delivery_type` VARCHAR(32) NOT NULL DEFAULT '',
+				`city` VARCHAR(128) NOT NULL DEFAULT '',
+				`city_ref` VARCHAR(64) NOT NULL DEFAULT '',
+				`address` VARCHAR(255) NOT NULL DEFAULT '',
+				`address_ref` VARCHAR(64) NOT NULL DEFAULT '',
+				`zone_id` INT(11) NOT NULL DEFAULT '0',
+				`zone` VARCHAR(128) NOT NULL DEFAULT '',
+				`country_id` INT(11) NOT NULL DEFAULT '0',
+				`country` VARCHAR(128) NOT NULL DEFAULT '',
+				`payload` TEXT NULL,
+				`date_added` DATETIME NOT NULL,
+				`date_modified` DATETIME NOT NULL,
+				PRIMARY KEY (`order_id`),
+				KEY `city_ref` (`city_ref`),
+				KEY `address_ref` (`address_ref`)
+			) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+		);
 	}
 }

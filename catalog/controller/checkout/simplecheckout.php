@@ -41,6 +41,7 @@ class Simplecheckout extends \Opencart\System\Engine\Controller {
 
 			if ($payment_form) {
 				$state['payment_form'] = $payment_form;
+				$this->persistNovaPoshtaOrderMeta();
 				$json['order_created'] = true;
 				unset($this->session->data['simplecheckout_show_errors']);
 			} else {
@@ -135,6 +136,41 @@ class Simplecheckout extends \Opencart\System\Engine\Controller {
 		$this->load->language('checkout/checkout');
 		$this->load->language('checkout/cart');
 		$this->load->language('checkout/simplecheckout');
+	}
+
+	private function persistNovaPoshtaOrderMeta(): void {
+		$order_id = (int)($this->session->data['order_id'] ?? 0);
+
+		if ($order_id <= 0) {
+			return;
+		}
+
+		$shipping_code = trim((string)($this->session->data['shipping_method']['code'] ?? ''));
+
+		if ($shipping_code === '' || strpos($shipping_code, 'novaposhta.') !== 0) {
+			return;
+		}
+
+		$shipping_address = $this->session->data['shipping_address'] ?? [];
+
+		if (!$shipping_address && !empty($this->session->data['simplecheckout']['shipping_address'])) {
+			$shipping_address = $this->session->data['simplecheckout']['shipping_address'];
+		}
+
+		$meta = [
+			'shipping_code' => $shipping_code,
+			'city' => trim((string)($shipping_address['city'] ?? '')),
+			'city_ref' => trim((string)($shipping_address['city_ref'] ?? '')),
+			'address' => trim((string)($shipping_address['address_1'] ?? '')),
+			'address_ref' => trim((string)($shipping_address['address_ref'] ?? '')),
+			'zone_id' => (int)($shipping_address['zone_id'] ?? 0),
+			'zone' => trim((string)($shipping_address['zone'] ?? '')),
+			'country_id' => (int)($shipping_address['country_id'] ?? 0),
+			'country' => trim((string)($shipping_address['country'] ?? ''))
+		];
+
+		$this->load->model('extension/manline/shipping/novaposhta');
+		$this->model_extension_manline_shipping_novaposhta->saveOrderMeta($order_id, $meta);
 	}
 
 	private function outputJson(array $json): void {
