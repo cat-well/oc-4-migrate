@@ -37,7 +37,7 @@ class Simplecheckout extends \Opencart\System\Engine\Controller {
 		$this->loadSimpleLanguages();
 
 		if ($create_order && !$state['errors']) {
-			$payment_form = $this->load->controller('checkout/confirm.confirm');
+			$payment_form = $this->load->controller('checkout/confirm');
 
 			if ($payment_form) {
 				$state['payment_form'] = $payment_form;
