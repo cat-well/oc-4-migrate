@@ -1,0 +1,53 @@
+<div class="simplecheckout-block" id="simplecheckout_shipping" {% if errors.shipping_method %}data-error="true"{% endif %}>
+  <div class="checkout-heading"><span>{{ text_shipping_method }}</span></div>
+  {% if errors.shipping_method %}
+    <div class="simplecheckout-warning-block">{{ errors.shipping_method }}</div>
+  {% endif %}
+  <div class="simplecheckout-block-content">
+    {% if shipping_methods %}
+      <table class="simplecheckout-methods-table">
+        {% for shipping_method in shipping_methods %}
+          {% if shipping_method.name %}
+            <tr>
+              <td colspan="3"><b>{{ shipping_method.name }}</b></td>
+            </tr>
+          {% endif %}
+
+          {% if shipping_method.error %}
+            <tr>
+              <td colspan="3"><div class="simplecheckout-error-text">{{ shipping_method.error }}</div></td>
+            </tr>
+          {% endif %}
+
+          {% if shipping_method.quote %}
+            {% for quote in shipping_method.quote %}
+              <tr>
+                <td class="code">
+                  <input
+                    type="radio"
+                    data-onchange="reloadAll"
+                    name="shipping_method"
+                    value="{{ quote.code }}"
+                    id="{{ quote.code|replace({'.':'-'}) }}"
+                    {% if quote.code == shipping_code %}checked="checked"{% endif %}
+                  />
+                </td>
+                <td class="title">
+                  <label for="{{ quote.code|replace({'.':'-'}) }}">{{ quote.name|default(quote.title)|default('') }}</label>
+                  {% if quote.description %}
+                    <div class="simplecheckout-methods-description">{{ quote.description }}</div>
+                  {% endif %}
+                </td>
+                <td class="quote">
+                  <label for="{{ quote.code|replace({'.':'-'}) }}">{{ quote.text|default('') }}</label>
+                </td>
+              </tr>
+            {% endfor %}
+          {% endif %}
+        {% endfor %}
+      </table>
+    {% else %}
+      <div class="simplecheckout-warning-text">{{ errors.shipping_method|default(text_shipping_address) }}</div>
+    {% endif %}
+  </div>
+</div>

@@ -4,12 +4,15 @@
   // used by simplecheckout-lite.js
   window.ocLanguage = '{{ lang }}';
 </script>
-<script src="catalog/view/theme/manline/js/simplecheckout-lite.js"></script>
+<script src="catalog/view/theme/manline/js/simplecheckout-lite.js?v=20260308-1"></script>
 
 <div class="container">
   {# Breadcrumbs (OC2-like) #}
   <div class="breadcrumb_w">
     {% for breadcrumb in breadcrumbs %}
+      {% if not loop.first %}
+        <span class="sep">&gt;</span>
+      {% endif %}
       {% if not loop.last %}
         <a href="{{ breadcrumb.href }}">{{ breadcrumb.text }}</a>
       {% else %}
@@ -23,116 +26,26 @@
   <h1>{{ heading_title }}</h1>
 
   <div class="simple-content">
-    <div id="simplecheckout_form_0" data-logged="{{ customer_logged ? 'true' : 'false' }}">
+    <div
+      id="simplecheckout_form_0"
+      data-logged="{{ customer_logged ? 'true' : 'false' }}"
+      data-reload-url="{{ reload_action }}"
+      data-np-url="{{ novaposhta_endpoint }}"
+    >
       <div class="simplecheckout">
 
-        <div class="simplecheckout-left-column-w">
-          <div class="simplecheckout-left-column">
-            {{ simple_blocks.cart|raw }}
-          </div>
+        <div class="simplecheckout-left-column">
+          {{ simple_blocks.cart|raw }}
         </div>
 
         <div class="simplecheckout-right-column">
-
-            {# CUSTOMER (temporary; will be replaced by ported simplecheckout_customer block) #}
-            <div class="simplecheckout-block" id="simplecheckout_customer">
-              <div class="checkout-heading"><span>{{ text_customer }}</span></div>
-              <div class="simplecheckout-block-content">
-                <div class="simplecheckout-table-form">
-                  <div class="simplecheckout-table-form-left"><span class="simplecheckout-required">*</span> {{ entry_firstname }}</div>
-                  <div class="simplecheckout-table-form-right"><input type="text" name="firstname" value="" placeholder="{{ placeholder_firstname }}" /></div>
-
-                  <div class="simplecheckout-table-form-left"><span class="simplecheckout-required">*</span> {{ entry_lastname }}</div>
-                  <div class="simplecheckout-table-form-right"><input type="text" name="lastname" value="" placeholder="{{ placeholder_lastname }}" /></div>
-
-                  <div class="simplecheckout-table-form-left"><span class="simplecheckout-required">*</span> {{ entry_telephone }}</div>
-                  <div class="simplecheckout-table-form-right"><input type="text" name="telephone" value="" placeholder="{{ placeholder_telephone }}" /></div>
-
-                  <div class="simplecheckout-table-form-left"><span class="simplecheckout-required">*</span> {{ entry_email }}</div>
-                  <div class="simplecheckout-table-form-right"><input type="text" name="email" value="" placeholder="{{ placeholder_email }}" /></div>
-                </div>
-
-                <div class="simplecheckout-table-form">
-                  <div class="simplecheckout-table-form-right" style="width:100%">
-                    <textarea name="comment" placeholder="{{ entry_comment }}"></textarea>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {# SHIPPING (temporary placeholder - do not leave blank) #}
-            <div class="simplecheckout-block" id="simplecheckout_shipping">
-              <div class="checkout-heading"><span>{{ text_shipping_method }}</span></div>
-              <div class="simplecheckout-block-content">
-                <table class="simplecheckout-methods-table">
-                  {% for opt in shipping_options %}
-                    <tr>
-                      <td class="code"><input type="radio" name="shipping_method" value="{{ opt.code }}" {% if loop.first %}checked="checked"{% endif %}></td>
-                      <td class="title">
-                        <label>{{ opt.title }}</label>
-                        <div class="simplecheckout-methods-description">{{ opt.desc }}</div>
-                      </td>
-                      <td class="quote"></td>
-                    </tr>
-                  {% endfor %}
-                </table>
-              </div>
-            </div>
-
-            {# SHIPPING ADDRESS (temporary placeholder) #}
-            <div class="simplecheckout-block" id="simplecheckout_shipping_address">
-              <div class="checkout-heading"><span>{{ text_shipping_address }}</span></div>
-              <div class="simplecheckout-block-content">
-                <div class="simplecheckout-table-form">
-                  <div class="simplecheckout-table-form-left"><span class="simplecheckout-required">*</span> {{ entry_country }}</div>
-                  <div class="simplecheckout-table-form-right">
-                    <select name="country_id">
-                      <option value="">{{ text_select }}</option>
-                      <option value="220" selected="selected">Україна</option>
-                    </select>
-                  </div>
-
-                  <div class="simplecheckout-table-form-left"><span class="simplecheckout-required">*</span> {{ entry_zone }}</div>
-                  <div class="simplecheckout-table-form-right">
-                    <select name="zone_id">
-                      <option value="">{{ text_select }}</option>
-                    </select>
-                  </div>
-
-                  <div class="simplecheckout-table-form-left"><span class="simplecheckout-required">*</span> {{ entry_city }}</div>
-                  <div class="simplecheckout-table-form-right"><input type="text" name="city" value="" autocomplete="off" /></div>
-
-                  <div class="simplecheckout-table-form-left"><span class="simplecheckout-required">*</span> {{ entry_address_1 }}</div>
-                  <div class="simplecheckout-table-form-right"><input type="text" name="address_1" value="" /></div>
-                </div>
-              </div>
-            </div>
-
-            {# PAYMENT (temporary placeholder) #}
-            <div class="simplecheckout-block" id="simplecheckout_payment">
-              <div class="checkout-heading"><span>{{ text_payment_method }}</span></div>
-              <div class="simplecheckout-block-content">
-                <table class="simplecheckout-methods-table">
-                  {% for opt in payment_options %}
-                    <tr>
-                      <td class="code"><input type="radio" name="payment_method" value="{{ opt.code }}" {% if loop.first %}checked="checked"{% endif %}></td>
-                      <td class="title"><label>{{ opt.title }}</label></td>
-                      <td class="quote"></td>
-                    </tr>
-                  {% endfor %}
-                </table>
-
-                <div class="simplecheckout-button-block buttons" id="buttons">
-                  <div class="simplecheckout-button-right">
-                    <a class="button btn-primary button_oc btn" href="#" id="simplecheckout_button_confirm"><span>{{ button_order }}</span></a>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-          </div>
+          {{ simple_blocks.customer|raw }}
+          {{ simple_blocks.comment|raw }}
+          {{ simple_blocks.shipping|raw }}
+          {{ simple_blocks.shipping_address|raw }}
+          {{ simple_blocks.payment|raw }}
+          <div id="simplecheckout_payment_form">{{ simple_blocks.payment_form|raw }}</div>
         </div>
-
       </div>
     </div>
   </div>

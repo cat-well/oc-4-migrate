@@ -283,6 +283,8 @@ $(document).ready(function () {
     });
     if ($('#simplecheckout_cart').length) {
         cuponPolt();
+        bindSimplecheckoutFallback();
+        initNovaPoshtaAutocomplete();
         $(document).on('click', '.have_cupon', function (e) {
             e.preventDefault();
             if ($('.cupon_w').hasClass('none')) {
@@ -479,91 +481,539 @@ function cuponPolt() {
         }
     }
 }
-function freeDelivery() {
-    const lang_pref = window.location.href.indexOf('/ua/') === -1 ? '' : '/ua';
-    $.get(lang_pref+"/index.php?route=common/cart", function (data) {
-        var total_cart = parseInt($(data).find('.total_money').text());
-        var free_deliv = parseInt($('.dozakaz').attr('data-free-deliv'));
-        var dozakaz = (free_deliv > total_cart) ? free_deliv - total_cart : '';
-        if (total_cart) {
-            if (total_cart < 1500) {
-                if (dozakaz > 0) {
-                    $('.rd').text(dozakaz + ' грн');
-                    if (window.location.href.indexOf('/ua/') === -1) {
-                        $('.dozak_word').text('Дозакажите');
-                    } else {
-                        $('.dozak_word').text('Дозамовте');
+
+var simplecheckoutFallbackBound = false;
+
+function bindSimplecheckoutFallback() {
+    if (simplecheckoutFallbackBound) {
+        return;
+    }
+
+    simplecheckoutFallbackBound = true;
+
+    $(document).on('click', '#simplecheckout_form_0 [data-onclick]', function (e) {
+        if (window.__simplecheckoutLiteActive) {
+            return;
+        }
+
+        var action = String($(this).attr('data-onclick') || '');
+        var key = String($(this).attr('data-product-key') || '');
+        var $qty;
+        var value;
+
+        if (!action) {
+            return;
+        }
+
+        if (action === 'increaseProductQuantity' && key) {
+            e.preventDefault();
+            $qty = $('#simplecheckout_form_0 input[name="quantity[' + key + ']"]');
+
+            if ($qty.length) {
+                value = parseInt($qty.val(), 10) || 1;
+                $qty.val(String(value + 1));
+            }
+
+            if (typeof window.reloadAll === 'function') {
+                window.reloadAll();
+            }
+
+            return;
+        }
+
+        if (action === 'decreaseProductQuantity' && key) {
+            e.preventDefault();
+            $qty = $('#simplecheckout_form_0 input[name="quantity[' + key + ']"]');
+
+            if ($qty.length) {
+                value = parseInt($qty.val(), 10) || 1;
+                value = value > 1 ? value - 1 : 1;
+                $qty.val(String(value));
+            }
+
+            if (typeof window.reloadAll === 'function') {
+                window.reloadAll();
+            }
+
+            return;
+        }
+
+        if (action === 'removeProduct' && key) {
+            e.preventDefault();
+            $('#simplecheckout_remove').val(key);
+
+            if (typeof window.reloadAll === 'function') {
+                window.reloadAll();
+            }
+
+            return;
+        }
+
+        if (action === 'changeProductQuantity' || action === 'reloadAll') {
+            e.preventDefault();
+
+            if (typeof window.reloadAll === 'function') {
+                window.reloadAll();
+            }
+
+            return;
+        }
+
+        if (action === 'createOrder') {
+            e.preventDefault();
+
+            if (typeof window.reloadAll === 'function') {
+                window.reloadAll({create_order: 1});
+            }
+        }
+    });
+
+    $(document).on('change', '#simplecheckout_form_0 [data-onchange]', function () {
+        if (window.__simplecheckoutLiteActive) {
+            return;
+        }
+
+        var action = String($(this).attr('data-onchange') || '');
+
+        if (action === 'changeProductQuantity' || action === 'reloadAll') {
+            if (typeof window.reloadAll === 'function') {
+                window.reloadAll();
+            }
+        }
+    });
+}
+
+(function ($) {
+    if (!$.fn.npAutocompleteAddress) {
+        var methods = {
+            init: function (options) {
+                return this.each(function () {
+                    var $input = $(this);
+
+                    if ($input.data('npAutocompleteAddress')) {
+                        return;
                     }
-                    $('.dozakaz, .dozakaz_in').show();
-                    $('.free').hide();
+
+                    var settings = $.extend({}, options || {});
+                    var $list = $('<ul class="dropdown-address"></ul>').hide();
+                    var timer = null;
+                    var items = {};
+
+                    function hide() {
+                        $list.hide();
+                    }
+
+                    function show() {
+                        var offset = $input.position();
+
+                        $list.css({
+                            top: offset.top + $input.outerHeight(),
+                            left: offset.left,
+                            width: $input.outerWidth()
+                        }).show();
+                    }
+
+                    function render(data) {
+                        items = {};
+
+                        if (!Array.isArray(data) || !data.length) {
+                            hide();
+                            $list.html('');
+                            return;
+                        }
+
+                        var html = '';
+
+                        $.each(data, function (_, item) {
+                            var value = String(item.value || item.description || '');
+
+                            if (!value) {
+                                return;
+                            }
+
+                            var key = value + '|' + String(item.ref || '');
+                            items[key] = item;
+
+                            html += '<li data-key="' + $('<div/>').text(key).html() + '"><a href="#">' + $('<div/>').text(String(item.label || value)).html() + '</a></li>';
+                        });
+
+                        $list.html(html);
+
+                        if (html && $input.is(':focus')) {
+                            show();
+                        } else {
+                            hide();
+                        }
+                    }
+
+                    function request(search) {
+                        if (typeof settings.source !== 'function') {
+                            return;
+                        }
+
+                        clearTimeout(timer);
+
+                        timer = setTimeout(function () {
+                            settings.source(search, function (result) {
+                                render(result || []);
+                            });
+                        }, 180);
+                    }
+
+                    $input.attr('autocomplete', 'new-password');
+
+                    $input.on('focus.npAutocompleteAddress', function () {
+                        request($input.val());
+                    });
+
+                    $input.on('blur.npAutocompleteAddress', function () {
+                        setTimeout(hide, 180);
+                    });
+
+                    $input.on('keydown.npAutocompleteAddress', function (event) {
+                        if (event.keyCode === 27) {
+                            hide();
+                            return;
+                        }
+
+                        request($input.val());
+                    });
+
+                    $list.on('mousedown.npAutocompleteAddress touchstart.npAutocompleteAddress', 'a', function (event) {
+                        event.preventDefault();
+                        event.stopPropagation();
+
+                        var key = String($(this).closest('li').attr('data-key') || '');
+                        var item = items[key];
+
+                        if (!item) {
+                            return;
+                        }
+
+                        if (typeof settings.select === 'function') {
+                            settings.select(item, $input);
+                        }
+
+                        hide();
+                    });
+
+                    $input.after($list);
+                    $input.data('npAutocompleteAddress', true);
+                });
+            },
+            destroy: function () {
+                return this.each(function () {
+                    var $input = $(this);
+
+                    if (!$input.data('npAutocompleteAddress')) {
+                        return;
+                    }
+
+                    $input.removeData('npAutocompleteAddress');
+                    $input.off('.npAutocompleteAddress');
+                    $input.siblings('ul.dropdown-address').remove();
+                });
+            }
+        };
+
+        $.fn.npAutocompleteAddress = function (method) {
+            if (methods[method]) {
+                return methods[method].apply(this, Array.prototype.slice.call(arguments, 1));
+            }
+
+            if (typeof method === 'object' || !method) {
+                return methods.init.apply(this, arguments);
+            }
+
+            return this;
+        };
+    }
+}(window.jQuery));
+
+var simpleNpAutocompleteBound = false;
+
+function selectedShippingMethodSimplecheckout() {
+    var checked = $('#simplecheckout_shipping input[name="shipping_method"]:checked').val();
+
+    if (checked) {
+        return String(checked);
+    }
+
+    var selected = $('#simplecheckout_shipping select[name="shipping_method"]').val();
+
+    return selected ? String(selected) : '';
+}
+
+function isNovaPoshtaMethodSimplecheckout(method) {
+    return String(method || '').indexOf('novaposhta.') === 0;
+}
+
+function isNovaPoshtaWarehouseMethodSimplecheckout(method) {
+    return method === 'novaposhta.branch' || method === 'novaposhta.locker';
+}
+
+function clearNovaPoshtaRefsSimplecheckout(clearCity) {
+    if (clearCity) {
+        $('input[name="shipping_city"]').val('');
+        $('#shipping_address_city_ref').val('');
+    }
+
+    $('input[name="shipping_address_1"]').val('');
+    $('#shipping_address_address_ref').val('');
+}
+
+function initNovaPoshtaAutocomplete() {
+    var $form = $('#simplecheckout_form_0');
+
+    if (!$form.length) {
+        return;
+    }
+
+    var endpoint = String($form.attr('data-np-url') || '');
+
+    if (!endpoint) {
+        return;
+    }
+
+    $('#simplecheckout_shipping_address .simplecheckout-block-content').css('overflow', 'visible');
+
+    if (simpleNpAutocompleteBound) {
+        return;
+    }
+
+    simpleNpAutocompleteBound = true;
+
+    $(document).on('change.simpleNp', '#simplecheckout_form_0 [name="shipping_method"], #simplecheckout_form_0 [name="shipping_country_id"], #simplecheckout_form_0 [name="shipping_zone_id"]', function (event) {
+        var method = selectedShippingMethodSimplecheckout();
+
+        if (!isNovaPoshtaMethodSimplecheckout(method)) {
+            clearNovaPoshtaRefsSimplecheckout(true);
+            $('input[name="shipping_city"], input[name="shipping_address_1"]').npAutocompleteAddress('destroy');
+            return;
+        }
+
+        if (event.target.name === 'shipping_country_id' || event.target.name === 'shipping_zone_id') {
+            $('input[name="shipping_city"]').val('');
+            $('input[name="shipping_address_1"]').val('');
+            clearNovaPoshtaRefsSimplecheckout(true);
+            return;
+        }
+
+        if (!isNovaPoshtaWarehouseMethodSimplecheckout(method)) {
+            $('#shipping_address_address_ref').val('');
+            $('input[name="shipping_address_1"]').npAutocompleteAddress('destroy');
+        } else {
+            $('input[name="shipping_address_1"]').val('');
+            $('#shipping_address_address_ref').val('');
+        }
+    });
+
+    $(document).on('change.simpleNp', '#simplecheckout_form_0 [name="shipping_city"]', function () {
+        if (!isNovaPoshtaMethodSimplecheckout(selectedShippingMethodSimplecheckout())) {
+            return;
+        }
+
+        if (!$(this).val()) {
+            $('#shipping_address_city_ref').val('');
+        }
+
+        $('input[name="shipping_address_1"]').val('');
+        $('#shipping_address_address_ref').val('');
+    });
+
+    $('body').on('focus.simpleNp', '#simplecheckout_form_0 input[name="shipping_city"], #simplecheckout_form_0 input[name="shipping_address_1"]', function () {
+        var method = selectedShippingMethodSimplecheckout();
+        var isCityInput = this.name === 'shipping_city';
+        var needsWarehouse = isNovaPoshtaWarehouseMethodSimplecheckout(method);
+
+        if (!isNovaPoshtaMethodSimplecheckout(method) || (!isCityInput && !needsWarehouse)) {
+            $(this).npAutocompleteAddress('destroy');
+            return;
+        }
+
+        var $input = $(this);
+        var cityRef = String($('#shipping_address_city_ref').val() || '');
+        var cityName = String($('input[name="shipping_city"]').val() || '');
+        var zoneId = String($('select[name="shipping_zone_id"]').val() || '');
+        var action = isCityInput ? 'getCities' : 'getWarehouses';
+
+        $input.npAutocompleteAddress({
+            source: function (request, response) {
+                var payload = {
+                    action: action,
+                    search: String(request || ''),
+                    shipping_method: method,
+                    zone_id: zoneId,
+                    city_ref: cityRef,
+                    city: cityName
+                };
+
+                $.ajax({
+                    url: endpoint,
+                    type: 'POST',
+                    dataType: 'json',
+                    data: payload,
+                    global: false
+                }).done(function (json) {
+                    response(Array.isArray(json) ? json : []);
+                }).fail(function () {
+                    response([]);
+                });
+            },
+            select: function (item, $target) {
+                var value = String(item.value || item.description || '');
+
+                $target.val(value);
+
+                if ($target.attr('name') === 'shipping_city') {
+                    $('#shipping_address_city_ref').val(String(item.ref || ''));
+                    $('input[name="shipping_address_1"]').val('');
+                    $('#shipping_address_address_ref').val('');
                 } else {
-                    if (window.location.href.indexOf('/ua/') === -1) {
-                        $('.dozak_word').text('Закажите');
+                    $('#shipping_address_address_ref').val(String(item.ref || ''));
+                }
+
+                $target.trigger('change');
+            }
+        });
+    });
+}
+
+function moneyToInt(value) {
+    var normalized = String(value || '').replace(/[^\d]/g, '');
+
+    if (!normalized) {
+        return 0;
+    }
+
+    return parseInt(normalized, 10) || 0;
+}
+
+function checkoutSubtotal() {
+    var sub_total = moneyToInt($('#total_sub_total .simplecheckout-cart-total-value').first().text());
+
+    if (sub_total > 0) {
+        return sub_total;
+    }
+
+    var first_row_total = moneyToInt($('#simplecheckout_cart .simplecheckout-cart-total .simplecheckout-cart-total-value').first().text());
+
+    if (first_row_total > 0) {
+        return first_row_total;
+    }
+
+    var cart_total = moneyToInt($('#simplecheckout_cart_total').first().text());
+
+    if (cart_total > 0) {
+        return cart_total;
+    }
+
+    return moneyToInt($('#total_total .simplecheckout-cart-total-value').first().text());
+}
+
+function checkoutDozakazBanner() {
+    var in_checkout = $('#simplecheckout_form_0 .simplecheckout-left-column .dozakaz').first();
+
+    if (in_checkout.length) {
+        return in_checkout;
+    }
+
+    return $('.dozakaz').first();
+}
+
+function freeDelivery() {
+    var banner = checkoutDozakazBanner();
+
+    if (!banner.length) {
+        return;
+    }
+
+    var free_deliv = moneyToInt(banner.attr('data-free-deliv')) || 1500;
+    var is_ua = window.location.href.indexOf('/ua/') !== -1;
+    var banner_rd = banner.find('.rd').first();
+    var banner_word = banner.find('.dozak_word').first();
+    var banner_dozakaz_in = banner.find('.dozakaz_in').first();
+    var banner_free = banner.find('.free').first();
+
+    function renderBanner(total_cart) {
+        var dozakaz = (free_deliv > total_cart) ? free_deliv - total_cart : 0;
+
+        if (total_cart > 0) {
+            if (total_cart < free_deliv) {
+                if (dozakaz > 0) {
+                    banner_rd.text(dozakaz + ' грн');
+                    if (!is_ua) {
+                        banner_word.text('Дозакажите');
                     } else {
-                        $('.dozak_word').text('Замовте');
+                        banner_word.text('Дозамовте');
                     }
-                    $('.rd').text(free_deliv + ' грн');
-                    $('.dozakaz, .dozakaz_in').show();
-                    $('.free').hide();
+                    banner.show();
+                    banner_dozakaz_in.show();
+                    banner_free.hide();
+                } else {
+                    if (!is_ua) {
+                        banner_word.text('Закажите');
+                    } else {
+                        banner_word.text('Замовте');
+                    }
+                    banner_rd.text(free_deliv + ' грн');
+                    banner.show();
+                    banner_dozakaz_in.show();
+                    banner_free.hide();
                 }
             } else {
-                $('.dozakaz').show();
-                $('.dozakaz_in').hide();
-                $('.free').show();
+                banner.show();
+                banner_dozakaz_in.hide();
+                banner_free.show();
             }
         } else {
-            if (window.location.href.indexOf('/ua/') === -1) {
-                $('.dozak_word').text('Закажите');
+            if (!is_ua) {
+                banner_word.text('Закажите');
             } else {
-                $('.dozak_word').text('Замовте');
+                banner_word.text('Замовте');
             }
-            $('.rd').text(free_deliv + ' грн');
-            $('.dozakaz, .dozakaz_in').show();
-            $('.free').hide();
+            banner_rd.text(free_deliv + ' грн');
+            banner.show();
+            banner_dozakaz_in.show();
+            banner_free.hide();
         }
+    }
+
+    if ($('#simplecheckout_cart').length) {
+        renderBanner(checkoutSubtotal());
+        return;
+    }
+
+    const lang_pref = window.location.href.indexOf('/ua/') === -1 ? '' : '/ua';
+    var total_checkout = checkoutSubtotal();
+
+    if (total_checkout > 0) {
+        renderBanner(total_checkout);
+        return;
+    }
+
+    $.get(lang_pref+"/index.php?route=common/cart", function (data) {
+        var total_cart = moneyToInt($(data).find('.total_money').first().text());
+        renderBanner(total_cart);
     }, 'html');
 }
 function freeDeliveryCart() {
-    if ($('#total_total').length) {
-        var polt_total = parseInt($('#total_sub_total .simplecheckout-cart-total-value').text().replace(/[^\d\.]/g, ''));
-        if (polt_total >= 1500) {
-            if ($('input[value*="novaposhta"]').is(':checked')) {
-                if (window.location.href.indexOf('/ua/') === -1) {
-                    $('#total_shipping .simplecheckout-cart-total-value').html('<span class="lint_thr">50 грн</span> <span class="free_deliv">бесплатно</span>');
-                } else {
-                    $('#total_shipping .simplecheckout-cart-total-value').html('<span class="lint_thr">50 грн</span> <span class="free_deliv">безкоштовно</span>');
-                }
-            }
-            $('td.quote').each(function () {
-                var label_val = $(this).find('label').text().replace(/[^\d\.]/g, '');
-                if (label_val > 0) {
-                    if ($(this).closest('tr').find('input').prop('checked')) {
-                        $(this).closest('tr').find('input').prop('checked', false);
-                        reloadAll();
-                    }
-                    $(this).closest('tr').hide();
-                } else {
-                    $(this).closest('tr').show();
-                }
-            });
-            $('.title label:contains("Доставка в отделение Новой Почты")').text('Бесплатная доставка в отделение Новой Почты');
-            $('.title label:contains("Доставка у відділення Нової Пошти")').text('Безкоштовна доставка у відділення Нової Пошти');
-        } else {
-            $('#simplecheckout_shipping tr').show();
-            $('.title label:contains("Доставка в отделение Новой Почты")').text('Доставка в отделение Новой Почты');
-            $('.title label:contains("Доставка у відділення Нової Пошти")').text('Доставка у відділення Нової Пошти');
-            //$('#total_shipping .simplecheckout-cart-total-value').html('50 грн');
-            $('td.quote').each(function () {
-                var label_text = $(this).find('label').text();
+    if (!$('#total_total').length) {
+        return;
+    }
 
-                var label_input = $(this).closest('tr').find('input');
+    var selected_shipping = $('#simplecheckout_shipping input[type="radio"]:checked');
+    var total_shipping_value = $('#total_shipping .simplecheckout-cart-total-value');
 
-                if(label_input.prop('checked')) {
-                    $('#total_shipping .simplecheckout-cart-total-value').html(label_text);
-                }
-            });
-            // npCost();
-        }
+    if (!selected_shipping.length || !total_shipping_value.length) {
+        return;
+    }
+
+    var selected_row = selected_shipping.closest('tr');
+    var selected_quote = selected_row.find('td.quote label').first();
+
+    if (selected_quote.length) {
+        total_shipping_value.html(selected_quote.text());
     }
 }
 function npCost() {

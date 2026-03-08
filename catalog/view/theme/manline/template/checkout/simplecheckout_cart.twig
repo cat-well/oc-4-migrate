@@ -1,5 +1,9 @@
 {# Port of OC2: catalog/view/theme/manline/template/checkout/simplecheckout_cart.tpl #}
 <div class="simplecheckout-block" id="simplecheckout_cart">
+  {% if errors.cart %}
+    <div class="simplecheckout-warning-block">{{ errors.cart }}</div>
+  {% endif %}
+
   <table class="simplecheckout-cart">
     <colgroup>
       <col class="image">
@@ -45,14 +49,16 @@
           </td>
           <td class="model">{{ product.model|default('') }}</td>
           <td class="quantity">
-            <img class="pm_cart" data-onclick="decreaseProductQuantity" data-product-key="{{ product.key }}" src="catalog/view/theme/manline/image/minus.png" alt="-" title="-" />
-            <input type="text" data-onchange="changeProductQuantity" data-product-key="{{ product.key }}" name="quantity[{{ product.key }}]" value="{{ product.quantity }}" size="1" />
-            <img class="pm_cart" data-onclick="increaseProductQuantity" data-product-key="{{ product.key }}" src="catalog/view/theme/manline/image/plus.png" alt="+" title="+" />
+            <span class="quantity-control">
+              <img class="pm_cart" data-onclick="decreaseProductQuantity" data-product-key="{{ product.key }}" src="catalog/view/theme/manline/image/simplecheckout-minus.png" alt="-" title="-" />
+              <input type="text" data-onchange="changeProductQuantity" data-product-key="{{ product.key }}" name="quantity[{{ product.key }}]" value="{{ product.quantity }}" size="1" />
+              <img class="pm_cart" data-onclick="increaseProductQuantity" data-product-key="{{ product.key }}" src="catalog/view/theme/manline/image/simplecheckout-plus.png" alt="+" title="+" />
+            </span>
           </td>
           <td class="price">{{ product.price }}</td>
           <td class="total">{{ product.total }}</td>
           <td class="remove">
-            <img data-onclick="removeProduct" data-product-key="{{ product.key }}" src="catalog/view/theme/manline/image/close.png" alt="x" title="x" />
+            <img data-onclick="removeProduct" data-product-key="{{ product.key }}" src="catalog/view/theme/manline/image/simplecheckout-close.png" alt="x" title="x" />
           </td>
         </tr>
       {% endfor %}
@@ -68,9 +74,27 @@
     </div>
   {% endfor %}
 
+  {% if coupon_enabled %}
+    <div class="simplecheckout-cart-total">
+      <span class="inputs">{{ entry_coupon }}&nbsp;<input type="text" data-onchange="reloadAll" name="coupon" value="{{ coupon }}" /></span>
+    </div>
+  {% endif %}
+
   <input type="hidden" name="remove" value="" id="simplecheckout_remove" />
+  <div style="display:none;" id="simplecheckout_cart_total">{{ cart_total|default('') }}</div>
+
+  {% if not display_model %}
+    <style>
+      .simplecheckout-cart col.model,
+      .simplecheckout-cart th.model,
+      .simplecheckout-cart td.model {
+        display: none;
+      }
+    </style>
+  {% endif %}
 </div>
 
-<div class="dozakaz" data-free-deliv="900">
-  <div class="dozakaz_in"><span class="dozak_word">{{ text_dozak_word|default('Дозакажите') }}</span> {{ text_dozak_after|default('на') }} <span class="rd">900 грн</span> {{ text_dozak_and|default('и получите') }} <span class="rb">{{ text_dozak_free|default('бесплатную доставку') }}</span></div>
+<div class="dozakaz" data-free-deliv="{{ free_delivery_total|default(1500) }}">
+  <div class="free"><span class="red">{{ text_free_delivery_prefix|default('Поздравляем!') }}</span> {{ text_free_delivery|default('Вы получили бесплатную доставку') }}</div>
+  <div class="dozakaz_in"><span class="dozak_word">{{ text_dozak_word|default('Дозакажите') }}</span> {{ text_dozak_after|default('на') }} <span class="rd">1500 грн</span> {{ text_dozak_and|default('и получите') }} <span class="rb">{{ text_dozak_free|default('бесплатную доставку') }}</span></div>
 </div>

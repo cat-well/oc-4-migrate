@@ -1,0 +1,58 @@
+<div class="simplecheckout-block" id="simplecheckout_shipping_address" {% if errors.shipping_country or errors.shipping_zone or errors.shipping_city or errors.shipping_address_1 or errors.shipping_postcode %}data-error="true"{% endif %}>
+  <div class="checkout-heading"><span>{{ text_shipping_address }}</span></div>
+  <div class="simplecheckout-block-content">
+    <div class="simplecheckout-table-form">
+      <div class="simplecheckout-table-form-left"><span class="simplecheckout-required">*</span> {{ entry_country }}</div>
+      <div class="simplecheckout-table-form-right">
+        <select name="shipping_country_id" data-onchange="reloadAll">
+          <option value="">{{ text_select }}</option>
+          {% for country in countries %}
+            <option value="{{ country.country_id }}" {% if country.country_id == shipping_address.country_id %}selected="selected"{% endif %}>{{ country.name }}</option>
+          {% endfor %}
+        </select>
+        {% if errors.shipping_country %}
+          <div class="simplecheckout-error-text">{{ errors.shipping_country }}</div>
+        {% endif %}
+      </div>
+
+      <div class="simplecheckout-table-form-left"><span class="simplecheckout-required">*</span> {{ entry_zone }}</div>
+      <div class="simplecheckout-table-form-right">
+        <select name="shipping_zone_id" data-onchange="reloadAll">
+          <option value="">{{ text_select }}</option>
+          {% for zone in zones %}
+            <option value="{{ zone.zone_id }}" {% if zone.zone_id == shipping_address.zone_id %}selected="selected"{% endif %}>{{ zone.name }}</option>
+          {% endfor %}
+        </select>
+        {% if errors.shipping_zone %}
+          <div class="simplecheckout-error-text">{{ errors.shipping_zone }}</div>
+        {% endif %}
+      </div>
+
+      <div class="simplecheckout-table-form-left"><span class="simplecheckout-required">*</span> {{ entry_city }}</div>
+      <div class="simplecheckout-table-form-right">
+        <input type="text" name="shipping_city" id="shipping_address_city" value="{{ shipping_address.city }}" data-onchange="reloadAll" autocomplete="off" />
+        <input type="hidden" name="shipping_city_ref" id="shipping_address_city_ref" value="{{ shipping_city_ref|default(shipping_address.city_ref|default('')) }}" />
+        {% if errors.shipping_city %}
+          <div class="simplecheckout-error-text">{{ errors.shipping_city }}</div>
+        {% endif %}
+      </div>
+
+      <div class="simplecheckout-table-form-left"><span class="simplecheckout-required">*</span> {{ entry_address_1 }}</div>
+      <div class="simplecheckout-table-form-right">
+        <input type="text" name="shipping_address_1" id="shipping_address_address_1" value="{{ shipping_address.address_1 }}" data-onchange="reloadAll" />
+        <input type="hidden" name="shipping_address_ref" id="shipping_address_address_ref" value="{{ shipping_address_ref|default(shipping_address.address_ref|default('')) }}" />
+        {% if errors.shipping_address_1 %}
+          <div class="simplecheckout-error-text">{{ errors.shipping_address_1 }}</div>
+        {% endif %}
+      </div>
+
+      <div class="simplecheckout-table-form-left">{{ entry_postcode }}</div>
+      <div class="simplecheckout-table-form-right">
+        <input type="text" name="shipping_postcode" value="{{ shipping_address.postcode }}" data-onchange="reloadAll" />
+        {% if errors.shipping_postcode %}
+          <div class="simplecheckout-error-text">{{ errors.shipping_postcode }}</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>

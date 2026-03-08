@@ -1,0 +1,67 @@
+<div class="simplecheckout-block" id="simplecheckout_payment" {% if errors.payment_method or errors.agree %}data-error="true"{% endif %}>
+  <div class="checkout-heading"><span>{{ text_payment_method }}</span></div>
+  {% if errors.payment_method %}
+    <div class="simplecheckout-warning-block">{{ errors.payment_method }}</div>
+  {% endif %}
+  <div class="simplecheckout-block-content">
+    {% if payment_methods %}
+      <table class="simplecheckout-methods-table">
+        {% for payment_method in payment_methods %}
+          {% if payment_method.name %}
+            <tr>
+              <td colspan="2"><b>{{ payment_method.name }}</b></td>
+            </tr>
+          {% endif %}
+
+          {% if payment_method.error %}
+            <tr>
+              <td colspan="2"><div class="simplecheckout-error-text">{{ payment_method.error }}</div></td>
+            </tr>
+          {% endif %}
+
+          {% if payment_method.option %}
+            {% for option in payment_method.option %}
+              <tr>
+                <td class="code">
+                  <input
+                    type="radio"
+                    data-onchange="reloadAll"
+                    name="payment_method"
+                    value="{{ option.code }}"
+                    id="{{ option.code|replace({'.':'-'}) }}"
+                    {% if option.code == payment_code %}checked="checked"{% endif %}
+                  />
+                </td>
+                <td class="title">
+                  <label for="{{ option.code|replace({'.':'-'}) }}">{{ option.name|default(option.title)|default('') }}</label>
+                  {% if option.description %}
+                    <div class="simplecheckout-methods-description">{{ option.description }}</div>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          {% endif %}
+        {% endfor %}
+      </table>
+    {% endif %}
+
+    {% if text_agree %}
+      <div class="simplecheckout-customer-same-address">
+        <label>
+          <input type="hidden" name="agree" value="0" />
+          <input type="checkbox" name="agree" value="1" data-onchange="reloadAll" {% if agree %}checked="checked"{% endif %} />
+          {{ text_agree|raw }}
+        </label>
+      </div>
+      {% if errors.agree %}
+        <div class="simplecheckout-error-text">{{ errors.agree }}</div>
+      {% endif %}
+    {% endif %}
+
+    <div class="simplecheckout-button-block buttons" id="buttons">
+      <div class="simplecheckout-button-right">
+        <a class="button btn-primary button_oc btn" href="#" data-onclick="createOrder" id="simplecheckout_button_confirm"><span>{{ button_order }}</span></a>
+      </div>
+    </div>
+  </div>
+</div>
