@@ -280,6 +280,35 @@
             </div>
           </div>
         </div>
+        {% if novaposhta.is_order %}
+          <div class="row">
+            <div class="col mb-3">
+              <div id="section-novaposhta" class="card border-info">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                  <span><i class="fa-solid fa-truck-fast"></i> {{ text_novaposhta }}</span>
+                  {% if novaposhta.can_create_ttn %}
+                    <button type="button" id="button-np-create-ttn" class="btn btn-sm btn-primary"><i class="fa-solid fa-plus-circle"></i> {{ button_np_create_ttn }}</button>
+                  {% endif %}
+                </div>
+                <div class="card-body">
+                  <div class="row row-cols-1 row-cols-md-2 g-2 mb-3">
+                    <div class="col"><strong>{{ text_np_delivery_type }}:</strong> <span id="np-delivery-type">{{ novaposhta.delivery_type_name }}</span></div>
+                    <div class="col"><strong>{{ text_np_city }}:</strong> <span id="np-city">{{ novaposhta.city ? novaposhta.city : text_none }}</span></div>
+                    <div class="col"><strong>{{ text_np_address }}:</strong> <span id="np-address">{{ novaposhta.address ? novaposhta.address : text_none }}</span></div>
+                    <div class="col"><strong>{{ text_np_zone }}:</strong> <span id="np-zone">{{ novaposhta.zone ? novaposhta.zone : text_none }}</span></div>
+                    <div class="col"><strong>{{ text_np_country }}:</strong> <span id="np-country">{{ novaposhta.country ? novaposhta.country : text_none }}</span></div>
+                  </div>
+                  <div class="row row-cols-1 row-cols-md-3 g-2">
+                    <div class="col"><strong>{{ text_np_ttn }}:</strong> <span id="np-ttn-number">{{ novaposhta.ttn_number ? novaposhta.ttn_number : text_none }}</span></div>
+                    <div class="col"><strong>{{ text_np_ttn_ref }}:</strong> <span id="np-ttn-ref">{{ novaposhta.ttn_ref ? novaposhta.ttn_ref : text_none }}</span></div>
+                    <div class="col"><strong>{{ text_np_ttn_date }}:</strong> <span id="np-ttn-date">{{ novaposhta.ttn_date_created ? novaposhta.ttn_date_created : text_none }}</span></div>
+                  </div>
+                  <div id="np-ttn-error" class="alert alert-danger mt-3 mb-0{% if not novaposhta.ttn_error %} d-none{% endif %}">{{ novaposhta.ttn_error }}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        {% endif %}
         <div id="collapse-order" class="collapse">
           <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3">
             {% for extension in extensions %}
@@ -1087,6 +1116,57 @@ $(document).on('click', '#button-invoice', function() {
         },
         error: function(xhr, ajaxOptions, thrownError) {
             console.log(thrownError + "\r\n" + xhr.statusText + "\r\n" + xhr.responseText);
+        }
+    });
+});
+
+$(document).on('click', '#button-np-create-ttn', function() {
+    var element = this;
+
+    $.ajax({
+        url: '{{ novaposhta_create_ttn }}',
+        type: 'post',
+        dataType: 'json',
+        data: {
+            order_id: $('#input-order-id').val()
+        },
+        beforeSend: function() {
+            $(element).prop('disabled', true);
+        },
+        complete: function() {
+            if (!$(element).hasClass('disabled')) {
+                $(element).prop('disabled', false);
+            }
+        },
+        success: function(json) {
+            $('.alert-dismissible').remove();
+
+            if (json['error']) {
+                $('#alert').prepend('<div class="alert alert-danger alert-dismissible"><i class="fa-solid fa-circle-exclamation"></i> ' + json['error'] + ' <button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>');
+                $('#np-ttn-error').removeClass('d-none').text(json['error']);
+            }
+
+            if (json['success']) {
+                $('#alert').prepend('<div class="alert alert-success alert-dismissible"><i class="fa-solid fa-check-circle"></i> ' + json['success'] + ' <button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>');
+
+                if (json['ttn_number']) {
+                    $('#np-ttn-number').text(json['ttn_number']);
+                }
+
+                if (json['ttn_ref']) {
+                    $('#np-ttn-ref').text(json['ttn_ref']);
+                }
+
+                if (json['ttn_date_created']) {
+                    $('#np-ttn-date').text(json['ttn_date_created']);
+                }
+
+                $('#np-ttn-error').addClass('d-none').text('');
+                $(element).addClass('disabled').prop('disabled', true);
+            }
+        },
+        error: function(xhr, ajaxOptions, thrownError) {
+            console.log(thrownError + \"\\r\\n\" + xhr.statusText + \"\\r\\n\" + xhr.responseText);
         }
     });
 });

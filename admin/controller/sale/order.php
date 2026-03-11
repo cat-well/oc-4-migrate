@@ -625,8 +625,25 @@ class Order extends \Opencart\System\Engine\Controller {
 		$data['shipping'] = $this->url->link('sale/order.shipping', 'user_token=' . $this->session->data['user_token'] . '&order_id=' . $order_id);
 		$data['invoice'] = $this->url->link('sale/order.invoice', 'user_token=' . $this->session->data['user_token'] . '&order_id=' . $order_id);
 		$data['back'] = $this->url->link('sale/order', 'user_token=' . $this->session->data['user_token'] . $url);
+		$data['novaposhta_create_ttn'] = $this->url->link('sale/order.createNovaposhtaTtn', 'user_token=' . $this->session->data['user_token'] . '&order_id=' . $order_id);
 		$data['upload'] = $this->url->link('tool/upload.upload', 'user_token=' . $this->session->data['user_token']);
 		$data['customer_add'] = $this->url->link('customer/customer.form', 'user_token=' . $this->session->data['user_token']);
+
+		$data['novaposhta'] = [
+			'is_order' => false,
+			'delivery_type' => '',
+			'delivery_type_name' => '',
+			'shipping_code' => '',
+			'city' => '',
+			'address' => '',
+			'zone' => '',
+			'country' => '',
+			'ttn_number' => '',
+			'ttn_ref' => '',
+			'ttn_error' => '',
+			'ttn_date_created' => '',
+			'can_create_ttn' => false
+		];
 
 		if ($order_id) {
 			$this->load->model('sale/order');
@@ -966,6 +983,46 @@ class Order extends \Opencart\System\Engine\Controller {
 			$data['shipping_method_code'] = '';
 			$data['shipping_method_cost'] = '';
 			$data['shipping_method_tax_class_id'] = 0;
+		}
+
+		if (!empty($order_info)) {
+			$this->load->model('extension/manline/shipping/novaposhta');
+
+			$novaposhta_meta = $this->model_extension_manline_shipping_novaposhta->getOrderMeta($order_id);
+			$shipping_code = $data['shipping_method_code'];
+
+			if (!$shipping_code && !empty($novaposhta_meta['shipping_code'])) {
+				$shipping_code = (string)$novaposhta_meta['shipping_code'];
+			}
+
+			$is_novaposhta_order = strpos($shipping_code, 'novaposhta.') === 0 || !empty($novaposhta_meta);
+
+			if ($is_novaposhta_order) {
+				$delivery_type = (string)($novaposhta_meta['delivery_type'] ?? '');
+
+				if ($delivery_type === '' && $shipping_code) {
+					$parts = explode('.', $shipping_code);
+					$delivery_type = (string)($parts[1] ?? '');
+				}
+
+				$ttn_number = trim((string)($novaposhta_meta['ttn_number'] ?? ''));
+
+				$data['novaposhta'] = [
+					'is_order' => true,
+					'delivery_type' => $delivery_type,
+					'delivery_type_name' => $this->formatNovaposhtaDeliveryType($delivery_type),
+					'shipping_code' => $shipping_code,
+					'city' => (string)($novaposhta_meta['city'] ?? $data['shipping_city']),
+					'address' => (string)($novaposhta_meta['address'] ?? $data['shipping_address_1']),
+					'zone' => (string)($novaposhta_meta['zone'] ?? $data['shipping_zone']),
+					'country' => (string)($novaposhta_meta['country'] ?? $data['shipping_country']),
+					'ttn_number' => $ttn_number,
+					'ttn_ref' => trim((string)($novaposhta_meta['ttn_ref'] ?? '')),
+					'ttn_error' => trim((string)($novaposhta_meta['ttn_error'] ?? '')),
+					'ttn_date_created' => (string)($novaposhta_meta['ttn_date_created'] ?? ''),
+					'can_create_ttn' => $this->user->hasPermission('modify', 'sale/order') && $ttn_number === ''
+				];
+			}
 		}
 
 		// Reward Points
@@ -1866,6 +1923,69 @@ class Order extends \Opencart\System\Engine\Controller {
 	}
 
 	/**
+	 * Create Nova Poshta TTN
+	 *
+	 * @return void
+	 */
+	public function createNovaposhtaTtn(): void {
+		$this->load->language('sale/order');
+
+		$json = [];
+
+		if (isset($this->request->get['order_id'])) {
+			$order_id = (int)$this->request->get['order_id'];
+		} elseif (isset($this->request->post['order_id'])) {
+			$order_id = (int)$this->request->post['order_id'];
+		} else {
+			$order_id = 0;
+		}
+
+		if (!$this->user->hasPermission('modify', 'sale/order')) {
+			$json['error'] = $this->language->get('error_permission');
+		}
+
+		$this->load->model('sale/order');
+
+		$order_info = $this->model_sale_order->getOrder($order_id);
+
+		if (!$order_info) {
+			$json['error'] = $this->language->get('error_order');
+		}
+
+		if (!$json) {
+			$this->load->model('extension/manline/shipping/novaposhta');
+
+			$shipping_code = (string)($order_info['shipping_method']['code'] ?? '');
+
+			if (strpos($shipping_code, 'novaposhta.') !== 0) {
+				$novaposhta_meta = $this->model_extension_manline_shipping_novaposhta->getOrderMeta($order_id);
+				$shipping_code = (string)($novaposhta_meta['shipping_code'] ?? '');
+			}
+
+			if (strpos($shipping_code, 'novaposhta.') !== 0) {
+				$json['error'] = $this->language->get('error_np_not_order');
+			}
+		}
+
+		if (!$json) {
+			$result = $this->model_extension_manline_shipping_novaposhta->createTtnForOrder($order_id);
+
+			if (empty($result['success'])) {
+				$json['error'] = (string)($result['error'] ?? $this->language->get('error_np_ttn_failed'));
+			} else {
+				$json['success'] = $this->language->get('text_np_ttn_success');
+				$json['ttn_number'] = (string)($result['ttn_number'] ?? '');
+				$json['ttn_ref'] = (string)($result['ttn_ref'] ?? '');
+				$json['ttn_date_created'] = (string)($result['ttn_date_created'] ?? '');
+				$json['message'] = (string)($result['message'] ?? '');
+			}
+		}
+
+		$this->response->addHeader('Content-Type: application/json');
+		$this->response->setOutput(json_encode($json));
+	}
+
+	/**
 	 * Add Reward
 	 *
 	 * @return void
@@ -2086,5 +2206,18 @@ class Order extends \Opencart\System\Engine\Controller {
 
 		$this->response->addHeader('Content-Type: application/json');
 		$this->response->setOutput(json_encode($json));
+	}
+
+	private function formatNovaposhtaDeliveryType(string $delivery_type): string {
+		switch ($delivery_type) {
+			case 'courier':
+				return $this->language->get('text_np_delivery_courier');
+			case 'locker':
+				return $this->language->get('text_np_delivery_locker');
+			case 'branch':
+				return $this->language->get('text_np_delivery_branch');
+			default:
+				return $delivery_type ? $delivery_type : $this->language->get('text_none');
+		}
 	}
 }

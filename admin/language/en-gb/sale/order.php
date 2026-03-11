@@ -134,3 +134,21 @@ $_['error_affiliate']            = 'Warning: Affiliate does not exist!';
 $_['error_reward_add']           = 'Warning: Reward points for this order has already been added!';
 $_['error_reward_guest']         = 'Warning: Guests can not use reward points!';
 $_['error_commission_add']       = 'Warning: Affiliate commission for this order has already been added!';
+$_['error_np_not_order']           = 'Warning: This order does not use Nova Poshta shipping!';
+$_['error_np_ttn_failed']          = 'Warning: Failed to create Nova Poshta TTN!';
+
+// Nova Poshta
+$_['text_novaposhta']              = 'Nova Poshta';
+$_['text_np_delivery_type']        = 'Delivery Type';
+$_['text_np_city']                 = 'City';
+$_['text_np_address']              = 'Address';
+$_['text_np_zone']                 = 'Region';
+$_['text_np_country']              = 'Country';
+$_['text_np_ttn']                  = 'TTN';
+$_['text_np_ttn_ref']              = 'TTN Ref';
+$_['text_np_ttn_date']             = 'Created At';
+$_['text_np_ttn_success']          = 'Nova Poshta TTN has been created successfully.';
+$_['text_np_delivery_branch']      = 'Branch';
+$_['text_np_delivery_courier']     = 'Courier';
+$_['text_np_delivery_locker']      = 'Locker';
+$_['button_np_create_ttn']         = 'Create TTN';
