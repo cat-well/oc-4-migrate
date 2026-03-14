@@ -1,10 +1,22 @@
 {{ header }}
-<div id="common-success" class="container">
-  <ul class="breadcrumb">
+
+<div class="container">
+  {# Breadcrumbs (OC2-like) #}
+  <div class="breadcrumb_w">
     {% for breadcrumb in breadcrumbs %}
-      <li class="breadcrumb-item"><a href="{{ breadcrumb.href }}">{{ breadcrumb.text }}</a></li>
+      {% if not loop.first %}
+        <span class="sep">&gt;</span>
+      {% endif %}
+      {% if not loop.last %}
+        <a href="{{ breadcrumb.href }}">{{ breadcrumb.text }}</a>
+      {% else %}
+        <span class="current">{{ breadcrumb.text }}</span>
+      {% endif %}
     {% endfor %}
-  </ul>
+  </div>
+</div>
+
+<div id="common-success" class="container">
   <div class="row">{{ column_left }}
     <div id="content" class="col">{{ content_top }}
       <h1>{{ heading_title }}</h1>
@@ -13,4 +25,5 @@
       {{ content_bottom }}</div>
     {{ column_right }}</div>
 </div>
+
 {{ footer }}
