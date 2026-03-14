@@ -37,16 +37,48 @@ class Simplecheckout extends \Opencart\System\Engine\Controller {
 		$this->loadSimpleLanguages();
 
 		if ($create_order && !$state['errors']) {
-			$payment_form = $this->load->controller('checkout/confirm');
+			// For offline payment methods (COD etc.) we confirm immediately and redirect to success.
+			$payment_code = (string)($state['payment_code'] ?? '');
 
-			if ($payment_form) {
-				$state['payment_form'] = $payment_form;
+			if (in_array($payment_code, ['cod.cod', 'cheque.cheque', 'bank_transfer.bank_transfer', 'free_checkout.free_checkout'], true)) {
 				$this->persistNovaPoshtaOrderMeta();
+
+				if (isset($this->session->data['order_id'])) {
+					$this->load->model('checkout/order');
+
+					$method = $this->session->data['payment_method']['code'] ?? '';
+					if ($method === 'cod.cod') {
+						$status_id = (int)$this->config->get('payment_cod_order_status_id');
+					} elseif ($method === 'cheque.cheque') {
+						$status_id = (int)$this->config->get('payment_cheque_order_status_id');
+					} elseif ($method === 'bank_transfer.bank_transfer') {
+						$status_id = (int)$this->config->get('payment_bank_transfer_order_status_id');
+					} elseif ($method === 'free_checkout.free_checkout') {
+						$status_id = (int)$this->config->get('payment_free_checkout_order_status_id');
+					} else {
+						$status_id = 0;
+					}
+
+					if ($status_id > 0) {
+						$this->model_checkout_order->addHistory((int)$this->session->data['order_id'], $status_id);
+					}
+				}
+
 				$json['order_created'] = true;
+				$json['redirect'] = $this->url->link('checkout/success', 'language=' . $this->config->get('config_language'), true);
 				unset($this->session->data['simplecheckout_show_errors']);
 			} else {
-				$state['errors']['warning'] = $this->language->get('error_confirm');
-				$json['order_created'] = false;
+				$payment_form = $this->load->controller('checkout/confirm');
+
+				if ($payment_form) {
+					$state['payment_form'] = $payment_form;
+					$this->persistNovaPoshtaOrderMeta();
+					$json['order_created'] = true;
+					unset($this->session->data['simplecheckout_show_errors']);
+				} else {
+					$state['errors']['warning'] = $this->language->get('error_confirm');
+					$json['order_created'] = false;
+				}
 			}
 		}
 
