@@ -1492,7 +1492,24 @@ div#filter_box_w {
 
 .breadcrumb {
     font-weight: 300;
-    margin: 20px auto 40px
+    margin: 20px auto 40px;
+
+    /* OC4 templates use <ul class="breadcrumb"><li class="breadcrumb-item">...
+       Legacy OC2 theme used <div> inside .breadcrumb. Support both without bullets. */
+    padding-left: 0;
+    list-style: none;
+    background: transparent;
+}
+
+.breadcrumb .breadcrumb-item {
+    display: inline-block;
+}
+
+.breadcrumb .breadcrumb-item + .breadcrumb-item:before {
+    content: '>';
+    display: inline-block;
+    margin: 0 8px;
+    color: #666;
 }
 
 .container, .container-fluid {
