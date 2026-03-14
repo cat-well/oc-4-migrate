@@ -136,6 +136,8 @@ $_['error_reward_guest']         = 'Warning: Guests can not use reward points!';
 $_['error_commission_add']       = 'Warning: Affiliate commission for this order has already been added!';
 $_['error_np_not_order']           = 'Warning: This order does not use Nova Poshta shipping!';
 $_['error_np_ttn_failed']          = 'Warning: Failed to create Nova Poshta TTN!';
+$_['error_np_ttn_not_found']        = 'Warning: TTN is not assigned to this order!';
+$_['error_np_ttn_status_failed']     = 'Warning: Failed to refresh Nova Poshta TTN status!';
 
 // Nova Poshta
 $_['text_novaposhta']              = 'Nova Poshta';
@@ -147,8 +149,48 @@ $_['text_np_country']              = 'Country';
 $_['text_np_ttn']                  = 'TTN';
 $_['text_np_ttn_ref']              = 'TTN Ref';
 $_['text_np_ttn_date']             = 'Created At';
+$_['text_np_ttn_status_code']        = 'Status Code';
+$_['text_np_ttn_status']             = 'Status';
+$_['text_np_ttn_status_date']        = 'Status Updated';
 $_['text_np_ttn_success']          = 'Nova Poshta TTN has been created successfully.';
+$_['text_np_ttn_recreate_success']  = 'Nova Poshta TTN has been recreated successfully.';
+$_['text_np_ttn_delete_success']    = 'Nova Poshta TTN has been cancelled and removed from order.';
+$_['text_np_ttn_delete_missing_remote'] = 'TTN was not found in Nova Poshta anymore. Local link has been removed.';
+$_['text_np_status_refresh_success'] = 'Nova Poshta status has been refreshed successfully.';
+$_['text_np_status_refresh_unchanged'] = 'Nova Poshta status has not changed.';
+$_['text_np_status_order_sync_success'] = 'Order status updated automatically: %s.';
+$_['text_np_status_order_sync_skipped'] = 'Order status sync skipped to prevent rollback (%s -> %s).';
 $_['text_np_delivery_branch']      = 'Branch';
 $_['text_np_delivery_courier']     = 'Courier';
 $_['text_np_delivery_locker']      = 'Locker';
+$_['text_np_confirm_delete']        = 'Are you sure you want to cancel TTN in Nova Poshta and remove it from this order?';
+$_['text_np_history_created']       = 'Nova Poshta TTN created: %s';
+$_['text_np_history_recreated']     = 'Nova Poshta TTN recreated: %s';
+$_['text_np_history_deleted']       = 'Nova Poshta TTN deleted: %s';
+$_['text_np_history_status_refreshed'] = 'Nova Poshta status refreshed (TTN %s): [%s] %s';
+$_['text_np_history_order_status_sync'] = 'Order status auto-updated from Nova Poshta %s: %s -> %s';
 $_['button_np_create_ttn']         = 'Create TTN';
+$_['button_np_recreate_ttn']       = 'Recreate TTN';
+$_['button_np_delete_ttn']         = 'Delete TTN';
+$_['button_np_print_ttn']          = 'Print TTN';
+$_['button_np_refresh_status']      = 'Refresh Status';
+
+// Checkbox
+$_['text_checkbox']                 = 'Checkbox receipt';
+$_['text_checkbox_ready']           = 'Ready to create receipt (auto mode trigger status matched).';
+$_['text_checkbox_receipt_id']      = 'Receipt ID';
+$_['text_checkbox_sms_phone']       = 'SMS phone';
+$_['button_checkbox_create']        = 'Create receipt';
+$_['button_checkbox_pdf']           = 'Open PDF';
+$_['button_checkbox_sms']           = 'Send SMS';
+
+$_['text_checkbox_receipt_created'] = 'Checkbox receipt created.';
+$_['text_checkbox_sms_sent']        = 'Receipt has been sent via SMS.';
+
+$_['text_checkbox_history_created'] = 'Checkbox receipt created: %s';
+$_['text_checkbox_history_sms']     = 'Checkbox receipt %s sent via SMS to %s';
+
+$_['error_checkbox_disabled']       = 'Checkbox module is disabled or not configured.';
+$_['error_checkbox_failed']         = 'Checkbox API request failed.';
+$_['error_checkbox_no_receipt']     = 'Receipt was not created yet.';
+$_['error_checkbox_phone']          = 'Customer phone is invalid. Expected format: 380XXXXXXXXX.';

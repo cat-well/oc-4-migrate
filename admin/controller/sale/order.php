@@ -626,6 +626,11 @@ class Order extends \Opencart\System\Engine\Controller {
 		$data['invoice'] = $this->url->link('sale/order.invoice', 'user_token=' . $this->session->data['user_token'] . '&order_id=' . $order_id);
 		$data['back'] = $this->url->link('sale/order', 'user_token=' . $this->session->data['user_token'] . $url);
 		$data['novaposhta_create_ttn'] = $this->url->link('sale/order.createNovaposhtaTtn', 'user_token=' . $this->session->data['user_token'] . '&order_id=' . $order_id);
+		$data['novaposhta_recreate_ttn'] = $this->url->link('sale/order.recreateNovaposhtaTtn', 'user_token=' . $this->session->data['user_token'] . '&order_id=' . $order_id);
+		$data['novaposhta_delete_ttn'] = $this->url->link('sale/order.deleteNovaposhtaTtn', 'user_token=' . $this->session->data['user_token'] . '&order_id=' . $order_id);
+		$data['novaposhta_refresh_status'] = $this->url->link('sale/order.refreshNovaposhtaStatus', 'user_token=' . $this->session->data['user_token'] . '&order_id=' . $order_id);
+		$data['checkbox_create_receipt'] = $this->url->link('sale/order.createCheckboxReceipt', 'user_token=' . $this->session->data['user_token'] . '&order_id=' . $order_id);
+		$data['checkbox_send_sms'] = $this->url->link('sale/order.sendCheckboxReceiptSms', 'user_token=' . $this->session->data['user_token'] . '&order_id=' . $order_id);
 		$data['upload'] = $this->url->link('tool/upload.upload', 'user_token=' . $this->session->data['user_token']);
 		$data['customer_add'] = $this->url->link('customer/customer.form', 'user_token=' . $this->session->data['user_token']);
 
@@ -642,7 +647,25 @@ class Order extends \Opencart\System\Engine\Controller {
 			'ttn_ref' => '',
 			'ttn_error' => '',
 			'ttn_date_created' => '',
-			'can_create_ttn' => false
+			'ttn_status_code' => '',
+			'ttn_status_text' => '',
+			'ttn_status_date' => '',
+			'ttn_print_url' => '',
+			'can_create_ttn' => false,
+			'can_recreate_ttn' => false,
+			'can_delete_ttn' => false,
+			'can_print_ttn' => false,
+			'can_refresh_status' => false
+		];
+
+		$data['checkbox'] = [
+			'enabled' => false,
+			'ready' => false,
+			'receipt_id' => '',
+			'receipt_pdf_url' => '',
+			'sms_phone' => '',
+			'sms_sent' => false,
+			'error' => ''
 		];
 
 		if ($order_id) {
@@ -1006,6 +1029,8 @@ class Order extends \Opencart\System\Engine\Controller {
 				}
 
 				$ttn_number = trim((string)($novaposhta_meta['ttn_number'] ?? ''));
+				$ttn_print_url = $this->model_extension_manline_shipping_novaposhta->getPrintUrlByOrderId($order_id);
+				$can_modify = $this->user->hasPermission('modify', 'sale/order');
 
 				$data['novaposhta'] = [
 					'is_order' => true,
@@ -1020,7 +1045,59 @@ class Order extends \Opencart\System\Engine\Controller {
 					'ttn_ref' => trim((string)($novaposhta_meta['ttn_ref'] ?? '')),
 					'ttn_error' => trim((string)($novaposhta_meta['ttn_error'] ?? '')),
 					'ttn_date_created' => (string)($novaposhta_meta['ttn_date_created'] ?? ''),
-					'can_create_ttn' => $this->user->hasPermission('modify', 'sale/order') && $ttn_number === ''
+					'ttn_status_code' => trim((string)($novaposhta_meta['ttn_status_code'] ?? '')),
+					'ttn_status_text' => trim((string)($novaposhta_meta['ttn_status_text'] ?? '')),
+					'ttn_status_date' => trim((string)($novaposhta_meta['ttn_status_date'] ?? '')),
+					'ttn_print_url' => $ttn_print_url,
+					'can_create_ttn' => $can_modify && $ttn_number === '',
+					'can_recreate_ttn' => $can_modify && $ttn_number !== '',
+					'can_delete_ttn' => $can_modify && $ttn_number !== '',
+					'can_print_ttn' => $ttn_number !== '' && $ttn_print_url !== '',
+					'can_refresh_status' => $can_modify && $ttn_number !== ''
+				];
+			}
+		}
+
+		// Checkbox receipts
+		if (!empty($order_info)) {
+			$this->load->model('setting/module');
+			$modules = $this->model_setting_module->getModulesByCode('manline.checkbox');
+
+			$checkbox_module = [];
+			foreach ($modules as $m) {
+				$settings = json_decode($m['setting'] ?? '', true);
+				if (!is_array($settings)) {
+					$settings = [];
+				}
+				if (!empty($settings['status'])) {
+					$checkbox_module = $settings;
+					break;
+				}
+			}
+
+			if ($checkbox_module) {
+				$this->load->model('extension/manline/integration/checkbox');
+				$meta = $this->model_extension_manline_integration_checkbox->getOrderMeta($order_id);
+
+				$receipt_id = trim((string)($meta['receipt_id'] ?? ''));
+				$receipt_pdf_url = '';
+				if ($receipt_id !== '') {
+					$api = rtrim((string)($checkbox_module['api_url'] ?? 'https://api.checkbox.in.ua'), '/');
+					$receipt_pdf_url = $api . '/api/v1/receipts/' . $receipt_id . '/pdf';
+				}
+
+				$auto_enabled = !empty($checkbox_module['auto_enabled']);
+				$auto_status_id = (int)($checkbox_module['auto_status_id'] ?? 0);
+				$ready = $auto_enabled && $auto_status_id > 0 && (int)$data['order_status_id'] === $auto_status_id && $receipt_id === '';
+
+				$data['checkbox'] = [
+					'enabled' => true,
+					'ready' => $ready,
+					'receipt_id' => $receipt_id,
+					'receipt_pdf_url' => $receipt_pdf_url,
+					'sms_phone' => (string)($meta['sms_phone'] ?? ''),
+					'sms_sent' => !empty($meta['sms_sent']),
+					'error' => trim((string)($meta['error'] ?? ''))
 				];
 			}
 		}
@@ -1931,44 +2008,11 @@ class Order extends \Opencart\System\Engine\Controller {
 		$this->load->language('sale/order');
 
 		$json = [];
+		$order_id = $this->getOrderIdFromRequest();
+		$order_info = [];
 
-		if (isset($this->request->get['order_id'])) {
-			$order_id = (int)$this->request->get['order_id'];
-		} elseif (isset($this->request->post['order_id'])) {
-			$order_id = (int)$this->request->post['order_id'];
-		} else {
-			$order_id = 0;
-		}
-
-		if (!$this->user->hasPermission('modify', 'sale/order')) {
-			$json['error'] = $this->language->get('error_permission');
-		}
-
-		$this->load->model('sale/order');
-
-		$order_info = $this->model_sale_order->getOrder($order_id);
-
-		if (!$order_info) {
-			$json['error'] = $this->language->get('error_order');
-		}
-
-		if (!$json) {
-			$this->load->model('extension/manline/shipping/novaposhta');
-
-			$shipping_code = (string)($order_info['shipping_method']['code'] ?? '');
-
-			if (strpos($shipping_code, 'novaposhta.') !== 0) {
-				$novaposhta_meta = $this->model_extension_manline_shipping_novaposhta->getOrderMeta($order_id);
-				$shipping_code = (string)($novaposhta_meta['shipping_code'] ?? '');
-			}
-
-			if (strpos($shipping_code, 'novaposhta.') !== 0) {
-				$json['error'] = $this->language->get('error_np_not_order');
-			}
-		}
-
-		if (!$json) {
-			$result = $this->model_extension_manline_shipping_novaposhta->createTtnForOrder($order_id);
+		if ($this->prepareNovaposhtaAction($order_id, $order_info, $json)) {
+			$result = $this->model_extension_manline_shipping_novaposhta->createTtnForOrder($order_id, false);
 
 			if (empty($result['success'])) {
 				$json['error'] = (string)($result['error'] ?? $this->language->get('error_np_ttn_failed'));
@@ -1977,7 +2021,263 @@ class Order extends \Opencart\System\Engine\Controller {
 				$json['ttn_number'] = (string)($result['ttn_number'] ?? '');
 				$json['ttn_ref'] = (string)($result['ttn_ref'] ?? '');
 				$json['ttn_date_created'] = (string)($result['ttn_date_created'] ?? '');
-				$json['message'] = (string)($result['message'] ?? '');
+				$json['print_url'] = (string)($result['print_url'] ?? $this->model_extension_manline_shipping_novaposhta->getPrintUrlByOrderId($order_id));
+
+				$this->addOrderHistoryLog($order_id, sprintf($this->language->get('text_np_history_created'), $json['ttn_number']));
+			}
+		}
+
+		$this->response->addHeader('Content-Type: application/json');
+		$this->response->setOutput(json_encode($json));
+	}
+
+	/**
+	 * Recreate Nova Poshta TTN
+	 *
+	 * @return void
+	 */
+	public function recreateNovaposhtaTtn(): void {
+		$this->load->language('sale/order');
+
+		$json = [];
+		$order_id = $this->getOrderIdFromRequest();
+		$order_info = [];
+
+		if ($this->prepareNovaposhtaAction($order_id, $order_info, $json)) {
+			$meta_before = $this->model_extension_manline_shipping_novaposhta->getOrderMeta($order_id);
+			$old_ttn = trim((string)($meta_before['ttn_number'] ?? ''));
+
+			$result = $this->model_extension_manline_shipping_novaposhta->createTtnForOrder($order_id, true);
+
+			if (empty($result['success'])) {
+				$json['error'] = (string)($result['error'] ?? $this->language->get('error_np_ttn_failed'));
+			} else {
+				$json['success'] = $this->language->get('text_np_ttn_recreate_success');
+				$json['ttn_number'] = (string)($result['ttn_number'] ?? '');
+				$json['ttn_ref'] = (string)($result['ttn_ref'] ?? '');
+				$json['ttn_date_created'] = (string)($result['ttn_date_created'] ?? '');
+				$json['print_url'] = (string)($result['print_url'] ?? $this->model_extension_manline_shipping_novaposhta->getPrintUrlByOrderId($order_id));
+
+				$history_ttn = $json['ttn_number'];
+
+				if ($old_ttn !== '') {
+					$history_ttn .= ' (old: ' . $old_ttn . ')';
+				}
+
+				$this->addOrderHistoryLog($order_id, sprintf($this->language->get('text_np_history_recreated'), $history_ttn));
+			}
+		}
+
+		$this->response->addHeader('Content-Type: application/json');
+		$this->response->setOutput(json_encode($json));
+	}
+
+	/**
+	 * Refresh Nova Poshta TTN status from API
+	 *
+	 * @return void
+	 */
+	public function refreshNovaposhtaStatus(): void {
+		$this->load->language('sale/order');
+
+		$json = [];
+		$order_id = $this->getOrderIdFromRequest();
+		$order_info = [];
+
+		if ($this->prepareNovaposhtaAction($order_id, $order_info, $json)) {
+			$result = $this->model_extension_manline_shipping_novaposhta->refreshTtnStatusForOrder($order_id);
+
+			if (empty($result['success'])) {
+				$json['error'] = (string)($result['error'] ?? $this->language->get('error_np_ttn_status_failed'));
+			} else {
+				$json['success'] = $this->language->get('text_np_status_refresh_success');
+				$json['ttn_number'] = (string)($result['ttn_number'] ?? '');
+				$json['ttn_status_code'] = (string)($result['ttn_status_code'] ?? '');
+				$json['ttn_status_text'] = (string)($result['ttn_status_text'] ?? '');
+				$json['ttn_status_date'] = (string)($result['ttn_status_date'] ?? '');
+				$json['changed'] = !empty($result['changed']);
+
+				if (!$json['changed']) {
+					$json['warning'] = $this->language->get('text_np_status_refresh_unchanged');
+				}
+
+				$history_comment = sprintf(
+					$this->language->get('text_np_history_status_refreshed'),
+					$json['ttn_number'],
+					$json['ttn_status_code'],
+					$json['ttn_status_text']
+				);
+
+				if ($json['ttn_status_date'] !== '') {
+					$history_comment .= ' (' . $json['ttn_status_date'] . ')';
+				}
+
+				$this->addOrderHistoryLog($order_id, $history_comment);
+
+				$sync_result = $this->syncOrderStatusFromNovaposhta(
+					$order_id,
+					$json['ttn_status_code'],
+					$json['ttn_status_text'],
+					$json['ttn_status_date']
+				);
+
+				if (!empty($sync_result['applied'])) {
+					$json['order_status_id'] = (int)$sync_result['order_status_id'];
+					$json['order_status_name'] = (string)$sync_result['order_status_name'];
+					$this->appendJsonMessage($json, 'success', sprintf($this->language->get('text_np_status_order_sync_success'), $json['order_status_name']));
+				}
+
+				if (!empty($sync_result['warning'])) {
+					$this->appendJsonMessage($json, 'warning', (string)$sync_result['warning']);
+				}
+			}
+		}
+
+		$this->response->addHeader('Content-Type: application/json');
+		$this->response->setOutput(json_encode($json));
+	}
+
+	/**
+	 * Cancel Nova Poshta TTN in API and remove from order meta
+	 *
+	 * @return void
+	 */
+	public function deleteNovaposhtaTtn(): void {
+		$this->load->language('sale/order');
+
+		$json = [];
+		$order_id = $this->getOrderIdFromRequest();
+		$order_info = [];
+
+		if ($this->prepareNovaposhtaAction($order_id, $order_info, $json)) {
+			$result = $this->model_extension_manline_shipping_novaposhta->deleteTtnForOrder($order_id);
+
+			if (empty($result['success'])) {
+				$json['error'] = (string)($result['error'] ?? $this->language->get('error_np_ttn_not_found'));
+			} else {
+				$deleted_ttn = (string)($result['deleted_ttn_number'] ?? '');
+				$json['success'] = $this->language->get('text_np_ttn_delete_success');
+				$json['deleted_ttn_number'] = $deleted_ttn;
+				$json['remote_deleted'] = !empty($result['remote_deleted']);
+				$json['remote_already_missing'] = !empty($result['remote_already_missing']);
+
+				if ($json['remote_already_missing']) {
+					$json['warning'] = $this->language->get('text_np_ttn_delete_missing_remote');
+				}
+
+				$this->addOrderHistoryLog($order_id, sprintf($this->language->get('text_np_history_deleted'), $deleted_ttn));
+			}
+		}
+
+		$this->response->addHeader('Content-Type: application/json');
+		$this->response->setOutput(json_encode($json));
+	}
+
+	/**
+	 * Create Checkbox receipt (fiscalization)
+	 */
+	public function createCheckboxReceipt(): void {
+		$this->load->language('sale/order');
+
+		$json = [];
+		$order_id = $this->getOrderIdFromRequest();
+		$order_info = [];
+
+		if ($this->prepareCheckboxAction($order_id, $order_info, $json)) {
+			$this->load->model('extension/manline/integration/checkbox');
+			$config = $this->getCheckboxConfig();
+
+			if (empty($config['enabled'])) {
+				$json['error'] = $this->language->get('error_checkbox_disabled');
+			} else {
+				$payload = $this->buildCheckboxSellPayload($order_info);
+
+				$result = $this->model_extension_manline_integration_checkbox->createSellReceipt($config, $payload);
+
+				if (empty($result['success'])) {
+					$json['error'] = (string)($result['error'] ?? $this->language->get('error_checkbox_failed'));
+
+					$this->model_extension_manline_integration_checkbox->saveOrderMeta($order_id, [
+						'error' => $json['error'],
+						'payload' => $payload,
+						'response' => (array)($result['response'] ?? [])
+					]);
+				} else {
+					$receipt_id = (string)($result['receipt_id'] ?? '');
+
+					$json['success'] = $this->language->get('text_checkbox_receipt_created');
+					$json['receipt_id'] = $receipt_id;
+					$json['pdf_url'] = rtrim((string)$config['api_url'], '/') . '/api/v1/receipts/' . $receipt_id . '/pdf';
+
+					$this->model_extension_manline_integration_checkbox->saveOrderMeta($order_id, [
+						'receipt_id' => $receipt_id,
+						'receipt_status' => 'CREATED',
+						'error' => '',
+						'payload' => $payload,
+						'response' => (array)($result['response'] ?? [])
+					]);
+
+					$this->addOrderHistoryLog($order_id, sprintf($this->language->get('text_checkbox_history_created'), $receipt_id));
+				}
+			}
+		}
+
+		$this->response->addHeader('Content-Type: application/json');
+		$this->response->setOutput(json_encode($json));
+	}
+
+	/**
+	 * Send Checkbox receipt via SMS
+	 */
+	public function sendCheckboxReceiptSms(): void {
+		$this->load->language('sale/order');
+
+		$json = [];
+		$order_id = $this->getOrderIdFromRequest();
+		$order_info = [];
+
+		if ($this->prepareCheckboxAction($order_id, $order_info, $json)) {
+			$this->load->model('extension/manline/integration/checkbox');
+			$config = $this->getCheckboxConfig();
+
+			if (empty($config['enabled'])) {
+				$json['error'] = $this->language->get('error_checkbox_disabled');
+			} else {
+				$meta = $this->model_extension_manline_integration_checkbox->getOrderMeta($order_id);
+				$receipt_id = trim((string)($meta['receipt_id'] ?? ''));
+
+				if ($receipt_id === '') {
+					$json['error'] = $this->language->get('error_checkbox_no_receipt');
+				} else {
+					$phone380 = $this->model_extension_manline_integration_checkbox->normalizePhoneTo380((string)($order_info['telephone'] ?? ''));
+
+					if ($phone380 === '') {
+						$json['error'] = $this->language->get('error_checkbox_phone');
+					} else {
+						$result = $this->model_extension_manline_integration_checkbox->sendReceiptSms($config, $receipt_id, $phone380);
+
+						if (empty($result['success'])) {
+							$json['error'] = (string)($result['error'] ?? $this->language->get('error_checkbox_failed'));
+							$this->model_extension_manline_integration_checkbox->saveOrderMeta($order_id, [
+								'receipt_id' => $receipt_id,
+								'sms_phone' => $phone380,
+								'sms_sent' => 0,
+								'error' => $json['error'],
+								'response' => (array)($result['response'] ?? [])
+							]);
+						} else {
+							$json['success'] = $this->language->get('text_checkbox_sms_sent');
+							$this->model_extension_manline_integration_checkbox->saveOrderMeta($order_id, [
+								'receipt_id' => $receipt_id,
+								'sms_phone' => $phone380,
+								'sms_sent' => 1,
+								'error' => ''
+							]);
+
+							$this->addOrderHistoryLog($order_id, sprintf($this->language->get('text_checkbox_history_sms'), $receipt_id, $phone380));
+						}
+					}
+				}
 			}
 		}
 
@@ -2206,6 +2506,385 @@ class Order extends \Opencart\System\Engine\Controller {
 
 		$this->response->addHeader('Content-Type: application/json');
 		$this->response->setOutput(json_encode($json));
+	}
+
+	private function getOrderIdFromRequest(): int {
+		if (isset($this->request->get['order_id'])) {
+			return (int)$this->request->get['order_id'];
+		}
+
+		if (isset($this->request->post['order_id'])) {
+			return (int)$this->request->post['order_id'];
+		}
+
+		return 0;
+	}
+
+	private function prepareNovaposhtaAction(int $order_id, array &$order_info, array &$json): bool {
+		if (!$this->user->hasPermission('modify', 'sale/order')) {
+			$json['error'] = $this->language->get('error_permission');
+
+			return false;
+		}
+
+		$this->load->model('sale/order');
+
+		$order_info = $this->model_sale_order->getOrder($order_id);
+
+		if (!$order_info) {
+			$json['error'] = $this->language->get('error_order');
+
+			return false;
+		}
+
+		$this->load->model('extension/manline/shipping/novaposhta');
+
+		$shipping_code = (string)($order_info['shipping_method']['code'] ?? '');
+
+		if (strpos($shipping_code, 'novaposhta.') !== 0) {
+			$novaposhta_meta = $this->model_extension_manline_shipping_novaposhta->getOrderMeta($order_id);
+			$shipping_code = (string)($novaposhta_meta['shipping_code'] ?? '');
+		}
+
+		if (strpos($shipping_code, 'novaposhta.') !== 0) {
+			$json['error'] = $this->language->get('error_np_not_order');
+
+			return false;
+		}
+
+		return true;
+	}
+
+	private function prepareCheckboxAction(int $order_id, array &$order_info, array &$json): bool {
+		if (!$this->user->hasPermission('modify', 'sale/order')) {
+			$json['error'] = $this->language->get('error_permission');
+
+			return false;
+		}
+
+		$this->load->model('sale/order');
+		$order_info = $this->model_sale_order->getOrder($order_id);
+
+		if (!$order_info) {
+			$json['error'] = $this->language->get('error_order');
+
+			return false;
+		}
+
+		return true;
+	}
+
+	private function getCheckboxConfig(): array {
+		$config = ['enabled' => false];
+
+		$this->load->model('setting/module');
+		$modules = $this->model_setting_module->getModulesByCode('manline.checkbox');
+
+		foreach ($modules as $m) {
+			$settings = json_decode($m['setting'] ?? '', true);
+			if (!is_array($settings)) {
+				$settings = [];
+			}
+			if (!empty($settings['status'])) {
+				$settings['enabled'] = true;
+				return $settings;
+			}
+		}
+
+		return $config;
+	}
+
+	private function buildCheckboxSellPayload(array $order_info): array {
+		$this->load->model('sale/order');
+		$products = $this->model_sale_order->getProducts((int)$order_info['order_id']);
+
+		$goods = [];
+		foreach ($products as $p) {
+			$name = (string)($p['name'] ?? '');
+			$model = (string)($p['model'] ?? '');
+			$qty = (int)($p['quantity'] ?? 0);
+			$price = (float)($p['price'] ?? 0.0);
+
+			if ($qty <= 0) {
+				continue;
+			}
+
+			// Checkbox expects amount in kopiykas and quantity in milli-units (1 = 1000)
+			$price_uah = $this->normalizeOrderCurrencyAmount($price, $order_info);
+			$price_kop = (int)round($price_uah * 100);
+
+			$goods[] = [
+				'good' => [
+					'code' => $model !== '' ? $model : ('order-' . (int)$order_info['order_id']),
+					'name' => $name,
+					'price' => $price_kop
+				],
+				'quantity' => $qty * 1000
+			];
+		}
+
+		$total_uah = $this->normalizeOrderCurrencyAmount((float)($order_info['total'] ?? 0.0), $order_info);
+		$total_kop = (int)round($total_uah * 100);
+
+		$payments = [];
+		if ($this->isCodPayment($order_info)) {
+			$payments[] = ['type' => 'CASH', 'value' => $total_kop, 'label' => 'COD'];
+		} else {
+			$payments[] = ['type' => 'CASHLESS', 'value' => $total_kop, 'label' => 'Online'];
+		}
+
+		return [
+			'id' => $this->uuidv4(),
+			'goods' => $goods,
+			'payments' => $payments
+		];
+	}
+
+	private function normalizeOrderCurrencyAmount(float $amount, array $order_info): float {
+		// OC stores order values in order currency. If order currency is not UAH, try to convert to base using currency_value.
+		$currency_code = (string)($order_info['currency_code'] ?? '');
+		$currency_value = (float)($order_info['currency_value'] ?? 1.0);
+
+		if ($currency_code === 'UAH' || $currency_code === 'грн' || $currency_value <= 0) {
+			return $amount;
+		}
+
+		// In OC: total in order currency, currency_value is rate to default. For safety we just divide.
+		return $amount / $currency_value;
+	}
+
+	private function isCodPayment(array $order_info): bool {
+		$code = '';
+		if (!empty($order_info['payment_method']) && is_array($order_info['payment_method'])) {
+			$code = (string)($order_info['payment_method']['code'] ?? '');
+		}
+		$code = strtolower($code);
+		if ($code === '') {
+			$code = strtolower((string)($order_info['payment_code'] ?? ''));
+		}
+
+		return $code !== '' && (
+			strpos($code, 'cod') !== false ||
+			strpos($code, 'cash') !== false ||
+			strpos($code, 'upon') !== false
+		);
+	}
+
+	private function uuidv4(): string {
+		$data = random_bytes(16);
+		$data[6] = chr((ord($data[6]) & 0x0f) | 0x40);
+		$data[8] = chr((ord($data[8]) & 0x3f) | 0x80);
+		return vsprintf('%s%s-%s-%s-%s-%s%s%s', str_split(bin2hex($data), 4));
+	}
+
+	private function addOrderHistoryLog(int $order_id, string $comment): void {
+		$comment = trim($comment);
+
+		if ($order_id <= 0 || $comment === '') {
+			return;
+		}
+
+		$query = $this->db->query("SELECT order_status_id FROM `" . DB_PREFIX . "order` WHERE order_id = '" . (int)$order_id . "' LIMIT 1");
+
+		if (!$query->num_rows) {
+			return;
+		}
+
+		$order_status_id = (int)$query->row['order_status_id'];
+
+		$this->db->query(
+			"INSERT INTO `" . DB_PREFIX . "order_history`
+			SET order_id = '" . (int)$order_id . "',
+				order_status_id = '" . (int)$order_status_id . "',
+				notify = '0',
+				comment = '" . $this->db->escape($comment) . "',
+				date_added = NOW()"
+		);
+	}
+
+	private function syncOrderStatusFromNovaposhta(int $order_id, string $np_status_code, string $np_status_text, string $np_status_date): array {
+		$target_order_status_id = $this->mapNovaposhtaStatusCodeToOrderStatusId($np_status_code);
+
+		if ($target_order_status_id <= 0) {
+			return ['applied' => false];
+		}
+
+		$query = $this->db->query("SELECT order_status_id FROM `" . DB_PREFIX . "order` WHERE order_id = '" . (int)$order_id . "' LIMIT 1");
+
+		if (!$query->num_rows) {
+			return ['applied' => false, 'warning' => $this->language->get('error_order')];
+		}
+
+		$current_order_status_id = (int)$query->row['order_status_id'];
+
+		if ($current_order_status_id === $target_order_status_id) {
+			return ['applied' => false];
+		}
+
+		$current_rank = $this->getOrderStatusProgressRank($current_order_status_id);
+		$target_rank = $this->getOrderStatusProgressRank($target_order_status_id);
+
+		if ($current_rank > 0 && $target_rank > 0 && $target_rank <= $current_rank) {
+			$current_name = $this->getOrderStatusNameById($current_order_status_id);
+			$target_name = $this->getOrderStatusNameById($target_order_status_id);
+
+			return [
+				'applied' => false,
+				'warning' => sprintf($this->language->get('text_np_status_order_sync_skipped'), $current_name, $target_name)
+			];
+		}
+
+		$current_name = $this->getOrderStatusNameById($current_order_status_id);
+		$target_name = $this->getOrderStatusNameById($target_order_status_id);
+
+		$status_label = '[' . trim($np_status_code) . '] ' . trim($np_status_text);
+
+		if (trim($np_status_date) !== '') {
+			$status_label .= ' (' . trim($np_status_date) . ')';
+		}
+
+		$comment = sprintf(
+			$this->language->get('text_np_history_order_status_sync'),
+			$status_label,
+			$current_name,
+			$target_name
+		);
+
+		if (!$this->setOrderStatusWithHistory($order_id, $target_order_status_id, $comment)) {
+			return ['applied' => false];
+		}
+
+		return [
+			'applied' => true,
+			'order_status_id' => $target_order_status_id,
+			'order_status_name' => $target_name
+		];
+	}
+
+	private function mapNovaposhtaStatusCodeToOrderStatusId(string $np_status_code): int {
+		$np_status_code = trim($np_status_code);
+
+		if ($np_status_code === '') {
+			return 0;
+		}
+
+		$processing_codes = [
+			'1', '4', '5', '6', '7', '8', '11', '12', '13', '14',
+			'101', '102', '103', '104', '105', '106', '107', '108'
+		];
+		$delivered_codes = ['9'];
+
+		$processing_order_status_id = (int)$this->config->get('shipping_novaposhta_order_status_processing_id');
+		$delivered_order_status_id = (int)$this->config->get('shipping_novaposhta_order_status_delivered_id');
+
+		if ($processing_order_status_id <= 0) {
+			$processing_order_status_id = 2;
+		}
+
+		if ($delivered_order_status_id <= 0) {
+			$delivered_order_status_id = 3;
+		}
+
+		if (in_array($np_status_code, $delivered_codes, true)) {
+			return $delivered_order_status_id;
+		}
+
+		if (in_array($np_status_code, $processing_codes, true)) {
+			return $processing_order_status_id;
+		}
+
+		return 0;
+	}
+
+	private function getOrderStatusProgressRank(int $order_status_id): int {
+		if ($order_status_id <= 0) {
+			return 0;
+		}
+
+		$default_order_status_id = (int)$this->config->get('config_order_status_id');
+		$processing_order_status_id = (int)$this->config->get('shipping_novaposhta_order_status_processing_id');
+		$delivered_order_status_id = (int)$this->config->get('shipping_novaposhta_order_status_delivered_id');
+		$processing_statuses = array_map('intval', (array)$this->config->get('config_processing_status'));
+		$complete_statuses = array_map('intval', (array)$this->config->get('config_complete_status'));
+
+		if ($processing_order_status_id <= 0) {
+			$processing_order_status_id = 2;
+		}
+
+		if ($delivered_order_status_id <= 0) {
+			$delivered_order_status_id = 3;
+		}
+
+		if ($order_status_id === $default_order_status_id) {
+			return 10;
+		}
+
+		if ($order_status_id === $delivered_order_status_id) {
+			return 40;
+		}
+
+		if (in_array($order_status_id, $complete_statuses, true)) {
+			return 50;
+		}
+
+		if ($order_status_id === $processing_order_status_id || in_array($order_status_id, $processing_statuses, true)) {
+			return 20;
+		}
+
+		// Unknown/manual statuses are treated as advanced to avoid unsafe automatic overrides.
+		return 35;
+	}
+
+	private function getOrderStatusNameById(int $order_status_id): string {
+		if ($order_status_id <= 0) {
+			return (string)$order_status_id;
+		}
+
+		$query = $this->db->query("SELECT name FROM `" . DB_PREFIX . "order_status` WHERE order_status_id = '" . (int)$order_status_id . "' AND language_id = '" . (int)$this->config->get('config_language_id') . "' LIMIT 1");
+
+		if ($query->num_rows) {
+			return (string)$query->row['name'];
+		}
+
+		return (string)$order_status_id;
+	}
+
+	private function setOrderStatusWithHistory(int $order_id, int $order_status_id, string $comment): bool {
+		if ($order_id <= 0 || $order_status_id <= 0) {
+			return false;
+		}
+
+		$this->db->query(
+			"UPDATE `" . DB_PREFIX . "order`
+			SET order_status_id = '" . (int)$order_status_id . "',
+				date_modified = NOW()
+			WHERE order_id = '" . (int)$order_id . "'"
+		);
+
+		$this->db->query(
+			"INSERT INTO `" . DB_PREFIX . "order_history`
+			SET order_id = '" . (int)$order_id . "',
+				order_status_id = '" . (int)$order_status_id . "',
+				notify = '0',
+				comment = '" . $this->db->escape(trim($comment)) . "',
+				date_added = NOW()"
+		);
+
+		return true;
+	}
+
+	private function appendJsonMessage(array &$json, string $field, string $message): void {
+		$message = trim($message);
+
+		if ($message === '') {
+			return;
+		}
+
+		if (empty($json[$field])) {
+			$json[$field] = $message;
+		} else {
+			$json[$field] .= ' ' . $message;
+		}
 	}
 
 	private function formatNovaposhtaDeliveryType(string $delivery_type): string {

@@ -23,7 +23,14 @@ class Cookie extends \Opencart\System\Engine\Controller {
 			if ($information_info) {
 				$this->load->language('common/cookie');
 
-				$data['text_cookie'] = sprintf($this->language->get('text_cookie'), $this->url->link('information/information.info', 'language=' . $this->config->get('config_language') . '&information_id=' . $information_info['information_id']));
+					$text_cookie = (string)$this->language->get('text_cookie');
+					$cookie_link = $this->url->link('information/information', 'language=' . $this->config->get('config_language') . '&information_id=' . $information_info['information_id']);
+
+					if (strpos($text_cookie, '%s') !== false) {
+						$data['text_cookie'] = sprintf($text_cookie, $cookie_link);
+					} else {
+						$data['text_cookie'] = $text_cookie;
+					}
 
 				$data['agree'] = $this->url->link('common/cookie.confirm', 'language=' . $this->config->get('config_language') . '&agree=1');
 				$data['disagree'] = $this->url->link('common/cookie.confirm', 'language=' . $this->config->get('config_language') . '&agree=0');

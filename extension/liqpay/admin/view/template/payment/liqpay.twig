@@ -1,0 +1,221 @@
+{{ header }}{{ column_left }}
+<div id="content">
+  <div class="page-header">
+    <div class="container-fluid">
+      <div class="float-end">
+        <a href="{{ payments }}" data-bs-toggle="tooltip" title="{{ button_payments }}" class="btn btn-info me-3"><i class="fa-solid fa-credit-card"></i> {{ button_payments }}</a>
+        <button type="submit" form="form-payment" data-bs-toggle="tooltip" title="{{ button_save }}" class="btn btn-primary"><i class="fa-solid fa-floppy-disk"></i></button>
+        <a href="{{ back }}" data-bs-toggle="tooltip" title="{{ button_back }}" class="btn btn-light"><i class="fa-solid fa-reply"></i></a>
+      </div>
+      <h1>{{ heading_title }}</h1>
+      <ol class="breadcrumb">
+        {% for breadcrumb in breadcrumbs %}
+          <li class="breadcrumb-item"><a href="{{ breadcrumb.href }}">{{ breadcrumb.text }}</a></li>
+        {% endfor %}
+      </ol>
+    </div>
+  </div>
+  <div class="container-fluid">
+    <div class="card">
+      <div class="card-header"><i class="fa-solid fa-pencil"></i> {{ text_edit }}</div>
+      <div class="card-body">
+        <form id="form-payment" action="{{ save }}" method="post" data-oc-toggle="ajax">
+          <ul class="nav nav-tabs">
+            <li class="nav-item"><a href="#tab-general" data-bs-toggle="tab" class="nav-link active">{{ tab_general }}</a></li>
+            <li class="nav-item"><a href="#tab-order-status" data-bs-toggle="tab" class="nav-link">{{ tab_order_status }}</a></li>
+            <li class="nav-item"><a href="#tab-license" data-bs-toggle="tab" class="nav-link">{{ tab_license }}</a></li>
+          </ul>
+          <div class="tab-content">
+            <div id="tab-general" class="tab-pane active">
+              <div class="row mb-3">
+                <label for="input-status" class="col-sm-2 col-form-label">{{ entry_status }}</label>
+                <div class="col-sm-10">
+                  <div class="form-check form-switch form-switch-lg">
+                    <input type="hidden" name="payment_liqpay_status" value="0"/>
+                    <input type="checkbox" name="payment_liqpay_status" value="1" id="input-status" class="form-check-input"{% if payment_liqpay_status %} checked{% endif %}/>
+                  </div>
+                </div>
+              </div>
+              <div class="row mb-3">
+                <label class="col-sm-2 col-form-label">{{ entry_title }}</label>
+                <div class="col-sm-10">
+                  {% for language in languages %}
+                    <div class="input-group">
+                      <span class="input-group-text"><img title="{{ language.name }}" src="{{ language.image }}"/></span>
+                      <input type="text" name="payment_liqpay_title[{{ language.language_id }}]" value="{{ payment_liqpay_title[language.language_id] ? payment_liqpay_title[language.language_id] : '' }}" class="form-control" />
+                    </div>
+                  {% endfor %}
+                </div>
+              </div>
+              <div class="row mb-3 required">
+                <label for="input-public-key" class="col-sm-2 col-form-label">{{ entry_public_key }}</label>
+                <div class="col-sm-10">
+                  <input type="text" name="payment_liqpay_public_key" value="{{ payment_liqpay_public_key }}" placeholder="{{ entry_public_key }}" id="input-public-key" class="form-control"/>
+                  <div id="error-public-key" class="invalid-feedback"></div>
+                </div>
+              </div>
+              <div class="row mb-3 required">
+                <label for="input-private-key" class="col-sm-2 col-form-label">{{ entry_private_key }}</label>
+                <div class="col-sm-10">
+                  <input type="password" name="payment_liqpay_private_key" value="{{ payment_liqpay_private_key }}" placeholder="{{ entry_private_key }}" id="input-private-key" class="form-control"/>
+                  <div id="error-private-key" class="invalid-feedback"></div>
+                </div>
+              </div>
+              <div class="row mb-3">
+                <label for="input-action-type" class="col-sm-2 col-form-label">{{ entry_action_type }}</label>
+                <div class="col-sm-10">
+                  <select name="payment_liqpay_action_type" id="input-action-type" class="form-select">
+                    <option value="pay"{% if payment_liqpay_action_type == 'pay' %} selected{% endif %}>{{ text_pay }}</option>
+                    <option value="hold"{% if payment_liqpay_action_type == 'hold' %} selected{% endif %}>{{ text_hold }}</option>
+                  </select>
+                  <div class="form-text">{{ help_action_type }}</div>
+                </div>
+              </div>
+              <div class="row mb-3">
+                <label class="col-sm-2 col-form-label">{{ entry_description }}</label>
+                <div class="col-sm-10">
+                  {% for language in languages %}
+                    <div class="input-group">
+                      <span class="input-group-text"><img title="{{ language.name }}" src="{{ language.image }}"/></span>
+                      <input type="text" name="payment_liqpay_description[{{ language.language_id }}]" value="{{ payment_liqpay_description[language.language_id] ? payment_liqpay_description[language.language_id] : '' }}" class="form-control" />
+                    </div>
+                  {% endfor %}
+                  <div class="form-text">{{ help_description }}</div>
+                </div>
+              </div>
+              <div class="row mb-3">
+                <label for="input-total" class="col-sm-2 col-form-label">{{ entry_total }}</label>
+                <div class="col-sm-10">
+                  <input type="text" name="payment_liqpay_total" value="{{ payment_liqpay_total }}" placeholder="{{ entry_total }}" id="input-total" class="form-control"/>
+                  <div class="form-text">{{ help_total }}</div>
+                </div>
+              </div>
+              <div class="row mb-3">
+                <label for="input-geo-zone" class="col-sm-2 col-form-label">{{ entry_geo_zone }}</label>
+                <div class="col-sm-10">
+                  <select name="payment_liqpay_geo_zone_id" id="input-geo-zone" class="form-select">
+                    <option value="0">{{ text_all_zones }}</option>
+                    {% for geo_zone in geo_zones %}
+                      <option value="{{ geo_zone.geo_zone_id }}"{% if geo_zone.geo_zone_id == payment_liqpay_geo_zone_id %} selected{% endif %}>{{ geo_zone.name }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+              </div>
+              <div class="row mb-3">
+                <label for="input-sort-order" class="col-sm-2 col-form-label">{{ entry_sort_order }}</label>
+                <div class="col-sm-10">
+                  <input type="text" name="payment_liqpay_sort_order" value="{{ payment_liqpay_sort_order }}" placeholder="{{ entry_sort_order }}" id="input-sort-order" class="form-control"/>
+                </div>
+              </div>
+              {% if config_session_samesite != 'None' %}
+              <div class="row mb-3">
+                <label class="col-sm-2 col-form-label">{{ entry_session }}</label>
+                <div class="col-sm-10">
+                  <div class="form-check form-switch form-switch-lg">
+                    <input type="checkbox" id="input-session-samesite" class="form-check-input" {% if config_session_samesite == 'None' %} checked{% endif %}/><small>None</small>
+                  </div>
+                  <div class="form-text">{{ help_session }}</div>
+                </div>
+              </div>
+              {% endif %}
+            </div>
+            <div id="tab-order-status" class="tab-pane">
+              <div class="row mb-3">
+                <label for="input-pending-status" class="col-sm-2 col-form-label">{{ entry_pending_status }}</label>
+                <div class="col-sm-10">
+                  <select name="payment_liqpay_pending_status_id" id="input-pending-status" class="form-select">
+                    {% for order_status in order_statuses %}
+                      <option value="{{ order_status.order_status_id }}"{% if order_status.order_status_id == payment_liqpay_pending_status_id %} selected{% endif %}>{{ order_status.name }}</option>
+                    {% endfor %}
+                  </select>
+                  <div class="form-text">{{ help_pending_status }}</div>
+                </div>
+              </div>
+              <div class="row mb-3">
+                <label for="input-hold-status" class="col-sm-2 col-form-label">{{ entry_hold_status }}</label>
+                <div class="col-sm-10">
+                  <select name="payment_liqpay_hold_status_id" id="input-hold-status" class="form-select">
+                    {% for order_status in order_statuses %}
+                      <option value="{{ order_status.order_status_id }}"{% if order_status.order_status_id == payment_liqpay_hold_status_id %} selected{% endif %}>{{ order_status.name }}</option>
+                    {% endfor %}
+                  </select>
+                  <div class="form-text">{{ help_hold_status }}</div>
+                </div>
+              </div>
+              <div class="row mb-3">
+                <label for="input-order-status" class="col-sm-2 col-form-label">{{ entry_order_status }}</label>
+                <div class="col-sm-10">
+                  <select name="payment_liqpay_order_status_id" id="input-order-status" class="form-select">
+                    {% for order_status in order_statuses %}
+                      <option value="{{ order_status.order_status_id }}"{% if order_status.order_status_id == payment_liqpay_order_status_id %} selected{% endif %}>{{ order_status.name }}</option>
+                    {% endfor %}
+                  </select>
+                  <div class="form-text">{{ help_order_status }}</div>
+                </div>
+              </div>
+              <div class="row mb-3">
+                <label for="input-refund-status" class="col-sm-2 col-form-label">{{ entry_refund_status }}</label>
+                <div class="col-sm-10">
+                  <select name="payment_liqpay_refund_status_id" id="input-refund-status" class="form-select">
+                    {% for order_status in order_statuses %}
+                      <option value="{{ order_status.order_status_id }}"{% if order_status.order_status_id == payment_liqpay_refund_status_id %} selected{% endif %}>{{ order_status.name }}</option>
+                    {% endfor %}
+                  </select>
+                  <div class="form-text">{{ help_refund_status }}</div>
+                </div>
+              </div>
+              <div class="row mb-3">
+                <label for="input-failed-status" class="col-sm-2 col-form-label">{{ entry_failed_status }}</label>
+                <div class="col-sm-10">
+                  <select name="payment_liqpay_failed_status_id" id="input-failed-status" class="form-select">
+                    {% for order_status in order_statuses %}
+                      <option value="{{ order_status.order_status_id }}"{% if order_status.order_status_id == payment_liqpay_failed_status_id %} selected{% endif %}>{{ order_status.name }}</option>
+                    {% endfor %}
+                  </select>
+                  <div class="form-text">{{ help_failed_status }}</div>
+                </div>
+              </div>
+            </div>
+            <div class="tab-pane" id="tab-license">
+              <div class="row mb-3">
+                <label class="col-sm-2 col-form-label" for="input-license">{{ entry_license }}</label>
+                <div class="col-sm-10">
+                  <input type="text" name="payment_liqpay_license" value="{{ payment_liqpay_license }}" placeholder="{{ entry_license }}" id="input-license" class="form-control"/>
+                  <br>
+                  {{ text_copyright }}
+                </div>
+              </div>
+            </div>
+          </div>
+        </form>
+        <div class="text-center bg-dark p-3 mt-4">
+          <div style="font-size: 12px; color: #cccccc; margin-bottom: 5px;">{{ text_developed }}</div>
+          <a href="https://opencartbot.com/" target="_blank" style="color: #ffffff; text-decoration: none; font-weight: 600; font-size: 14px; letter-spacing: 0.5px;">OpenCartBot</a>
+          <a href="https://pay.monobank.ua/j_E-B_dZ4nhG" target="_blank" class="donate px-3 py-2 text-dark bg-white">Дякую</a>
+          <style>.donate{border:1px solid #fff;position:absolute;margin-top:-20px;margin-left:25px; border-radius: 30px}.donate::before {content: '';position: absolute;left: -13px;top: 50%;transform: translateY(-50%);width: 0;height: 0;border-top: 9px solid transparent;border-bottom: 4px solid transparent;border-right: 14px solid #ffffff;}</style>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% if config_session_samesite != 'None' %}
+<script type="text/javascript">
+$('#input-session-samesite').on('change', function() {
+    let value = $(this).is(':checked') ? 'None' : 'Lax';
+
+    $.ajax({
+        url: 'index.php?route=extension/liqpay/payment/liqpay.setSessionSameSite&user_token={{ user_token }}',
+        type: 'post',
+        data: { value: value },
+        dataType: 'json',
+        success: function(json) {
+            console.log(json);
+        },
+        error: function(xhr, ajaxOptions, thrownError) {
+            alert(thrownError + "\n" + xhr.statusText + "\n" + xhr.responseText);
+        }
+    });
+});
+</script>
+{% endif %}
+{{ footer }}

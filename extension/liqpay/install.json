@@ -1,0 +1,7 @@
+{
+    "name": "Liqpay",
+    "description": "Модуль оплати Liqpay для OpenCart 4",
+    "version": "1.0.0",
+    "author": "OpenCartBot",
+    "link": "https://opencartbot.com/" 
+}

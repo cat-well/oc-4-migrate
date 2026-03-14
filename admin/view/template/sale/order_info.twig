@@ -286,9 +286,23 @@
               <div id="section-novaposhta" class="card border-info">
                 <div class="card-header d-flex justify-content-between align-items-center">
                   <span><i class="fa-solid fa-truck-fast"></i> {{ text_novaposhta }}</span>
-                  {% if novaposhta.can_create_ttn %}
-                    <button type="button" id="button-np-create-ttn" class="btn btn-sm btn-primary"><i class="fa-solid fa-plus-circle"></i> {{ button_np_create_ttn }}</button>
-                  {% endif %}
+                  <div class="btn-group btn-group-sm">
+                    {% if novaposhta.can_refresh_status %}
+                      <button type="button" id="button-np-refresh-status" class="btn btn-secondary"><i class="fa-solid fa-arrows-rotate"></i> {{ button_np_refresh_status }}</button>
+                    {% endif %}
+                    {% if novaposhta.can_print_ttn %}
+                      <a href="{{ novaposhta.ttn_print_url }}" target="_blank" id="button-np-print-ttn" class="btn btn-info"><i class="fa-solid fa-print"></i> {{ button_np_print_ttn }}</a>
+                    {% endif %}
+                    {% if novaposhta.can_create_ttn %}
+                      <button type="button" id="button-np-create-ttn" class="btn btn-primary"><i class="fa-solid fa-plus-circle"></i> {{ button_np_create_ttn }}</button>
+                    {% endif %}
+                    {% if novaposhta.can_recreate_ttn %}
+                      <button type="button" id="button-np-recreate-ttn" class="btn btn-warning"><i class="fa-solid fa-rotate"></i> {{ button_np_recreate_ttn }}</button>
+                    {% endif %}
+                    {% if novaposhta.can_delete_ttn %}
+                      <button type="button" id="button-np-delete-ttn" class="btn btn-danger"><i class="fa-solid fa-trash"></i> {{ button_np_delete_ttn }}</button>
+                    {% endif %}
+                  </div>
                 </div>
                 <div class="card-body">
                   <div class="row row-cols-1 row-cols-md-2 g-2 mb-3">
@@ -303,12 +317,51 @@
                     <div class="col"><strong>{{ text_np_ttn_ref }}:</strong> <span id="np-ttn-ref">{{ novaposhta.ttn_ref ? novaposhta.ttn_ref : text_none }}</span></div>
                     <div class="col"><strong>{{ text_np_ttn_date }}:</strong> <span id="np-ttn-date">{{ novaposhta.ttn_date_created ? novaposhta.ttn_date_created : text_none }}</span></div>
                   </div>
+                  <div class="row row-cols-1 row-cols-md-3 g-2 mt-1">
+                    <div class="col"><strong>{{ text_np_ttn_status_code }}:</strong> <span id="np-ttn-status-code">{{ novaposhta.ttn_status_code ? novaposhta.ttn_status_code : text_none }}</span></div>
+                    <div class="col"><strong>{{ text_np_ttn_status }}:</strong> <span id="np-ttn-status">{{ novaposhta.ttn_status_text ? novaposhta.ttn_status_text : text_none }}</span></div>
+                    <div class="col"><strong>{{ text_np_ttn_status_date }}:</strong> <span id="np-ttn-status-date">{{ novaposhta.ttn_status_date ? novaposhta.ttn_status_date : text_none }}</span></div>
+                  </div>
                   <div id="np-ttn-error" class="alert alert-danger mt-3 mb-0{% if not novaposhta.ttn_error %} d-none{% endif %}">{{ novaposhta.ttn_error }}</div>
                 </div>
               </div>
             </div>
           </div>
         {% endif %}
+
+        {% if checkbox.enabled %}
+          <div class="row">
+            <div class="col mb-3">
+              <div id="section-checkbox" class="card border-dark">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                  <span><i class="fa-solid fa-receipt"></i> {{ text_checkbox }}</span>
+                  <div class="btn-group btn-group-sm">
+                    {% if not checkbox.receipt_id %}
+                      <button type="button" id="button-checkbox-create" class="btn btn-primary"><i class="fa-solid fa-plus-circle"></i> {{ button_checkbox_create }}</button>
+                    {% endif %}
+                    {% if checkbox.receipt_id %}
+                      <a href="{{ checkbox.receipt_pdf_url }}" target="_blank" id="button-checkbox-pdf" class="btn btn-info"><i class="fa-solid fa-file-pdf"></i> {{ button_checkbox_pdf }}</a>
+                      <button type="button" id="button-checkbox-sms" class="btn btn-secondary"><i class="fa-solid fa-comment-sms"></i> {{ button_checkbox_sms }}</button>
+                    {% endif %}
+                  </div>
+                </div>
+                <div class="card-body">
+                  {% if checkbox.ready %}
+                    <div class="alert alert-warning mb-3"><i class="fa-solid fa-triangle-exclamation"></i> {{ text_checkbox_ready }}</div>
+                  {% endif %}
+
+                  <div class="row row-cols-1 row-cols-md-2 g-2">
+                    <div class="col"><strong>{{ text_checkbox_receipt_id }}:</strong> <span id="checkbox-receipt-id">{{ checkbox.receipt_id ? checkbox.receipt_id : text_none }}</span></div>
+                    <div class="col"><strong>{{ text_checkbox_sms_phone }}:</strong> <span id="checkbox-sms-phone">{{ checkbox.sms_phone ? checkbox.sms_phone : text_none }}</span></div>
+                  </div>
+
+                  <div id="checkbox-error" class="alert alert-danger mt-3 mb-0{% if not checkbox.error %} d-none{% endif %}">{{ checkbox.error }}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        {% endif %}
+
         <div id="collapse-order" class="collapse">
           <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3">
             {% for extension in extensions %}
@@ -1120,11 +1173,9 @@ $(document).on('click', '#button-invoice', function() {
     });
 });
 
-$(document).on('click', '#button-np-create-ttn', function() {
-    var element = this;
-
+function npTtnAction(url, element) {
     $.ajax({
-        url: '{{ novaposhta_create_ttn }}',
+        url: url,
         type: 'post',
         dataType: 'json',
         data: {
@@ -1134,9 +1185,7 @@ $(document).on('click', '#button-np-create-ttn', function() {
             $(element).prop('disabled', true);
         },
         complete: function() {
-            if (!$(element).hasClass('disabled')) {
-                $(element).prop('disabled', false);
-            }
+            $(element).prop('disabled', false);
         },
         success: function(json) {
             $('.alert-dismissible').remove();
@@ -1148,27 +1197,86 @@ $(document).on('click', '#button-np-create-ttn', function() {
 
             if (json['success']) {
                 $('#alert').prepend('<div class="alert alert-success alert-dismissible"><i class="fa-solid fa-check-circle"></i> ' + json['success'] + ' <button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>');
-
-                if (json['ttn_number']) {
-                    $('#np-ttn-number').text(json['ttn_number']);
-                }
-
-                if (json['ttn_ref']) {
-                    $('#np-ttn-ref').text(json['ttn_ref']);
-                }
-
-                if (json['ttn_date_created']) {
-                    $('#np-ttn-date').text(json['ttn_date_created']);
-                }
-
                 $('#np-ttn-error').addClass('d-none').text('');
-                $(element).addClass('disabled').prop('disabled', true);
+
+                if (json['warning']) {
+                    $('#alert').prepend('<div class="alert alert-warning alert-dismissible"><i class="fa-solid fa-triangle-exclamation"></i> ' + json['warning'] + ' <button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>');
+                }
+
+                setTimeout(function() {
+                    location.reload();
+                }, 250);
             }
         },
         error: function(xhr, ajaxOptions, thrownError) {
-            console.log(thrownError + \"\\r\\n\" + xhr.statusText + \"\\r\\n\" + xhr.responseText);
+            console.log(thrownError + "\r\n" + xhr.statusText + "\r\n" + xhr.responseText);
         }
     });
+}
+
+$(document).on('click', '#button-np-create-ttn', function() {
+    npTtnAction('{{ novaposhta_create_ttn|replace({'&amp;':'&'})|escape('js') }}', this);
+});
+
+$(document).on('click', '#button-np-recreate-ttn', function() {
+    npTtnAction('{{ novaposhta_recreate_ttn|replace({'&amp;':'&'})|escape('js') }}', this);
+});
+
+$(document).on('click', '#button-np-refresh-status', function() {
+    npTtnAction('{{ novaposhta_refresh_status|replace({'&amp;':'&'})|escape('js') }}', this);
+});
+
+$(document).on('click', '#button-np-delete-ttn', function() {
+    if (!confirm('{{ text_np_confirm_delete|escape('js') }}')) {
+        return;
+    }
+
+    npTtnAction('{{ novaposhta_delete_ttn|replace({'&amp;':'&'})|escape('js') }}', this);
+});
+
+function checkboxAction(url, element) {
+    $.ajax({
+        url: url,
+        type: 'post',
+        dataType: 'json',
+        data: {
+            order_id: $('#input-order-id').val()
+        },
+        beforeSend: function() {
+            $(element).prop('disabled', true);
+        },
+        complete: function() {
+            $(element).prop('disabled', false);
+        },
+        success: function(json) {
+            $('.alert-dismissible').remove();
+
+            if (json['error']) {
+                $('#alert').prepend('<div class="alert alert-danger alert-dismissible"><i class="fa-solid fa-circle-exclamation"></i> ' + json['error'] + ' <button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>');
+                $('#checkbox-error').removeClass('d-none').text(json['error']);
+            }
+
+            if (json['success']) {
+                $('#alert').prepend('<div class="alert alert-success alert-dismissible"><i class="fa-solid fa-check-circle"></i> ' + json['success'] + ' <button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>');
+                $('#checkbox-error').addClass('d-none').text('');
+
+                setTimeout(function() {
+                    location.reload();
+                }, 250);
+            }
+        },
+        error: function(xhr, ajaxOptions, thrownError) {
+            console.log(thrownError + "\r\n" + xhr.statusText + "\r\n" + xhr.responseText);
+        }
+    });
+}
+
+$(document).on('click', '#button-checkbox-create', function() {
+    checkboxAction('{{ checkbox_create_receipt|replace({'&amp;':'&'})|escape('js') }}', this);
+});
+
+$(document).on('click', '#button-checkbox-sms', function() {
+    checkboxAction('{{ checkbox_send_sms|replace({'&amp;':'&'})|escape('js') }}', this);
 });
 
 // Customer

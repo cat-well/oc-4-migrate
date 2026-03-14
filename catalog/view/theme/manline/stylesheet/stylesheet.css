@@ -7162,3 +7162,55 @@ ul.nav_menu > li:hover div {
 #product-category {
   overflow-x: hidden;
 }
+
+/* Cookie banner (customizable in one place) */
+.cookie-banner {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10050;
+  background: rgba(43, 50, 61, 0.96);
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 -6px 24px rgba(0, 0, 0, 0.18);
+  color: #ffffff;
+}
+
+.cookie-banner__row {
+  margin-top: 0 !important;
+}
+
+.cookie-banner__text {
+  margin: 10px 0 12px;
+  font-size: 15px;
+  line-height: 1.45;
+  color: #ffffff;
+}
+
+.cookie-banner__text a {
+  color: #ffd500;
+  text-decoration: underline;
+}
+
+.cookie-banner__actions {
+  display: inline-flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.cookie-banner__btn {
+  min-width: 160px;
+}
+
+@media (max-width: 767px) {
+  .cookie-banner__text {
+    margin: 8px 0 10px;
+    font-size: 14px;
+  }
+
+  .cookie-banner__btn {
+    width: 100%;
+    min-width: 0;
+  }
+}

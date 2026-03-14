@@ -14,3 +14,10 @@
 
 # SEOShield caches (generated/ported from legacy)
 /seoshield-client/data/footers_cache/
+
+# IDE
+/.idea/
+
+# Logs
+/system/storage/logs/*.log
+/system/storage/logs/*.txt

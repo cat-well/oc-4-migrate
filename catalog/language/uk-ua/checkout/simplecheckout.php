@@ -59,6 +59,13 @@ $_['button_update'] = 'Оновити';
 
 // Agreement
 $_['text_agree'] = 'Я прочитав і погоджуюсь з <a href="%s" class="modal-link"><b>%s</b></a>';
+$_['text_agree_prefix'] = 'Я прочитав і погоджуюсь з';
+$_['text_agree_and'] = 'та';
+$_['text_agree_intro'] = 'Я підтверджую, що ознайомлений(а) та погоджуюсь з умовами';
+$_['text_agree_offer'] = 'Публічного договору (оферти)';
+$_['text_agree_privacy'] = 'Політики конфіденційності';
+$_['text_agree_returns'] = 'Політики обміну та повернення';
+$_['text_agree_personal_data'] = 'та надаю згоду на обробку персональних даних.';
 
 // Errors
 $_['error_cart_empty'] = 'Кошик порожній.';

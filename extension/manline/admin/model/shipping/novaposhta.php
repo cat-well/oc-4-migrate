@@ -34,10 +34,18 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 			}
 		}
 
+		if (!empty($row['ttn_status_payload']) && is_string($row['ttn_status_payload'])) {
+			$ttn_status_payload = json_decode($row['ttn_status_payload'], true);
+
+			if (is_array($ttn_status_payload)) {
+				$row['ttn_status_payload'] = $ttn_status_payload;
+			}
+		}
+
 		return $row;
 	}
 
-	public function createTtnForOrder(int $order_id): array {
+	public function createTtnForOrder(int $order_id, bool $force = false): array {
 		if ($order_id <= 0) {
 			return ['success' => false, 'error' => 'Order ID is missing.'];
 		}
@@ -54,12 +62,15 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 		}
 
 		$shipping_code = (string)($order_info['shipping_method']['code'] ?? '');
+		$meta = $this->getOrderMeta($order_id);
+
+		if (strpos($shipping_code, 'novaposhta.') !== 0 && !empty($meta['shipping_code'])) {
+			$shipping_code = (string)$meta['shipping_code'];
+		}
 
 		if (!$shipping_code || strpos($shipping_code, 'novaposhta.') !== 0) {
 			return ['success' => false, 'error' => 'This order does not use Nova Poshta shipping.'];
 		}
-
-		$meta = $this->getOrderMeta($order_id);
 
 		if (!$meta) {
 			$this->createFallbackMeta($order_id, $order_info, $shipping_code);
@@ -70,25 +81,33 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 			return ['success' => false, 'error' => 'Nova Poshta delivery data is missing for this order.'];
 		}
 
-		if (!empty($meta['ttn_number'])) {
-			return [
-				'success' => true,
-				'ttn_number' => (string)$meta['ttn_number'],
-				'ttn_ref' => (string)($meta['ttn_ref'] ?? ''),
-				'ttn_date_created' => (string)($meta['ttn_date_created'] ?? ''),
-				'message' => 'TTN already exists for this order.'
-			];
+		$credentials = $this->getApiCredentials();
+
+		if (empty($credentials['success'])) {
+			return ['success' => false, 'error' => (string)($credentials['error'] ?? 'Nova Poshta API credentials are not configured.')];
 		}
 
-		$api_key = trim((string)$this->config->get('shipping_novaposhta_api_key'));
-		$api_url = trim((string)$this->config->get('shipping_novaposhta_api_url'));
+		$api_key = (string)$credentials['api_key'];
+		$api_url = (string)$credentials['api_url'];
 
-		if ($api_url === '') {
-			$api_url = 'https://api.novaposhta.ua/v2.0/json/';
-		}
+		$existing_ttn_number = trim((string)($meta['ttn_number'] ?? ''));
+		$existing_ttn_ref = trim((string)($meta['ttn_ref'] ?? ''));
 
-		if ($api_key === '') {
-			return ['success' => false, 'error' => 'Nova Poshta API key is not configured.'];
+		if ($existing_ttn_number !== '' || $existing_ttn_ref !== '') {
+			if (!$force) {
+				return ['success' => false, 'error' => 'TTN already exists for this order.'];
+			}
+
+			$delete_result = $this->deleteTtnInNovaPoshta($api_key, $api_url, $existing_ttn_ref, $existing_ttn_number, true);
+
+			if (empty($delete_result['success'])) {
+				$error = 'Unable to cancel existing TTN in Nova Poshta: ' . (string)($delete_result['error'] ?? 'Unknown API error.');
+				$this->updateTtnError($order_id, $error, (array)($delete_result['response'] ?? []));
+
+				return ['success' => false, 'error' => $error];
+			}
+
+			$this->clearTtnData($order_id);
 		}
 
 		try {
@@ -153,13 +172,196 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 				'success' => true,
 				'ttn_number' => $ttn_number,
 				'ttn_ref' => $ttn_ref,
-				'ttn_date_created' => date('Y-m-d H:i:s')
+				'ttn_date_created' => date('Y-m-d H:i:s'),
+				'print_url' => $this->buildPrintUrl($ttn_ref)
 			];
 		} catch (\Throwable $e) {
 			$this->updateTtnError($order_id, $e->getMessage(), []);
 
 			return ['success' => false, 'error' => $e->getMessage()];
 		}
+	}
+
+	public function deleteTtnForOrder(int $order_id): array {
+		if ($order_id <= 0) {
+			return ['success' => false, 'error' => 'Order ID is missing.'];
+		}
+
+		$this->ensureOrderMetaTable();
+		$this->ensureTtnColumns();
+
+		$meta = $this->getOrderMeta($order_id);
+
+		if (!$meta) {
+			return ['success' => false, 'error' => 'Nova Poshta delivery data is missing for this order.'];
+		}
+
+		$ttn_number = trim((string)($meta['ttn_number'] ?? ''));
+		$ttn_ref = trim((string)($meta['ttn_ref'] ?? ''));
+
+		if ($ttn_number === '' && $ttn_ref === '') {
+			return ['success' => false, 'error' => 'TTN is not assigned to this order.'];
+		}
+
+		$credentials = $this->getApiCredentials();
+
+		if (empty($credentials['success'])) {
+			return ['success' => false, 'error' => (string)($credentials['error'] ?? 'Nova Poshta API credentials are not configured.')];
+		}
+
+		$delete_result = $this->deleteTtnInNovaPoshta(
+			(string)$credentials['api_key'],
+			(string)$credentials['api_url'],
+			$ttn_ref,
+			$ttn_number,
+			true
+		);
+
+		if (empty($delete_result['success'])) {
+			$error = 'Nova Poshta API did not cancel TTN: ' . (string)($delete_result['error'] ?? 'Unknown API error.');
+			$this->updateTtnError($order_id, $error, (array)($delete_result['response'] ?? []));
+
+			return ['success' => false, 'error' => $error];
+		}
+
+		$this->clearTtnData($order_id);
+
+		return [
+			'success' => true,
+			'deleted_ttn_number' => $ttn_number,
+			'deleted_ttn_ref' => $ttn_ref,
+			'remote_deleted' => empty($delete_result['already_missing']),
+			'remote_already_missing' => !empty($delete_result['already_missing'])
+		];
+	}
+
+	public function getPrintUrlByOrderId(int $order_id): string {
+		if ($order_id <= 0) {
+			return '';
+		}
+
+		$meta = $this->getOrderMeta($order_id);
+
+		if (!$meta) {
+			return '';
+		}
+
+		$ttn_ref = trim((string)($meta['ttn_ref'] ?? ''));
+
+		return $this->buildPrintUrl($ttn_ref);
+	}
+
+	public function refreshTtnStatusForOrder(int $order_id): array {
+		if ($order_id <= 0) {
+			return ['success' => false, 'error' => 'Order ID is missing.'];
+		}
+
+		$this->ensureOrderMetaTable();
+		$this->ensureTtnColumns();
+
+		$this->load->model('sale/order');
+
+		$order_info = $this->model_sale_order->getOrder($order_id);
+
+		if (!$order_info) {
+			return ['success' => false, 'error' => 'Order was not found.'];
+		}
+
+		$meta = $this->getOrderMeta($order_id);
+
+		if (!$meta) {
+			return ['success' => false, 'error' => 'Nova Poshta delivery data is missing for this order.'];
+		}
+
+		$ttn_number = trim((string)($meta['ttn_number'] ?? ''));
+
+		if ($ttn_number === '') {
+			return ['success' => false, 'error' => 'TTN is not assigned to this order.'];
+		}
+
+		$credentials = $this->getApiCredentials();
+
+		if (empty($credentials['success'])) {
+			return ['success' => false, 'error' => (string)($credentials['error'] ?? 'Nova Poshta API credentials are not configured.')];
+		}
+
+		$api_key = (string)$credentials['api_key'];
+		$api_url = (string)$credentials['api_url'];
+		$phones = $this->getTrackingPhones((string)($order_info['telephone'] ?? ''), $meta);
+
+		if (!$phones) {
+			return ['success' => false, 'error' => 'Recipient phone is required for Nova Poshta status request.'];
+		}
+
+		$response = [];
+		$status_data = [];
+
+		foreach ($phones as $phone) {
+			try {
+				$response = $this->callApi(
+					$api_key,
+					$api_url,
+					'TrackingDocument',
+					'getStatusDocuments',
+					[
+						'Documents' => [
+							[
+								'DocumentNumber' => $ttn_number,
+								'Phone' => $phone
+							]
+						]
+					]
+				);
+			} catch (\Throwable $e) {
+				return ['success' => false, 'error' => $e->getMessage()];
+			}
+
+			if (!empty($response['success']) && !empty($response['data'][0]) && is_array($response['data'][0])) {
+				$status_data = $response['data'][0];
+				break;
+			}
+		}
+
+		if (!$status_data) {
+			$error = $this->getApiError($response, 'Nova Poshta API did not return TTN status.');
+
+			return ['success' => false, 'error' => $error];
+		}
+
+		$status_code = trim((string)($status_data['StatusCode'] ?? ''));
+		$status_text = trim((string)($status_data['Status'] ?? ''));
+		$status_date = trim((string)($status_data['TrackingUpdateDate'] ?? ''));
+
+		if ($status_date === '') {
+			$status_date = trim((string)($status_data['DateScan'] ?? ''));
+		}
+
+		if ($status_date === '') {
+			$status_date = trim((string)($status_data['RecipientDateTime'] ?? ''));
+		}
+
+		if ($status_date === '') {
+			$status_date = trim((string)($status_data['DateCreated'] ?? ''));
+		}
+
+		if ($status_text === '') {
+			return ['success' => false, 'error' => 'Nova Poshta API did not return status text.'];
+		}
+
+		$previous_code = trim((string)($meta['ttn_status_code'] ?? ''));
+		$previous_text = trim((string)($meta['ttn_status_text'] ?? ''));
+		$previous_date = trim((string)($meta['ttn_status_date'] ?? ''));
+
+		$this->updateTtnStatus($order_id, $status_code, $status_text, $status_date, $response);
+
+		return [
+			'success' => true,
+			'ttn_number' => $ttn_number,
+			'ttn_status_code' => $status_code,
+			'ttn_status_text' => $status_text,
+			'ttn_status_date' => $status_date,
+			'changed' => $previous_code !== $status_code || $previous_text !== $status_text || $previous_date !== $status_date
+		];
 	}
 
 	private function getOrderData(int $order_id, array $order_info): array {
@@ -568,6 +770,158 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 		return $fallback;
 	}
 
+	private function getApiCredentials(): array {
+		$api_key = trim((string)$this->config->get('shipping_novaposhta_api_key'));
+		$api_url = trim((string)$this->config->get('shipping_novaposhta_api_url'));
+
+		if ($api_url === '') {
+			$api_url = 'https://api.novaposhta.ua/v2.0/json/';
+		}
+
+		if ($api_key === '') {
+			return ['success' => false, 'error' => 'Nova Poshta API key is not configured.'];
+		}
+
+		return [
+			'success' => true,
+			'api_key' => $api_key,
+			'api_url' => $api_url
+		];
+	}
+
+	private function getTrackingPhones(string $order_phone, array $meta): array {
+		$phones = [];
+
+		$add = function(string $phone) use (&$phones): void {
+			$normalized = $this->normalizePhone($phone);
+
+			if ($normalized !== '') {
+				$phones[] = $normalized;
+				$phones[] = '38' . substr($normalized, 1);
+			}
+
+			$digits = preg_replace('/\D+/', '', $phone);
+
+			if (is_string($digits)) {
+				if (strlen($digits) === 12 && strpos($digits, '380') === 0) {
+					$phones[] = $digits;
+				}
+
+				if (strlen($digits) === 10 && strpos($digits, '0') === 0) {
+					$phones[] = $digits;
+					$phones[] = '38' . substr($digits, 1);
+				}
+			}
+		};
+
+		$add($order_phone);
+		$add((string)($meta['phone'] ?? ''));
+
+		$payload = $meta['payload'] ?? [];
+		if (is_array($payload)) {
+			$add((string)($payload['RecipientsPhone'] ?? ''));
+		}
+
+		$ttn_payload = $meta['ttn_payload'] ?? [];
+		if (is_array($ttn_payload)) {
+			$add((string)($ttn_payload['data'][0]['RecipientsPhone'] ?? ''));
+		}
+
+		$ttn_status_payload = $meta['ttn_status_payload'] ?? [];
+		if (is_array($ttn_status_payload)) {
+			$add((string)($ttn_status_payload['data'][0]['PhoneRecipient'] ?? ''));
+		}
+
+		$phones = array_values(array_unique(array_filter($phones, static function($phone) {
+			return is_string($phone) && $phone !== '';
+		})));
+
+		return $phones;
+	}
+
+	private function deleteTtnInNovaPoshta(string $api_key, string $api_url, string $ttn_ref, string $ttn_number, bool $allow_missing = false): array {
+		$ttn_ref = trim($ttn_ref);
+		$ttn_number = trim($ttn_number);
+
+		if ($ttn_ref === '' && $ttn_number === '') {
+			return ['success' => false, 'error' => 'TTN ref and number are missing for delete request.'];
+		}
+
+		$properties = [];
+
+		if ($ttn_ref !== '') {
+			$properties['DocumentRefs'] = [$ttn_ref];
+		} else {
+			$properties['DocumentBarcodes'] = [$ttn_number];
+		}
+
+		try {
+			$response = $this->callApi($api_key, $api_url, 'InternetDocument', 'delete', $properties);
+		} catch (\Throwable $e) {
+			return [
+				'success' => false,
+				'error' => $e->getMessage(),
+				'response' => []
+			];
+		}
+
+		if (!empty($response['success'])) {
+			return [
+				'success' => true,
+				'already_missing' => false,
+				'response' => $response
+			];
+		}
+
+		$error = $this->getApiError($response, 'Nova Poshta API did not delete TTN.');
+
+		if ($allow_missing && $this->isTtnMissingOnNovaPoshta($response, $error)) {
+			return [
+				'success' => true,
+				'already_missing' => true,
+				'error' => $error,
+				'response' => $response
+			];
+		}
+
+		return [
+			'success' => false,
+			'error' => $error,
+			'response' => $response
+		];
+	}
+
+	private function isTtnMissingOnNovaPoshta(array $response, string $error): bool {
+		$missing_codes = ['20000200564'];
+		$error_codes = $response['errorCodes'] ?? [];
+
+		if (is_array($error_codes)) {
+			foreach ($error_codes as $code) {
+				if (in_array((string)$code, $missing_codes, true)) {
+					return true;
+				}
+			}
+		}
+
+		$error_lower = mb_strtolower($error);
+		$needles = [
+			'invalid documentbarcodes',
+			'invalid documentrefs',
+			'not found',
+			'не знайден',
+			'не знайш',
+			'не існує'
+		];
+
+		foreach ($needles as $needle) {
+			if (mb_stripos($error_lower, $needle) !== false) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
 	private function updateTtnSuccess(int $order_id, string $ttn_number, string $ttn_ref, array $payload): void {
 		$this->db->query(
 			"UPDATE `" . DB_PREFIX . "order_novaposhta`
@@ -587,6 +941,37 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 			"UPDATE `" . DB_PREFIX . "order_novaposhta`
 			SET ttn_error = '" . $this->db->escape($error) . "',
 				ttn_payload = '" . $this->db->escape($this->encodeJson($payload)) . "',
+				ttn_date_modified = NOW(),
+				date_modified = NOW()
+			WHERE order_id = '" . (int)$order_id . "'"
+		);
+	}
+
+	private function updateTtnStatus(int $order_id, string $status_code, string $status_text, string $status_date, array $payload): void {
+		$this->db->query(
+			"UPDATE `" . DB_PREFIX . "order_novaposhta`
+			SET ttn_status_code = '" . $this->db->escape($status_code) . "',
+				ttn_status_text = '" . $this->db->escape($status_text) . "',
+				ttn_status_date = '" . $this->db->escape($status_date) . "',
+				ttn_status_payload = '" . $this->db->escape($this->encodeJson($payload)) . "',
+				ttn_date_modified = NOW(),
+				date_modified = NOW()
+			WHERE order_id = '" . (int)$order_id . "'"
+		);
+	}
+
+	private function clearTtnData(int $order_id): void {
+		$this->db->query(
+			"UPDATE `" . DB_PREFIX . "order_novaposhta`
+			SET ttn_ref = '',
+				ttn_number = '',
+				ttn_error = '',
+				ttn_payload = NULL,
+				ttn_status_code = '',
+				ttn_status_text = '',
+				ttn_status_date = '',
+				ttn_status_payload = NULL,
+				ttn_date_created = NULL,
 				ttn_date_modified = NOW(),
 				date_modified = NOW()
 			WHERE order_id = '" . (int)$order_id . "'"
@@ -683,6 +1068,22 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 		}
 	}
 
+	private function buildPrintUrl(string $ttn_ref): string {
+		$ttn_ref = trim($ttn_ref);
+
+		if ($ttn_ref === '') {
+			return '';
+		}
+
+		$api_key = trim((string)$this->config->get('shipping_novaposhta_api_key'));
+
+		if ($api_key === '') {
+			return '';
+		}
+
+		return 'https://my.novaposhta.ua/orders/printDocument/orders[]/' . rawurlencode($ttn_ref) . '/type/pdf/apiKey/' . rawurlencode($api_key);
+	}
+
 	private function extractDeliveryType(string $shipping_code): string {
 		$parts = explode('.', $shipping_code);
 
@@ -742,6 +1143,22 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 
 		if (!$this->hasColumn($table, 'ttn_date_modified')) {
 			$this->db->query("ALTER TABLE `" . $table . "` ADD `ttn_date_modified` DATETIME NULL AFTER `ttn_date_created`");
+		}
+
+		if (!$this->hasColumn($table, 'ttn_status_code')) {
+			$this->db->query("ALTER TABLE `" . $table . "` ADD `ttn_status_code` VARCHAR(32) NOT NULL DEFAULT '' AFTER `ttn_date_modified`");
+		}
+
+		if (!$this->hasColumn($table, 'ttn_status_text')) {
+			$this->db->query("ALTER TABLE `" . $table . "` ADD `ttn_status_text` VARCHAR(255) NOT NULL DEFAULT '' AFTER `ttn_status_code`");
+		}
+
+		if (!$this->hasColumn($table, 'ttn_status_date')) {
+			$this->db->query("ALTER TABLE `" . $table . "` ADD `ttn_status_date` VARCHAR(64) NOT NULL DEFAULT '' AFTER `ttn_status_text`");
+		}
+
+		if (!$this->hasColumn($table, 'ttn_status_payload')) {
+			$this->db->query("ALTER TABLE `" . $table . "` ADD `ttn_status_payload` MEDIUMTEXT NULL AFTER `ttn_status_date`");
 		}
 	}
 

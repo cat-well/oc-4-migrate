@@ -1,0 +1,31 @@
+<div class="buttons">
+  <div class="float-end">
+    <button type="button" id="button-confirm" class="btn btn-primary">{{ button_confirm }}</button>
+  </div>
+</div>
+
+<script>
+$('#button-confirm').on('click', function() {
+    $.ajax({
+        type: 'GET',
+        url: 'index.php?route=extension/liqpay/payment/liqpay.confirm&language={{ language }}',
+        cache: false,
+        beforeSend: function() {
+            $('#button-confirm').prop('disabled', true);
+        },
+        complete: function() {
+            $('#button-confirm').prop('disabled', false);
+        },
+        success: function(json) {
+            if (json.redirect) {
+                location = json.redirect;
+            }
+
+            if (json.error) {
+                $('#alert').remove();
+                $('#checkout-confirm').before('<div id="alert" class="alert alert-danger alert-dismissible"><i class="fa-solid fa-circle-exclamation"></i> ' + json.error + ' <button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>');
+            }
+        }
+    });
+});
+</script>

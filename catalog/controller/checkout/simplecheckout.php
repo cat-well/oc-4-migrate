@@ -243,34 +243,6 @@ class Simplecheckout extends \Opencart\System\Engine\Controller {
 			];
 		}
 
-		$totals = [];
-		$taxes = $this->cart->getTaxes();
-		$total = 0;
-
-		($this->model_checkout_cart->getTotals)($totals, $taxes, $total);
-
-		$totals_data = [];
-		$cart_total_text = '';
-
-		foreach ($totals as $item) {
-			$text = $this->currency->format($item['value'], $this->session->data['currency']);
-
-			$totals_data[] = [
-				'code'  => $item['code'],
-				'title' => $item['title'],
-				'text'  => $text
-			];
-
-			if ($item['code'] === 'total') {
-				$cart_total_text = $text;
-			}
-		}
-
-		if ($cart_total_text === '' && $totals_data) {
-			$last_total = end($totals_data);
-			$cart_total_text = $last_total['text'] ?? '';
-		}
-
 		$countries = $this->getCountriesWithFallback();
 		$shipping_country_id = (int)$simple['shipping_address']['country_id'];
 		$zones = $this->getZonesByCountryIdWithFallback($shipping_country_id);
@@ -339,6 +311,34 @@ class Simplecheckout extends \Opencart\System\Engine\Controller {
 		} else {
 			unset($this->session->data['payment_method']);
 			$this->session->data['simplecheckout']['payment_method'] = '';
+		}
+
+		$totals = [];
+		$taxes = $this->cart->getTaxes();
+		$total = 0;
+
+		($this->model_checkout_cart->getTotals)($totals, $taxes, $total);
+
+		$totals_data = [];
+		$cart_total_text = '';
+
+		foreach ($totals as $item) {
+			$text = $this->currency->format($item['value'], $this->session->data['currency']);
+
+			$totals_data[] = [
+				'code'  => $item['code'],
+				'title' => $item['title'],
+				'text'  => $text
+			];
+
+			if ($item['code'] === 'total') {
+				$cart_total_text = $text;
+			}
+		}
+
+		if ($cart_total_text === '' && $totals_data) {
+			$last_total = end($totals_data);
+			$cart_total_text = $last_total['text'] ?? '';
 		}
 
 		$state = [
@@ -441,24 +441,173 @@ class Simplecheckout extends \Opencart\System\Engine\Controller {
 		$data['display_model'] = false;
 
 		$this->load->model('catalog/information');
-
-		$information_id = (int)$this->config->get('config_checkout_id');
-		$information_info = $this->model_catalog_information->getInformation($information_id);
-
-		if ($information_info) {
-			$data['text_agree'] = sprintf(
-				$this->language->get('text_agree'),
-				$this->url->link(
-					'information/information.info',
-					'language=' . $this->config->get('config_language') . '&information_id=' . $information_id
-				),
-				$information_info['title']
-			);
-		} else {
-			$data['text_agree'] = '';
-		}
+		$data['text_agree'] = $this->buildAgreementText();
 
 		return $data;
+	}
+
+	private function buildAgreementText(): string {
+		$links = $this->getAgreementDocumentLinks();
+
+		if (empty($links['checkout']) && empty($links['gdpr']) && empty($links['returns'])) {
+			return '';
+		}
+
+		$intro = trim((string)$this->language->get('text_agree_intro'));
+		$consent = trim((string)$this->language->get('text_agree_personal_data'));
+
+		if ($intro === '' || $intro === 'text_agree_intro') {
+			$intro = 'I confirm that I have read and agree to the terms of';
+		}
+
+		if ($consent === '' || $consent === 'text_agree_personal_data') {
+			$consent = 'and I consent to the processing of personal data.';
+		}
+
+		$offer_label = trim((string)$this->language->get('text_agree_offer'));
+		$privacy_label = trim((string)$this->language->get('text_agree_privacy'));
+		$returns_label = trim((string)$this->language->get('text_agree_returns'));
+
+		if ($offer_label === '' || $offer_label === 'text_agree_offer') {
+			$offer_label = 'Public offer agreement';
+		}
+
+		if ($privacy_label === '' || $privacy_label === 'text_agree_privacy') {
+			$privacy_label = 'Privacy policy';
+		}
+
+		if ($returns_label === '' || $returns_label === 'text_agree_returns') {
+			$returns_label = 'Exchange and return policy';
+		}
+
+		$lines = [
+			$this->formatAgreementLink($links['checkout'] ?? '', $offer_label) . ',',
+			$this->formatAgreementLink($links['gdpr'] ?? '', $privacy_label) . ',',
+			$this->formatAgreementLink($links['returns'] ?? '', $returns_label) . ',',
+			htmlspecialchars($consent, ENT_QUOTES, 'UTF-8')
+		];
+
+		return htmlspecialchars($intro, ENT_QUOTES, 'UTF-8') . '<br>' . implode('<br>', $lines);
+	}
+
+	/**
+	 * @return array<string, string>
+	 */
+	private function getAgreementDocumentLinks(): array {
+		$all = $this->model_catalog_information->getInformations();
+		$links = [];
+		$used_ids = [];
+
+		foreach (['checkout', 'gdpr', 'returns'] as $type) {
+			$information_id = $this->resolveAgreementInformationId($type, $all, $used_ids);
+
+			if ($information_id > 0) {
+				$links[$type] = $this->url->link(
+					'information/information',
+					'language=' . $this->config->get('config_language') . '&information_id=' . $information_id
+				);
+			}
+		}
+
+		if (empty($links['returns'])) {
+			$links['returns'] = rtrim((string)$this->config->get('config_url'), '/') . '/obmenvozvrat?language=' . $this->config->get('config_language');
+		}
+
+		return $links;
+	}
+
+	/**
+	 * @param array<int, array<string, mixed>> $all_informations
+	 * @param array<int, bool>                 $used_ids
+	 */
+	private function resolveAgreementInformationId(string $type, array $all_informations, array &$used_ids): int {
+		$configured_id = 0;
+
+		if ($type === 'checkout') {
+			$configured_id = (int)$this->config->get('config_checkout_id');
+		} elseif ($type === 'gdpr') {
+			$configured_id = (int)$this->config->get('config_gdpr_id');
+		}
+
+		if ($configured_id > 0 && !isset($used_ids[$configured_id])) {
+			$information_info = $this->model_catalog_information->getInformation($configured_id);
+
+			if ($information_info) {
+				$used_ids[$configured_id] = true;
+
+				return $configured_id;
+			}
+		}
+
+		foreach ($all_informations as $information) {
+			$information_id = (int)($information['information_id'] ?? 0);
+
+			if ($information_id <= 0 || isset($used_ids[$information_id])) {
+				continue;
+			}
+
+			$title = trim((string)($information['title'] ?? ''));
+
+			if (!$this->informationTitleMatchesAgreementType($title, $type)) {
+				continue;
+			}
+
+			$used_ids[$information_id] = true;
+
+			return $information_id;
+		}
+
+		return 0;
+	}
+
+	private function formatAgreementLink(string $url, string $label): string {
+		$safe_label = htmlspecialchars($label, ENT_QUOTES, 'UTF-8');
+
+		if ($url === '') {
+			return '<b>' . $safe_label . '</b>';
+		}
+
+		return '<a href="' . $url . '" target="_blank" rel="nofollow noopener"><b>' . $safe_label . '</b></a>';
+	}
+
+	private function hasAgreementDocumentsConfigured(): bool {
+		return (int)$this->config->get('config_checkout_id') > 0
+			|| (int)$this->config->get('config_gdpr_id') > 0
+			|| (int)$this->config->get('config_cookie_id') > 0;
+	}
+
+	private function informationTitleMatchesAgreementType(string $title, string $type): bool {
+		$title = trim($title);
+
+		if ($title === '') {
+			return false;
+		}
+
+		$normalized = function_exists('mb_strtolower') ? mb_strtolower($title, 'UTF-8') : strtolower($title);
+
+		if ($type === 'checkout') {
+			return strpos($normalized, 'оферт') !== false
+				|| strpos($normalized, 'договор') !== false
+				|| strpos($normalized, 'догов') !== false
+				|| strpos($normalized, 'offer') !== false;
+		}
+
+		if ($type === 'gdpr') {
+			return strpos($normalized, 'конфиденц') !== false
+				|| strpos($normalized, 'конфіденц') !== false
+				|| strpos($normalized, 'privacy') !== false
+				|| strpos($normalized, 'персональн') !== false;
+		}
+
+		if ($type === 'returns') {
+			return strpos($normalized, 'обмен') !== false
+				|| strpos($normalized, 'возврат') !== false
+				|| strpos($normalized, 'повернен') !== false
+				|| strpos($normalized, 'exchange') !== false
+				|| strpos($normalized, 'return') !== false;
+		}
+
+		return false;
 	}
 
 	private function applyPostedState(array $post): void {
@@ -491,6 +640,7 @@ class Simplecheckout extends \Opencart\System\Engine\Controller {
 		$previous_country_id = (int)($simple['shipping_address']['country_id'] ?? 0);
 		$previous_zone_id = (int)($simple['shipping_address']['zone_id'] ?? 0);
 		$is_create_order_request = !empty($post['create_order']);
+		$changed_field = trim((string)($post['__changed_field'] ?? ''));
 
 		$customer_map = [
 			'firstname' => 'firstname',
@@ -523,8 +673,9 @@ class Simplecheckout extends \Opencart\System\Engine\Controller {
 
 		$country_changed = array_key_exists('shipping_country_id', $post) && (int)$simple['shipping_address']['country_id'] !== $previous_country_id;
 		$zone_changed = array_key_exists('shipping_zone_id', $post) && (int)$simple['shipping_address']['zone_id'] !== $previous_zone_id;
+		$should_reset_dependent_address = $changed_field === 'shipping_country_id' || $changed_field === 'shipping_zone_id';
 
-		if ($country_changed || $zone_changed) {
+		if (($country_changed || $zone_changed) && $should_reset_dependent_address) {
 			$simple['shipping_address']['city_ref'] = '';
 			$simple['shipping_address']['address_ref'] = '';
 
@@ -979,7 +1130,7 @@ class Simplecheckout extends \Opencart\System\Engine\Controller {
 			$errors['payment_method'] = $this->language->get('error_payment_method');
 		}
 
-		if ($this->config->get('config_checkout_id') && empty($this->session->data['agree'])) {
+		if ($this->hasAgreementDocumentsConfigured() && empty($this->session->data['agree'])) {
 			$errors['agree'] = $this->language->get('error_agree');
 		}
 

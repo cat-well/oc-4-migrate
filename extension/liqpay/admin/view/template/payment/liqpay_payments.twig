@@ -1,0 +1,243 @@
+{{ header }}{{ column_left }}
+<div id="content">
+  <div class="page-header">
+    <div class="container-fluid">
+      <div class="float-end">
+        <a href="{{ back }}" data-bs-toggle="tooltip" title="{{ button_back }}" class="btn btn-light"><i class="fa-solid fa-reply"></i></a>
+      </div>
+      <h1>{{ heading_title_payments }}</h1>
+      <ol class="breadcrumb">
+        {% for breadcrumb in breadcrumbs %}
+          <li class="breadcrumb-item"><a href="{{ breadcrumb.href }}">{{ breadcrumb.text }}</a></li>
+        {% endfor %}
+      </ol>
+    </div>
+  </div>
+  <div class="container-fluid">
+    <div class="card">
+      <div class="card-header"><i class="fa-solid fa-credit-card"></i> {{ text_list }}</div>
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-bordered table-hover">
+            <thead>
+              <tr>
+                <th class="text-center">{{ column_transaction_id }}</th>
+                <th class="text-center">{{ column_order_id }}</th>
+                <th class="text-center">{{ column_liqpay_order_id }}</th>
+                <th class="text-center">{{ column_amount }}</th>
+                <th class="text-center">{{ column_status }}</th>
+                <th class="text-center">{{ column_action_type }}</th>
+                <th class="text-center">{{ column_date_added }}</th>
+                <th class="text-center">{{ column_action }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% if transactions %}
+                {% for transaction in transactions %}
+                  <tr>
+                    <td class="text-center">{{ transaction.transaction_id }}</td>
+                    <td class="text-center"><a href="{{ transaction.view_order }}">{{ transaction.order_id }}</a></td>
+                    <td class="text-center">{{ transaction.liqpay_order_id }}</td>
+                    <td class="text-center">{{ transaction.amount ~ ' ' ~ transaction.currency }}</td>
+                    <td class="text-center">
+                      {% if transaction.status == 'success' %}
+                        <span class="badge bg-success">{{ text_success }}</span>
+                      {% elseif transaction.status == 'hold' %}
+                        <span class="badge bg-warning">{{ text_hold }}</span>
+                      {% elseif transaction.status == 'pending' %}
+                        <span class="badge bg-info">{{ text_pending }}</span>
+                      {% elseif transaction.status == 'failed' %}
+                        <span class="badge bg-danger">{{ text_failed }}</span>
+                      {% elseif transaction.status == 'refunded' %}
+                        <span class="badge bg-secondary">{{ text_refunded }}</span>
+                      {% elseif transaction.status == 'captured' %}
+                        <span class="badge bg-primary">{{ text_captured }}</span>
+                      {% else %}
+                        <span class="badge bg-light text-dark">{{ transaction.status }}</span>
+                      {% endif %}
+                    </td>
+                    <td class="text-center">
+                      {% if transaction.action_type == 'hold' %}
+                        <span class="badge bg-warning">{{ text_hold }}</span>
+                      {% else %}
+                        <span class="badge bg-success">{{ text_pay }}</span>
+                      {% endif %}
+                    </td>
+                    <td class="text-center">{{ transaction.date_added }}</td>
+                    <td class="text-center">
+                      {% if transaction.status == 'hold' %}
+                        <button type="button" data-order-id="{{ transaction.order_id }}" data-transaction-id="{{ transaction.transaction_id }}" class="btn btn-sm btn-success btn-capture" data-bs-toggle="tooltip" title="{{ button_capture }}"><i class="fa-solid fa-check"></i></button>
+                      {% endif %}
+                      {% if transaction.status in ['success', 'captured'] %}
+                        <button type="button" data-order-id="{{ transaction.order_id }}" data-transaction-id="{{ transaction.transaction_id }}" data-amount="{{ transaction.amount }}" class="btn btn-sm btn-warning btn-refund" data-bs-toggle="tooltip" title="{{ button_refund }}"><i class="fa-solid fa-undo"></i></button>
+                      {% endif %}
+                    </td>
+                  </tr>
+                {% endfor %}
+              {% else %}
+                <tr>
+                  <td class="text-center" colspan="8">{{ text_no_results }}</td>
+                </tr>
+              {% endif %}
+            </tbody>
+          </table>
+        </div>
+        <div class="row">
+          <div class="col-sm-6 text-start">{{ pagination }}</div>
+          <div class="col-sm-6 text-end">{{ results }}</div>
+        </div>
+        <div class="text-center bg-dark p-3 mt-4">
+          <div style="font-size: 12px; color: #cccccc; margin-bottom: 5px;">{{ text_developed }}</div>
+          <a href="https://opencartbot.com/" target="_blank" style="color: #ffffff; text-decoration: none; font-weight: 600; font-size: 14px; letter-spacing: 0.5px;">OpenCartBot</a>
+          <a href="https://pay.monobank.ua/j_E-B_dZ4nhG" target="_blank" class="donate px-3 py-2 text-dark bg-white">Дякую</a>
+          <style>.donate{border:1px solid #fff;position:absolute;margin-top:-20px;margin-left:25px; border-radius: 30px}.donate::before {content: '';position: absolute;left: -13px;top: 50%;transform: translateY(-50%);width: 0;height: 0;border-top: 9px solid transparent;border-bottom: 4px solid transparent;border-right: 14px solid #ffffff;}</style>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="modal-capture" class="modal fade">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">{{ text_capture_title }}</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p>{{ text_capture_confirm }}</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ button_cancel }}</button>
+        <button type="button" class="btn btn-primary" id="button-capture-confirm">{{ button_capture }}</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="modal-refund" class="modal fade">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">{{ text_refund_title }}</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p>{{ text_refund_confirm }}</p>
+        <div class="row mb-3">
+          <label for="input-refund-amount" class="col-sm-3 col-form-label">{{ entry_refund_amount }}</label>
+          <div class="col-sm-9">
+            <input type="text" id="input-refund-amount" class="form-control" placeholder="{{ entry_refund_amount }}"/>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ button_cancel }}</button>
+        <button type="button" class="btn btn-warning" id="button-refund-confirm">{{ button_refund }}</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+$(document).ready(function() {
+    var capture_transaction_id = 0,
+        capture_order_id = 0,
+        refund_transaction_id = 0,
+        refund_order_id = 0;
+
+    $('.btn-capture').on('click', function() {
+        capture_transaction_id = $(this).data('transaction-id');
+        capture_order_id = $(this).data('order-id');
+        $('#modal-capture').modal('show');
+    });
+
+    $('.btn-refund').on('click', function() {
+        refund_transaction_id = $(this).data('transaction-id');
+        refund_order_id = $(this).data('order-id');
+        var amount = $(this).data('amount');
+        $('#input-refund-amount').val(amount);
+        $('#modal-refund').modal('show');
+    });
+
+    $('#button-capture-confirm').on('click', function() {
+        $.ajax({
+            url: '{{ capture|replace({'&amp;':'&'}) }}',
+            type: 'post',
+            data: {
+                order_id: capture_order_id,
+                transaction_id: capture_transaction_id
+            },
+            dataType: 'json',
+            beforeSend: function() {
+                $('#button-capture-confirm').prop('disabled', true);
+            },
+            complete: function() {
+                $('#button-capture-confirm').prop('disabled', false);
+            },
+            success: function(json) {
+                if (json.error) {
+                    $('#alert').remove();
+                    $('#content > .container-fluid').prepend('<div id="alert" class="alert alert-danger alert-dismissible"><i class="fa-solid fa-circle-exclamation"></i> ' + json.error + ' <button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>');
+                }
+
+                if (json.success) {
+                    $('#alert').remove();
+                    $('#content > .container-fluid').prepend('<div id="alert" class="alert alert-success alert-dismissible"><i class="fa-solid fa-circle-check"></i> ' + json.success + ' <button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>');
+                    
+                    setTimeout(function() {
+                        location.reload();
+                    }, 1000);
+                }
+
+                $('#modal-capture').modal('hide');
+            }
+        });
+    });
+
+    $('#button-refund-confirm').on('click', function() {
+        var amount = $('#input-refund-amount').val();
+        
+        if (!amount || parseFloat(amount) <= 0) {
+            alert('{{ error_refund_amount }}');
+            return;
+        }
+
+        $.ajax({
+            url: '{{ refund|replace({'&amp;':'&'}) }}',
+            type: 'post',
+            data: {
+                order_id: refund_order_id,
+                transaction_id: refund_transaction_id,
+                amount: amount
+            },
+            dataType: 'json',
+            beforeSend: function() {
+                $('#button-refund-confirm').prop('disabled', true);
+            },
+            complete: function() {
+                $('#button-refund-confirm').prop('disabled', false);
+            },
+            success: function(json) {
+                if (json.error) {
+                    $('#alert').remove();
+                    $('#content > .container-fluid').prepend('<div id="alert" class="alert alert-danger alert-dismissible"><i class="fa-solid fa-circle-exclamation"></i> ' + json.error + ' <button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>');
+                }
+
+                if (json.success) {
+                    $('#alert').remove();
+                    $('#content > .container-fluid').prepend('<div id="alert" class="alert alert-success alert-dismissible"><i class="fa-solid fa-circle-check"></i> ' + json.success + ' <button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>');
+                    
+                    setTimeout(function() {
+                        location.reload();
+                    }, 1000);
+                }
+
+                $('#modal-refund').modal('hide');
+            }
+        });
+    });
+});
+</script>
+
+{{ footer }}

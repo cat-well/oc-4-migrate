@@ -1,8 +1,12 @@
-<div id="cookie">
+<div id="cookie" class="cookie-banner">
   <div class="container">
-    <div class="row mt-2">
-      <div class="col-12 p-2 text-center"><p>{{ text_cookie }}</p>
-        <button type="button" value="{{ agree }}" class="btn bg-primary btn-block text-white">{{ button_agree }}</button>&nbsp;&nbsp;&nbsp;<button type="button" value="{{ disagree }}" class="btn btn-light btn-block">{{ button_disagree }}</button>
+    <div class="row mt-2 cookie-banner__row">
+      <div class="col-12 p-2 text-center">
+        <p class="cookie-banner__text">{{ text_cookie }}</p>
+        <div class="cookie-banner__actions">
+          <button type="button" value="{{ agree }}" class="btn bg-primary btn-block text-white cookie-banner__btn cookie-banner__btn--agree">{{ button_agree }}</button>
+          <button type="button" value="{{ disagree }}" class="btn btn-light btn-block cookie-banner__btn cookie-banner__btn--disagree">{{ button_disagree }}</button>
+        </div>
       </div>
     </div>
   </div>

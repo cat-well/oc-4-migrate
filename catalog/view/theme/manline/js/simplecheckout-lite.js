@@ -404,7 +404,9 @@
     }
 
     if (action === 'changeProductQuantity' || action === 'reloadAll') {
-      reloadAll();
+      reloadAll({
+        __changed_field: String(field.name || '')
+      });
     }
   }
 
