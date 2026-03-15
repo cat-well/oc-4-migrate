@@ -103,36 +103,54 @@
       </div>
     {% endif %}
 
-    {# Sale carousel (Specials) #}
-    {% if home_special_products is defined and home_special_products %}
-      <div class="col-xs-12" style="margin-top:35px">
-        <div class="title">
-          <h2>
-            {% if lang == 'uk-ua' %}{{ home_special_title_ua|default('Розпродаж') }}{% else %}{{ home_special_title_ru|default('Распродажа') }}{% endif %}
-          </h2>
+    {# Panda Code-like recommended blocks (manual from admin). If configured, they replace legacy auto carousels. #}
+    {% if home_recommended_blocks is defined and home_recommended_blocks %}
+      {% for b in home_recommended_blocks %}
+        <div class="col-xs-12" style="margin-top:35px">
+          <div class="title">
+            <h2>
+              {% if lang == 'uk-ua' %}{{ b.title_ua|default(b.title_ru|default('')) }}{% else %}{{ b.title_ru|default(b.title_ua|default('')) }}{% endif %}
+            </h2>
+          </div>
+          <div class="carusel_prod">
+            {% for p in b.items %}
+              {{ p }}
+            {% endfor %}
+          </div>
         </div>
-        <div class="carusel_prod">
-          {% for p in home_special_products %}
-            {{ p }}
-          {% endfor %}
+      {% endfor %}
+    {% else %}
+      {# Sale carousel (Specials) #}
+      {% if home_special_products is defined and home_special_products %}
+        <div class="col-xs-12" style="margin-top:35px">
+          <div class="title">
+            <h2>
+              {% if lang == 'uk-ua' %}{{ home_special_title_ua|default('Розпродаж') }}{% else %}{{ home_special_title_ru|default('Распродажа') }}{% endif %}
+            </h2>
+          </div>
+          <div class="carusel_prod">
+            {% for p in home_special_products %}
+              {{ p }}
+            {% endfor %}
+          </div>
         </div>
-      </div>
-    {% endif %}
+      {% endif %}
 
-    {# Popular products carousel (BestSeller) #}
-    {% if home_bestseller_products is defined and home_bestseller_products %}
-      <div class="col-xs-12" style="margin-top:35px">
-        <div class="title">
-          <h2>
-            {% if lang == 'uk-ua' %}{{ home_bestseller_title_ua|default('Популярні товари') }}{% else %}{{ home_bestseller_title_ru|default('Популярные товары') }}{% endif %}
-          </h2>
+      {# Popular products carousel (BestSeller) #}
+      {% if home_bestseller_products is defined and home_bestseller_products %}
+        <div class="col-xs-12" style="margin-top:35px">
+          <div class="title">
+            <h2>
+              {% if lang == 'uk-ua' %}{{ home_bestseller_title_ua|default('Популярні товари') }}{% else %}{{ home_bestseller_title_ru|default('Популярные товары') }}{% endif %}
+            </h2>
+          </div>
+          <div class="carusel_prod">
+            {% for p in home_bestseller_products %}
+              {{ p }}
+            {% endfor %}
+          </div>
         </div>
-        <div class="carusel_prod">
-          {% for p in home_bestseller_products %}
-            {{ p }}
-          {% endfor %}
-        </div>
-      </div>
+      {% endif %}
     {% endif %}
 
     {# Underwear category block (OC2-like) #}

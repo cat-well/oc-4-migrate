@@ -257,6 +257,96 @@ class Home extends \Opencart\System\Engine\Controller {
 		$data['home_bestseller_title_ru'] = $home_cfg['bestseller_title_ru'] ?? 'Популярные товары';
 		$data['home_bestseller_title_ua'] = $home_cfg['bestseller_title_ua'] ?? 'Популярні товари';
 
+		// Panda Code-like manual blocks (from admin module manline.recommended)
+		$data['home_recommended_blocks'] = [];
+		try {
+			$this->load->model('setting/module');
+			$mods = $this->model_setting_module->getModulesByCode('manline.recommended');
+			$settings = [];
+			foreach ($mods as $m) {
+				$s = json_decode($m['setting'] ?? '', true);
+				if (is_array($s) && !empty($s['status'])) {
+					$settings = $s;
+					break;
+				}
+			}
+
+			$blocks = $settings['blocks'] ?? [];
+			if (is_array($blocks) && $blocks) {
+				$this->load->model('catalog/product');
+				$this->load->model('tool/image');
+
+				foreach ($blocks as $b) {
+					if (!is_array($b) || empty($b['status'])) {
+						continue;
+					}
+
+					$title_ru = trim((string)($b['title_ru'] ?? ''));
+					$title_ua = trim((string)($b['title_ua'] ?? ''));
+					$sort_order = (int)($b['sort_order'] ?? 0);
+					$w = (int)($b['image_width'] ?? 250);
+					$h = (int)($b['image_height'] ?? 375);
+					if ($w <= 0) $w = 250;
+					if ($h <= 0) $h = 375;
+
+					$product_ids = [];
+					$raw_ids = (string)($b['product_ids'] ?? '');
+					foreach (preg_split('/\s*,\s*/', trim($raw_ids)) ?: [] as $pid) {
+						$pid = (int)$pid;
+						if ($pid > 0) $product_ids[] = $pid;
+					}
+					$product_ids = array_values(array_unique($product_ids));
+					if (!$product_ids) {
+						continue;
+					}
+
+					$items = [];
+					foreach ($product_ids as $pid) {
+						$p = $this->model_catalog_product->getProduct((int)$pid);
+						if (!$p) {
+							continue;
+						}
+
+						$thumb = '';
+						if (!empty($p['image']) && is_file(DIR_IMAGE . html_entity_decode((string)$p['image'], ENT_QUOTES, 'UTF-8'))) {
+							$thumb = $this->model_tool_image->resize((string)$p['image'], $w, $h);
+						}
+
+						$price_raw = (float)($p['price'] ?? 0.0);
+						$special_raw = (float)($p['special'] ?? 0.0);
+
+						$items[] = $this->load->controller('product/thumb', [
+							'product_id' => (int)$pid,
+							'images' => [],
+							'thumb' => $thumb,
+							'name' => $p['name'] ?? '',
+							'quantity' => (int)($p['quantity'] ?? 0),
+							'price' => $price_raw > 0 ? $this->currency->format($price_raw, $this->session->data['currency']) : '',
+							'special' => $special_raw > 0 ? $this->currency->format($special_raw, $this->session->data['currency']) : '',
+							'lang_code' => $data['lang'],
+							'model' => $p['model'] ?? '',
+							'href' => $this->url->link('product/product', 'language=' . $this->config->get('config_language') . '&product_id=' . (int)$pid)
+						]);
+					}
+
+					if ($items) {
+						$data['home_recommended_blocks'][] = [
+							'title_ru' => $title_ru,
+							'title_ua' => $title_ua,
+							'sort_order' => $sort_order,
+							'items' => $items
+						];
+					}
+				}
+
+				usort($data['home_recommended_blocks'], function($a, $b) {
+					return ((int)($a['sort_order'] ?? 0)) <=> ((int)($b['sort_order'] ?? 0));
+				});
+			}
+		} catch (\Throwable $e) {
+			// ignore
+		}
+
 		// Underwear category block (OC2-like hardcoded rows)
 		$data['home_underwear_rows'] = [];
 
