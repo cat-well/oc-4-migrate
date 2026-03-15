@@ -281,6 +281,40 @@ $(document).ready(function () {
         $.magnificPopup.close();
         $('#header #cart').load(lang_pref+'index.php?route=common/cart #cart > *');
     });
+
+    // Info/help popups (OC2 legacy): links like <a class="title_href" href="#some_popup">...
+    // and <a class="btn_pop" href="#pop">...
+    $(document).on('click', 'a.btn_pop, a.title_href', function(e) {
+        var href = String($(this).attr('href') || '');
+
+        if (href.charAt(0) !== '#') {
+            return;
+        }
+
+        var $target = $(href);
+
+        if (!$target.length) {
+            return;
+        }
+
+        e.preventDefault();
+
+        $.magnificPopup.open({
+            items: { src: href },
+            type: 'inline',
+            fixedContentPos: true,
+            removalDelay: 300,
+            mainClass: String($(this).attr('data-effect') || 'mfp-zoom-in'),
+            callbacks: {
+                open: function() {
+                    $('body').addClass('popup_open');
+                },
+                close: function() {
+                    $('body').removeClass('popup_open');
+                }
+            }
+        });
+    });
     if ($('#simplecheckout_cart').length) {
         cuponPolt();
         bindSimplecheckoutFallback();
