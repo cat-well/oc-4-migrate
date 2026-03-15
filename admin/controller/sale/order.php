@@ -1095,6 +1095,7 @@ class Order extends \Opencart\System\Engine\Controller {
 					'ready' => $ready,
 					'receipt_id' => $receipt_id,
 					'receipt_pdf_url' => $receipt_pdf_url,
+					'order_phone' => (string)($order_info['telephone'] ?? ''),
 					'sms_phone' => (string)($meta['sms_phone'] ?? ''),
 					'sms_sent' => !empty($meta['sms_sent']),
 					'error' => trim((string)($meta['error'] ?? ''))
@@ -2249,7 +2250,12 @@ class Order extends \Opencart\System\Engine\Controller {
 				if ($receipt_id === '') {
 					$json['error'] = $this->language->get('error_checkbox_no_receipt');
 				} else {
-					$phone380 = $this->model_extension_manline_integration_checkbox->normalizePhoneTo380((string)($order_info['telephone'] ?? ''));
+					$requested_phone = '';
+					if (!empty($this->request->post['phone'])) {
+						$requested_phone = (string)$this->request->post['phone'];
+					}
+
+					$phone380 = $this->model_extension_manline_integration_checkbox->normalizePhoneTo380($requested_phone !== '' ? $requested_phone : (string)($order_info['telephone'] ?? ''));
 
 					if ($phone380 === '') {
 						$json['error'] = $this->language->get('error_checkbox_phone');

@@ -355,6 +355,14 @@
                     <div class="col"><strong>{{ text_checkbox_sms_phone }}:</strong> <span id="checkbox-sms-phone">{{ checkbox.sms_phone ? checkbox.sms_phone : text_none }}</span></div>
                   </div>
 
+                  <div class="row mt-3">
+                    <label for="input-checkbox-phone" class="col-sm-3 col-form-label">{{ text_checkbox_sms_phone }}</label>
+                    <div class="col-sm-9">
+                      <input type="text" id="input-checkbox-phone" class="form-control" value="{{ checkbox.sms_phone ? checkbox.sms_phone : checkbox.order_phone }}" placeholder="380XXXXXXXXX"/>
+                      <div class="form-text">Можно ввести 0XXXXXXXXX / +380… — система приведёт к 380XXXXXXXXX.</div>
+                    </div>
+                  </div>
+
                   <div id="checkbox-error" class="alert alert-danger mt-3 mb-0{% if not checkbox.error %} d-none{% endif %}">{{ checkbox.error }}</div>
                 </div>
               </div>
@@ -1234,14 +1242,20 @@ $(document).on('click', '#button-np-delete-ttn', function() {
     npTtnAction('{{ novaposhta_delete_ttn|replace({'&amp;':'&'})|escape('js') }}', this);
 });
 
-function checkboxAction(url, element) {
+function checkboxAction(url, element, extraData) {
+    var data = {
+        order_id: $('#input-order-id').val()
+    };
+
+    if (extraData) {
+        data = Object.assign(data, extraData);
+    }
+
     $.ajax({
         url: url,
         type: 'post',
         dataType: 'json',
-        data: {
-            order_id: $('#input-order-id').val()
-        },
+        data: data,
         beforeSend: function() {
             $(element).prop('disabled', true);
         },
@@ -1276,7 +1290,9 @@ $(document).on('click', '#button-checkbox-create', function() {
 });
 
 $(document).on('click', '#button-checkbox-sms', function() {
-    checkboxAction('{{ checkbox_send_sms|replace({'&amp;':'&'})|escape('js') }}', this);
+    checkboxAction('{{ checkbox_send_sms|replace({'&amp;':'&'})|escape('js') }}', this, {
+        phone: $('#input-checkbox-phone').val()
+    });
 });
 
 // Customer
