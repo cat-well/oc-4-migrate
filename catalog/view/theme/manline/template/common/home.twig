@@ -107,15 +107,17 @@
     {% if home_recommended_blocks is defined and home_recommended_blocks %}
       {% for b in home_recommended_blocks %}
         <div class="col-xs-12" style="margin-top:35px">
-          <div class="title">
-            <h2>
-              {% if lang == 'uk-ua' %}{{ b.title_ua|default(b.title_ru|default('')) }}{% else %}{{ b.title_ru|default(b.title_ua|default('')) }}{% endif %}
-            </h2>
-          </div>
-          <div class="carusel_prod">
-            {% for p in b.items %}
-              {{ p }}
-            {% endfor %}
+          <div class="container">
+            <div class="title">
+              <h2>
+                {% if lang == 'uk-ua' %}{{ b.title_ua|default(b.title_ru|default('')) }}{% else %}{{ b.title_ru|default(b.title_ua|default('')) }}{% endif %}
+              </h2>
+            </div>
+            <div class="carusel_prod">
+              {% for p in b.items %}
+                {{ p }}
+              {% endfor %}
+            </div>
           </div>
         </div>
       {% endfor %}
