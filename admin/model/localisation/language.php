@@ -584,6 +584,14 @@ class Language extends \Opencart\System\Engine\Model {
 	public function getLanguages(array $data = []): array {
 		$sql = "SELECT * FROM `" . DB_PREFIX . "language`";
 
+		// By default (when called without filters) return only enabled languages.
+		// Many admin forms use getLanguages() to render multi-language inputs; disabled languages should not be required.
+		if (isset($data['filter_status'])) {
+			$sql .= " WHERE `status` = '" . (int)$data['filter_status'] . "'";
+		} elseif (!$data) {
+			$sql .= " WHERE `status` = '1'";
+		}
+
 		$sort_data = [
 			'name',
 			'code',
