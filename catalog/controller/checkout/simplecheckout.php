@@ -64,8 +64,9 @@ class Simplecheckout extends \Opencart\System\Engine\Controller {
 					}
 				}
 
+				$language = (string)($this->request->get['language'] ?? ($this->session->data['language'] ?? $this->config->get('config_language')));
 				$json['order_created'] = true;
-				$json['redirect'] = $this->url->link('checkout/success', 'language=' . $this->config->get('config_language'), true);
+				$json['redirect'] = $this->url->link('checkout/success', 'language=' . $language, true);
 				unset($this->session->data['simplecheckout_show_errors']);
 			} else {
 				$payment_form = $this->load->controller('checkout/confirm');
@@ -213,22 +214,24 @@ class Simplecheckout extends \Opencart\System\Engine\Controller {
 	private function getViewData(array $state): array {
 		$data = $this->getBlockData($state);
 
+		$language = (string)($this->request->get['language'] ?? ($this->session->data['language'] ?? $this->config->get('config_language')));
+
 		$data['breadcrumbs'] = [
 			[
 				'text' => $this->config->get('config_name'),
-				'href' => $this->url->link('common/home', 'language=' . $this->config->get('config_language'))
+				'href' => $this->url->link('common/home', 'language=' . $language)
 			],
 			[
 				'text' => $this->language->get('heading_title'),
-				'href' => $this->url->link('checkout/simplecheckout', 'language=' . $this->config->get('config_language'))
+				'href' => $this->url->link('checkout/simplecheckout', 'language=' . $language)
 			]
 		];
 
-		$data['lang'] = $this->config->get('config_language');
+		$data['lang'] = $language;
 		$data['heading_title'] = $this->language->get('heading_title');
 		$data['customer_logged'] = $this->customer->isLogged();
-		$data['action'] = $this->url->link('checkout/simplecheckout', 'language=' . $this->config->get('config_language'));
-		$data['reload_action'] = $this->url->link('checkout/simplecheckout.reload', 'language=' . $this->config->get('config_language'));
+		$data['action'] = $this->url->link('checkout/simplecheckout', 'language=' . $language);
+		$data['reload_action'] = $this->url->link('checkout/simplecheckout.reload', 'language=' . $language);
 		$data['simple_blocks'] = $this->renderBlocks($state);
 
 		return $data;
