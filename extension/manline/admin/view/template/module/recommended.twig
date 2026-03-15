@@ -163,37 +163,61 @@ function addRow() {
   tbody.insertAdjacentHTML('beforeend', html);
 }
 
-document.getElementById('button-add-block').addEventListener('click', addRow);
+// (handler replaced below)
 
-// Minimal autocomplete: on Enter, resolve first match and append its id.
-document.addEventListener('keydown', function(e) {
-  const el = e.target;
-  if (!el || !el.classList || !el.classList.contains('block-product-search')) return;
+function bindAutocomplete(input) {
+  const row = parseInt(input.getAttribute('data-row'), 10);
+  const targetId = 'dropdown-recommended-' + row;
 
-  if (e.key !== 'Enter') return;
-  e.preventDefault();
+  if (!input.getAttribute('data-oc-target')) {
+    input.setAttribute('data-oc-target', targetId);
+    const ul = document.createElement('ul');
+    ul.className = 'dropdown-menu';
+    ul.id = targetId;
+    input.parentNode.appendChild(ul);
+  }
 
-  const row = parseInt(el.getAttribute('data-row'), 10);
-  const q = String(el.value || '').trim();
-  if (!q) return;
-
-  const url = 'index.php?route=catalog/product.autocomplete&user_token={{ user_token }}&filter_name=' + encodeURIComponent(q);
-
-  fetch(url, { credentials: 'same-origin' })
-    .then(r => r.json())
-    .then(items => {
-      if (!Array.isArray(items) || !items.length) return;
-      const pid = parseInt(items[0].product_id || items[0].product_id, 10);
-      if (!Number.isFinite(pid) || pid <= 0) return;
-
+  $(input).autocomplete({
+    source: function(request, response) {
+      $.ajax({
+        url: 'index.php?route=catalog/product.autocomplete&user_token={{ user_token|escape('js') }}&filter_name=' + encodeURIComponent(request),
+        dataType: 'json',
+        success: function(json) {
+          response($.map(json, function(item) {
+            return {
+              label: item['name'] + (item['model'] ? ' (' + item['model'] + ')' : ''),
+              value: item['product_id']
+            };
+          }));
+        }
+      });
+    },
+    select: function(item) {
       const tr = document.querySelector('tr[data-row="' + row + '"]');
       if (!tr) return;
       const current = parseIds(tr.querySelector('.block-product-ids').value);
-      if (!current.includes(pid)) current.push(pid);
+      const pid = parseInt(item.value, 10);
+      if (Number.isFinite(pid) && pid > 0 && !current.includes(pid)) {
+        current.push(pid);
+      }
       setRowIds(row, current);
-      el.value = '';
-    })
-    .catch(console.error);
+      input.value = '';
+    }
+  });
+}
+
+function bindAllAutocompletes() {
+  document.querySelectorAll('.block-product-search').forEach(function(el) {
+    if (el.__recommendedBound) return;
+    el.__recommendedBound = true;
+    bindAutocomplete(el);
+  });
+}
+
+bindAllAutocompletes();
+document.getElementById('button-add-block').addEventListener('click', function() {
+  addRow();
+  bindAllAutocompletes();
 });
 </script>
 

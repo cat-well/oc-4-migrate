@@ -260,11 +260,10 @@ class Home extends \Opencart\System\Engine\Controller {
 		// Panda Code-like manual blocks (from admin module manline.recommended)
 		$data['home_recommended_blocks'] = [];
 		try {
-			$this->load->model('setting/module');
-			$mods = $this->model_setting_module->getModulesByCode('manline.recommended');
 			$settings = [];
-			foreach ($mods as $m) {
-				$s = json_decode($m['setting'] ?? '', true);
+			$q = $this->db->query("SELECT `setting` FROM `" . DB_PREFIX . "module` WHERE `code` = 'manline.recommended' ORDER BY `name` ASC LIMIT 50");
+			foreach ($q->rows as $row) {
+				$s = json_decode($row['setting'] ?? '', true);
 				if (is_array($s) && !empty($s['status'])) {
 					$settings = $s;
 					break;
