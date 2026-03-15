@@ -358,7 +358,13 @@
                   <div class="row mt-3">
                     <label for="input-checkbox-phone" class="col-sm-3 col-form-label">{{ text_checkbox_sms_phone }}</label>
                     <div class="col-sm-9">
-                      <input type="text" id="input-checkbox-phone" class="form-control" value="{{ checkbox.sms_phone ? checkbox.sms_phone : checkbox.order_phone }}" placeholder="380XXXXXXXXX"/>
+                      <div class="input-group">
+                        <input type="text" id="input-checkbox-phone" class="form-control" value="{{ checkbox.sms_phone ? checkbox.sms_phone : checkbox.order_phone }}" placeholder="380XXXXXXXXX"/>
+                        <button type="button" class="btn btn-outline-secondary" id="button-checkbox-phone-from-order" title="Use order phone">
+                          <i class="fa-solid fa-arrow-rotate-left"></i>
+                        </button>
+                      </div>
+                      <div id="checkbox-phone-feedback" class="invalid-feedback"></div>
                       <div class="form-text">Можно ввести 0XXXXXXXXX / +380… — система приведёт к 380XXXXXXXXX.</div>
                     </div>
                   </div>
@@ -1289,7 +1295,60 @@ $(document).on('click', '#button-checkbox-create', function() {
     checkboxAction('{{ checkbox_create_receipt|replace({'&amp;':'&'})|escape('js') }}', this);
 });
 
+function normalizePhoneTo380(raw) {
+    var digits = String(raw || '').replace(/\D+/g, '');
+
+    if (!digits) return '';
+
+    if (/^380\d{9}$/.test(digits)) return digits;
+
+    if (/^0\d{9}$/.test(digits)) return '38' + digits;
+
+    if (/^80\d{9}$/.test(digits)) return '3' + digits;
+
+    return '';
+}
+
+function validateCheckboxPhone() {
+    var $input = $('#input-checkbox-phone');
+    var val = $input.val();
+    var norm = normalizePhoneTo380(val);
+
+    // Clear previous
+    $input.removeClass('is-invalid');
+    $('#checkbox-phone-feedback').text('');
+
+    if (String(val || '').trim() === '') {
+        return { ok: true, normalized: '' };
+    }
+
+    if (norm === '') {
+        $input.addClass('is-invalid');
+        $('#checkbox-phone-feedback').text('Invalid phone. Expected UA format like +380XXXXXXXXX / 0XXXXXXXXX.');
+        return { ok: false, normalized: '' };
+    }
+
+    return { ok: true, normalized: norm };
+}
+
+$(document).on('input', '#input-checkbox-phone', function() {
+    validateCheckboxPhone();
+});
+
+$(document).on('click', '#button-checkbox-phone-from-order', function() {
+    $('#input-checkbox-phone').val('{{ checkbox.order_phone|escape('js') }}');
+    $('#input-checkbox-phone').trigger('input');
+    $('#input-checkbox-phone').focus();
+});
+
 $(document).on('click', '#button-checkbox-sms', function() {
+    var check = validateCheckboxPhone();
+
+    if (!check.ok) {
+        $('#checkbox-error').removeClass('d-none').text('Please fix phone number before sending SMS.');
+        return;
+    }
+
     checkboxAction('{{ checkbox_send_sms|replace({'&amp;':'&'})|escape('js') }}', this, {
         phone: $('#input-checkbox-phone').val()
     });
