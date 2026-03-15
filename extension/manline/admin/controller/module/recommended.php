@@ -37,23 +37,16 @@ class Recommended extends \Opencart\System\Engine\Controller {
 		$data['user_token'] = $this->session->data['user_token'];
 
 		$module_info = [];
-		$module_setting = [];
 		if (isset($this->request->get['module_id'])) {
 			$this->load->model('setting/module');
+			// In OC4, getModule() returns decoded `setting` array (not DB row)
 			$module_info = $this->model_setting_module->getModule((int)$this->request->get['module_id']);
-
-			if (!empty($module_info['setting'])) {
-				$decoded = json_decode($module_info['setting'], true);
-				if (is_array($decoded)) {
-					$module_setting = $decoded;
-				}
-			}
 		}
 
 		$data['module_id'] = isset($this->request->get['module_id']) ? (int)$this->request->get['module_id'] : 0;
 		$data['name'] = $module_info['name'] ?? $this->language->get('heading_title');
-		$data['status'] = $module_setting['status'] ?? 0;
-		$data['blocks'] = $module_setting['blocks'] ?? [];
+		$data['status'] = (int)($module_info['status'] ?? 0);
+		$data['blocks'] = $module_info['blocks'] ?? [];
 
 		if (!is_array($data['blocks'])) {
 			$data['blocks'] = [];
