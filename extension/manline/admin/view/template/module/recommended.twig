@@ -44,8 +44,9 @@
 
           <style>
             /* Autocomplete dropdown inside responsive table: prevent clipping */
-            .recommended-blocks.table-responsive { overflow: visible; }
-            #blocks td { overflow: visible; position: relative; }
+            .recommended-blocks.table-responsive { overflow: visible !important; }
+            #blocks td { overflow: visible !important; }
+            #blocks .dropdown { position: relative; }
             #blocks .dropdown-menu { max-height: 260px; overflow: auto; z-index: 2000; }
           </style>
 
@@ -72,8 +73,10 @@
                       <td><input type="text" name="blocks[{{ block_row }}][title_ru]" value="{{ b.title_ru }}" class="form-control"/></td>
                       <td><input type="text" name="blocks[{{ block_row }}][title_ua]" value="{{ b.title_ua }}" class="form-control"/></td>
                       <td>
-                        <input type="text" name="product" value="" placeholder="{{ help_products }}" class="form-control block-product-search" data-row="{{ block_row }}" data-oc-target="autocomplete-product-{{ block_row }}" autocomplete="off"/>
-                        <ul id="autocomplete-product-{{ block_row }}" class="dropdown-menu"></ul>
+                        <div class="dropdown">
+                          <input type="text" name="product" value="" placeholder="{{ help_products }}" class="form-control block-product-search" data-row="{{ block_row }}" data-oc-target="autocomplete-product-{{ block_row }}" autocomplete="off"/>
+                          <ul id="autocomplete-product-{{ block_row }}" class="dropdown-menu"></ul>
+                        </div>
 
                         <div class="form-control p-0 mt-2" style="height: 120px; overflow: auto;">
                           <table class="table m-0">
@@ -163,8 +166,10 @@ function addRow() {
       <td><input type="text" name="blocks[${row}][title_ru]" value="" class="form-control"/></td>
       <td><input type="text" name="blocks[${row}][title_ua]" value="" class="form-control"/></td>
       <td>
-        <input type="text" name="product" value="" placeholder="{{ help_products|escape('js') }}" class="form-control block-product-search" data-row="${row}" data-oc-target="autocomplete-product-${row}" autocomplete="off"/>
-        <ul id="autocomplete-product-${row}" class="dropdown-menu"></ul>
+        <div class="dropdown">
+          <input type="text" name="product" value="" placeholder="{{ help_products|escape('js') }}" class="form-control block-product-search" data-row="${row}" data-oc-target="autocomplete-product-${row}" autocomplete="off"/>
+          <ul id="autocomplete-product-${row}" class="dropdown-menu"></ul>
+        </div>
         <div class="form-control p-0 mt-2" style="height: 120px; overflow: auto;">
           <table class="table m-0">
             <tbody id="recommended-product-${row}"></tbody>
