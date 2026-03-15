@@ -42,10 +42,17 @@
             </div>
           </div>
 
+          <style>
+            /* Autocomplete dropdown inside responsive table: prevent clipping */
+            .recommended-blocks.table-responsive { overflow: visible; }
+            #blocks td { overflow: visible; position: relative; }
+            #blocks .dropdown-menu { max-height: 260px; overflow: auto; z-index: 2000; }
+          </style>
+
           <fieldset>
             <legend>{{ text_blocks }}</legend>
 
-            <div class="table-responsive">
+            <div class="table-responsive recommended-blocks">
               <table id="blocks" class="table table-bordered table-hover">
                 <thead>
                   <tr>
