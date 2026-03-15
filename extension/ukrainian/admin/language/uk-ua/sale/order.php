@@ -135,3 +135,26 @@ $_['error_order'] = 'Увага: Замовлення не існує!';
 $_['error_affiliate'] = 'Увага: Партнер не існує!';
 $_['error_reward_add'] = 'Увага: Бонусні бали за це замовлення вже додані!';
 $_['error_commission_add'] = 'Увага: Партнерська комісія за це замовлення вже додана!';
+
+// Checkbox (Manline)
+$_['text_checkbox']                 = 'Чек Checkbox';
+$_['text_checkbox_ready']           = 'Готово до створення чека (спрацював статус авт. режиму).';
+$_['text_checkbox_receipt_id']      = 'ID чека';
+$_['text_checkbox_sms_phone']       = 'Телефон для SMS';
+$_['button_checkbox_create']        = 'Створити чек';
+$_['button_checkbox_pdf']           = 'Відкрити PDF';
+$_['button_checkbox_sms']           = 'Надіслати SMS';
+
+$_['text_checkbox_receipt_created'] = 'Чек Checkbox створено.';
+$_['text_checkbox_sms_sent']        = 'Чек надіслано через SMS.';
+
+$_['text_checkbox_history_created'] = 'Checkbox чек створено: %s';
+$_['text_checkbox_history_sms']     = 'Checkbox чек %s надіслано через SMS на %s';
+
+$_['error_checkbox_disabled']       = 'Модуль Checkbox вимкнений або не налаштований.';
+$_['error_checkbox_failed']         = 'Помилка запиту до Checkbox API.';
+$_['error_checkbox_no_receipt']     = 'Чек ще не створено.';
+$_['error_checkbox_phone']          = 'Невірний телефон. Очікуваний формат: 380XXXXXXXXX.';
+$_['error_checkbox_phone_client']   = 'Невірний номер. Приклад: +380XXXXXXXXX або 0XXXXXXXXX (буде приведено до 380XXXXXXXXX).';
+$_['error_checkbox_fix_phone']      = 'Виправ номер телефону перед відправкою SMS.';
+$_['button_checkbox_use_order_phone'] = 'Підставити телефон із замовлення';

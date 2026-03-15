@@ -194,3 +194,6 @@ $_['error_checkbox_disabled']       = 'Checkbox module is disabled or not config
 $_['error_checkbox_failed']         = 'Checkbox API request failed.';
 $_['error_checkbox_no_receipt']     = 'Receipt was not created yet.';
 $_['error_checkbox_phone']          = 'Customer phone is invalid. Expected format: 380XXXXXXXXX.';
+$_['error_checkbox_phone_client']   = 'Неверный номер. Пример: +380XXXXXXXXX или 0XXXXXXXXX (будет приведено к 380XXXXXXXXX).';
+$_['error_checkbox_fix_phone']      = 'Исправь номер телефона перед отправкой SMS.';
+$_['button_checkbox_use_order_phone'] = 'Подставить телефон из заказа';

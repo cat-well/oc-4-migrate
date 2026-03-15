@@ -360,7 +360,7 @@
                     <div class="col-sm-9">
                       <div class="input-group">
                         <input type="text" id="input-checkbox-phone" class="form-control" value="{{ checkbox.sms_phone ? checkbox.sms_phone : checkbox.order_phone }}" placeholder="380XXXXXXXXX"/>
-                        <button type="button" class="btn btn-outline-secondary" id="button-checkbox-phone-from-order" title="Use order phone">
+                        <button type="button" class="btn btn-outline-secondary" id="button-checkbox-phone-from-order" title="{{ button_checkbox_use_order_phone }}">
                           <i class="fa-solid fa-arrow-rotate-left"></i>
                         </button>
                       </div>
@@ -1324,7 +1324,7 @@ function validateCheckboxPhone() {
 
     if (norm === '') {
         $input.addClass('is-invalid');
-        $('#checkbox-phone-feedback').text('Invalid phone. Expected UA format like +380XXXXXXXXX / 0XXXXXXXXX.');
+        $('#checkbox-phone-feedback').text('{{ error_checkbox_phone_client|escape('js') }}');
         return { ok: false, normalized: '' };
     }
 
@@ -1345,7 +1345,7 @@ $(document).on('click', '#button-checkbox-sms', function() {
     var check = validateCheckboxPhone();
 
     if (!check.ok) {
-        $('#checkbox-error').removeClass('d-none').text('Please fix phone number before sending SMS.');
+        $('#checkbox-error').removeClass('d-none').text('{{ error_checkbox_fix_phone|escape('js') }}');
         return;
     }
 
