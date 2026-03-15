@@ -177,6 +177,23 @@ function bindAutocomplete(input) {
     input.parentNode.appendChild(ul);
   }
 
+  function applySelectedProduct(pid) {
+    const tr = document.querySelector('tr[data-row="' + row + '"]');
+    if (!tr) return;
+    const idsInput = tr.querySelector('.block-product-ids');
+    if (!idsInput) return;
+
+    const current = parseIds(idsInput.value);
+    pid = parseInt(pid, 10);
+
+    if (Number.isFinite(pid) && pid > 0 && !current.includes(pid)) {
+      current.push(pid);
+    }
+
+    setRowIds(row, current);
+    input.value = '';
+  }
+
   $(input).autocomplete({
     source: function(request, response) {
       $.ajax({
@@ -193,18 +210,19 @@ function bindAutocomplete(input) {
       });
     },
     select: function(item) {
-      const tr = document.querySelector('tr[data-row="' + row + '"]');
-      if (!tr) return;
-      const current = parseIds(tr.querySelector('.block-product-ids').value);
-      const pid = parseInt(item.value, 10);
-      if (Number.isFinite(pid) && pid > 0 && !current.includes(pid)) {
-        current.push(pid);
-      }
-      setRowIds(row, current);
-      input.value = '';
+      applySelectedProduct(item.value);
     }
   });
+
+  // Fallback click handler: sometimes dropdown inside table-responsive is tricky.
+  // This guarantees selecting an item updates hidden IDs.
+  $(document).off('click.recommended-' + row).on('click.recommended-' + row, '#' + targetId + ' a.dropdown-item', function(e) {
+    e.preventDefault();
+    applySelectedProduct($(this).attr('href'));
+    $('#' + targetId).removeClass('show');
+  });
 }
+
 
 function bindAllAutocompletes() {
   document.querySelectorAll('.block-product-search').forEach(function(el) {
