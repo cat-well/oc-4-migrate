@@ -7,6 +7,8 @@ class Recommended extends \Opencart\System\Engine\Controller {
 
 		$this->document->setTitle($this->language->get('heading_title'));
 
+		$this->load->model('catalog/product');
+
 		$data['breadcrumbs'] = [];
 		$data['breadcrumbs'][] = [
 			'text' => $this->language->get('text_home'),
@@ -63,10 +65,31 @@ class Recommended extends \Opencart\System\Engine\Controller {
 				unset($data['blocks'][$i]);
 				continue;
 			}
+
+			$product_ids = [];
+			$raw_ids = (string)($b['product_ids'] ?? '');
+			foreach (preg_split('/\s*,\s*/', trim($raw_ids)) ?: [] as $pid) {
+				$pid = (int)$pid;
+				if ($pid > 0) $product_ids[] = $pid;
+			}
+			$product_ids = array_values(array_unique($product_ids));
+
+			$products = [];
+			foreach ($product_ids as $pid) {
+				$info = $this->model_catalog_product->getProduct($pid);
+				if ($info) {
+					$products[] = [
+						'product_id' => (int)$pid,
+						'name' => (string)($info['name'] ?? '')
+					];
+				}
+			}
+
 			$data['blocks'][$i] = $b + [
 				'title_ru' => '',
 				'title_ua' => '',
-				'product_ids' => '',
+				'product_ids' => implode(',', $product_ids),
+				'products' => $products,
 				'image_width' => 250,
 				'image_height' => 375,
 				'status' => 1,
@@ -116,7 +139,24 @@ class Recommended extends \Opencart\System\Engine\Controller {
 
 			$title_ru = trim((string)($b['title_ru'] ?? ''));
 			$title_ua = trim((string)($b['title_ua'] ?? ''));
-			$product_ids = trim((string)($b['product_ids'] ?? ''));
+
+			$product_ids = '';
+			if (!empty($b['product']) && is_array($b['product'])) {
+				$ids = [];
+				foreach ($b['product'] as $pid) {
+					$pid = (int)$pid;
+					if ($pid > 0) {
+						$ids[] = $pid;
+					}
+				}
+				$ids = array_values(array_unique($ids));
+				$product_ids = implode(',', $ids);
+			} else {
+				$product_ids = trim((string)($b['product_ids'] ?? ''));
+			}
+
+			$product_ids = trim($product_ids);
+
 			$w = (int)($b['image_width'] ?? 250);
 			$h = (int)($b['image_height'] ?? 375);
 			$status = !empty($b['status']) ? 1 : 0;

@@ -65,9 +65,21 @@
                       <td><input type="text" name="blocks[{{ block_row }}][title_ru]" value="{{ b.title_ru }}" class="form-control"/></td>
                       <td><input type="text" name="blocks[{{ block_row }}][title_ua]" value="{{ b.title_ua }}" class="form-control"/></td>
                       <td>
-                        <input type="hidden" class="block-product-ids" name="blocks[{{ block_row }}][product_ids]" value="{{ b.product_ids }}"/>
-                        <input type="text" class="form-control block-product-search" placeholder="{{ help_products }}" data-row="{{ block_row }}" autocomplete="off"/>
-                        <div class="small text-muted mt-1">IDs: <span class="block-product-ids-text">{{ b.product_ids }}</span></div>
+                        <input type="text" name="product" value="" placeholder="{{ help_products }}" class="form-control block-product-search" data-row="{{ block_row }}" data-oc-target="autocomplete-product-{{ block_row }}" autocomplete="off"/>
+                        <ul id="autocomplete-product-{{ block_row }}" class="dropdown-menu"></ul>
+
+                        <div class="form-control p-0 mt-2" style="height: 120px; overflow: auto;">
+                          <table class="table m-0">
+                            <tbody id="recommended-product-{{ block_row }}">
+                              {% for p in b.products|default([]) %}
+                                <tr id="recommended-product-{{ block_row }}-{{ p.product_id }}">
+                                  <td>{{ p.name }}<input type="hidden" name="blocks[{{ block_row }}][product][]" value="{{ p.product_id }}"/></td>
+                                  <td class="text-end"><button type="button" class="btn btn-danger btn-sm"><i class="fa-solid fa-circle-minus"></i></button></td>
+                                </tr>
+                              {% endfor %}
+                            </tbody>
+                          </table>
+                        </div>
                       </td>
                       <td>
                         <div class="input-group">
@@ -109,21 +121,26 @@ function removeBlockRow(btn) {
   if (tr) tr.remove();
 }
 
-function parseIds(text) {
-  return String(text || '')
-    .split(',')
-    .map(s => parseInt(s.trim(), 10))
-    .filter(n => Number.isFinite(n) && n > 0);
-}
+function addProductToRow(row, item) {
+  const pid = parseInt(item.value, 10);
+  if (!Number.isFinite(pid) || pid <= 0) return;
 
-function setRowIds(row, ids) {
-  const tr = document.querySelector('tr[data-row="' + row + '"]');
-  if (!tr) return;
-  const input = tr.querySelector('.block-product-ids');
-  const label = tr.querySelector('.block-product-ids-text');
-  const value = ids.join(',');
-  if (input) input.value = value;
-  if (label) label.textContent = value;
+  const tbody = document.getElementById('recommended-product-' + row);
+  if (!tbody) return;
+
+  // prevent duplicates
+  if (document.getElementById('recommended-product-' + row + '-' + pid)) {
+    return;
+  }
+
+  const label = String(item.label || '');
+
+  const tr = document.createElement('tr');
+  tr.id = 'recommended-product-' + row + '-' + pid;
+  tr.innerHTML = '<td>' + label + '<input type="hidden" name="blocks[' + row + '][product][]" value="' + pid + '"/></td>' +
+    '<td class="text-end"><button type="button" class="btn btn-danger btn-sm"><i class="fa-solid fa-circle-minus"></i></button></td>';
+
+  tbody.appendChild(tr);
 }
 
 function addRow() {
@@ -139,9 +156,13 @@ function addRow() {
       <td><input type="text" name="blocks[${row}][title_ru]" value="" class="form-control"/></td>
       <td><input type="text" name="blocks[${row}][title_ua]" value="" class="form-control"/></td>
       <td>
-        <input type="hidden" class="block-product-ids" name="blocks[${row}][product_ids]" value=""/>
-        <input type="text" class="form-control block-product-search" placeholder="{{ help_products|escape('js') }}" data-row="${row}" autocomplete="off"/>
-        <div class="small text-muted mt-1">IDs: <span class="block-product-ids-text"></span></div>
+        <input type="text" name="product" value="" placeholder="{{ help_products|escape('js') }}" class="form-control block-product-search" data-row="${row}" data-oc-target="autocomplete-product-${row}" autocomplete="off"/>
+        <ul id="autocomplete-product-${row}" class="dropdown-menu"></ul>
+        <div class="form-control p-0 mt-2" style="height: 120px; overflow: auto;">
+          <table class="table m-0">
+            <tbody id="recommended-product-${row}"></tbody>
+          </table>
+        </div>
       </td>
       <td>
         <div class="input-group">
@@ -167,32 +188,6 @@ function addRow() {
 
 function bindAutocomplete(input) {
   const row = parseInt(input.getAttribute('data-row'), 10);
-  const targetId = 'dropdown-recommended-' + row;
-
-  if (!input.getAttribute('data-oc-target')) {
-    input.setAttribute('data-oc-target', targetId);
-    const ul = document.createElement('ul');
-    ul.className = 'dropdown-menu';
-    ul.id = targetId;
-    input.parentNode.appendChild(ul);
-  }
-
-  function applySelectedProduct(pid) {
-    const tr = document.querySelector('tr[data-row="' + row + '"]');
-    if (!tr) return;
-    const idsInput = tr.querySelector('.block-product-ids');
-    if (!idsInput) return;
-
-    const current = parseIds(idsInput.value);
-    pid = parseInt(pid, 10);
-
-    if (Number.isFinite(pid) && pid > 0 && !current.includes(pid)) {
-      current.push(pid);
-    }
-
-    setRowIds(row, current);
-    input.value = '';
-  }
 
   $(input).autocomplete({
     source: function(request, response) {
@@ -210,16 +205,9 @@ function bindAutocomplete(input) {
       });
     },
     select: function(item) {
-      applySelectedProduct(item.value);
+      addProductToRow(row, item);
+      input.value = '';
     }
-  });
-
-  // Fallback click handler: sometimes dropdown inside table-responsive is tricky.
-  // This guarantees selecting an item updates hidden IDs.
-  $(document).off('click.recommended-' + row).on('click.recommended-' + row, '#' + targetId + ' a.dropdown-item', function(e) {
-    e.preventDefault();
-    applySelectedProduct($(this).attr('href'));
-    $('#' + targetId).removeClass('show');
   });
 }
 
@@ -236,6 +224,11 @@ bindAllAutocompletes();
 document.getElementById('button-add-block').addEventListener('click', function() {
   addRow();
   bindAllAutocompletes();
+});
+
+// Remove selected product
+$(document).on('click', '[id^="recommended-product-"] .btn', function() {
+  $(this).closest('tr').remove();
 });
 </script>
 
