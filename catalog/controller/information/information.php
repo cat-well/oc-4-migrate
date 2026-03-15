@@ -31,21 +31,41 @@ class Information extends \Opencart\System\Engine\Controller {
 
 			$data['breadcrumbs'] = [];
 
+			$language = (string)($this->request->get['language'] ?? ($this->session->data['language'] ?? $this->config->get('config_language')));
+
 			$data['breadcrumbs'][] = [
 				'text' => $this->language->get('text_home'),
-				'href' => $this->url->link('common/home', 'language=' . $this->config->get('config_language'))
+				'href' => $this->url->link('common/home', 'language=' . $language)
 			];
 
 			$data['breadcrumbs'][] = [
 				'text' => $information_info['title'],
-				'href' => $this->url->link('information/information', 'language=' . $this->config->get('config_language') . '&information_id=' . $information_id)
+				'href' => $this->url->link('information/information', 'language=' . $language . '&information_id=' . $information_id)
 			];
 
 			$data['heading_title'] = $information_info['title'];
 
 			$data['description'] = html_entity_decode($information_info['description'], ENT_QUOTES, 'UTF-8');
 
-			$data['continue'] = $this->url->link('common/home', 'language=' . $this->config->get('config_language'));
+			$data['continue'] = $this->url->link('common/home', 'language=' . $language);
+
+			// Manline: help/info menu (left sidebar) - mimic OC2 help navigation
+			$data['help_nav'] = [];
+			$help_ids = [8, 9, 10, 11, 12, 13, 14, 16];
+
+			foreach ($help_ids as $help_id) {
+				$info = $this->model_catalog_information->getInformation((int)$help_id);
+				if (!$info) {
+					continue;
+				}
+
+				$data['help_nav'][] = [
+					'information_id' => (int)$help_id,
+					'title' => (string)$info['title'],
+					'href' => $this->url->link('information/information', 'language=' . $language . '&information_id=' . (int)$help_id),
+					'active' => ((int)$help_id === (int)$information_id)
+				];
+			}
 
 			$data['column_left'] = $this->load->controller('common/column_left');
 			$data['column_right'] = $this->load->controller('common/column_right');

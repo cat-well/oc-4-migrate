@@ -17,11 +17,32 @@
 </div>
 
 <div id="information-information" class="container">
-  <div class="row">{{ column_left }}
-    <div id="content" class="col">{{ content_top }}
-      <h1>{{ heading_title }}</h1>
-      {{ description|raw }}{{ content_bottom }}</div>
-    {{ column_right }}</div>
+  <div class="row">
+    {% if help_nav is defined and help_nav %}
+      <div class="col-sm-3">
+        <ul class="help_nav">
+          {% for item in help_nav %}
+            {% if item.active %}
+              <li class="active"><span>{{ item.title }}</span></li>
+            {% else %}
+              <li><a href="{{ item.href }}">{{ item.title }}</a></li>
+            {% endif %}
+          {% endfor %}
+        </ul>
+      </div>
+      <div id="content" class="col-sm-9">{{ content_top }}
+        <h1>{{ heading_title }}</h1>
+        {{ description|raw }}{{ content_bottom }}
+      </div>
+    {% else %}
+      {{ column_left }}
+      <div id="content" class="col">{{ content_top }}
+        <h1>{{ heading_title }}</h1>
+        {{ description|raw }}{{ content_bottom }}
+      </div>
+      {{ column_right }}
+    {% endif %}
+  </div>
 </div>
 
 {{ footer }}
