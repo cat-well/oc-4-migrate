@@ -227,62 +227,14 @@ class Checkbox extends \Opencart\System\Engine\Model {
 		return ['success' => true, 'receipt_id' => $receipt_id, 'response' => $data];
 	}
 
-	public function createReturnReceipt(array $config, string $sell_receipt_id): array {
-		$sign = $this->cashierSignIn($config);
-		if (empty($sign['success'])) {
-			return $sign;
-		}
-
-		$token = (string)$sign['token'];
-		$api_url = rtrim((string)($config['api_url'] ?? ''), '/');
-
-		// Try the most common endpoints used by Checkbox for return receipts.
-		$candidates = [
-			[
-				'method' => 'POST',
-				'url' => $api_url . '/api/v1/receipts/' . rawurlencode($sell_receipt_id) . '/return',
-				'body' => ''
-			],
-			[
-				'method' => 'POST',
-				'url' => $api_url . '/api/v1/receipts/return',
-				'body' => json_encode(['receipt_id' => $sell_receipt_id], JSON_UNESCAPED_UNICODE) ?: '{}'
-			],
-		];
-
-		$headers = [
-			'Content-Type: application/json',
-			'Authorization: Bearer ' . $token
-		];
-		if (!empty($config['client_name'])) {
-			$headers[] = 'X-Client-Name: ' . (string)$config['client_name'];
-		}
-		if (!empty($config['client_version'])) {
-			$headers[] = 'X-Client-Version: ' . (string)$config['client_version'];
-		}
-
-		$last = null;
-		foreach ($candidates as $c) {
-			$body = (string)($c['body'] ?? '');
-			$res = $this->request((string)$c['method'], (string)$c['url'], $headers, $body);
-			$last = $res;
-			$data = json_decode((string)$res['body'], true);
-			if (!is_array($data)) {
-				$data = ['message' => (string)$res['body']];
-			}
-			if ((int)$res['code'] >= 400) {
-				// Try next candidate only on not-found endpoints
-				if ((int)$res['code'] === 404 || (int)$res['code'] === 405) {
-					continue;
-			}
-				return ['success' => false, 'error' => (string)($data['message'] ?? 'Checkbox API error.'), 'http_code' => (int)$res['code'], 'response' => $data];
-			}
-
-			$receipt_id = (string)($data['id'] ?? '');
-			return ['success' => true, 'receipt_id' => $receipt_id, 'response' => $data];
-		}
-
-		return ['success' => false, 'error' => 'Unable to create return receipt (no compatible endpoint).', 'http_code' => (int)($last['code'] ?? 0), 'response' => (string)($last['body'] ?? '')];
+	/**
+	 * Create return receipt.
+	 *
+	 * Checkbox uses the same endpoint as SELL: POST /api/v1/receipts/sell
+	 * The payload must include related_receipt_id (original sell receipt id) and usually negative payments.
+	 */
+	public function createReturnReceipt(array $config, array $return_payload): array {
+		return $this->createSellReceipt($config, $return_payload);
 	}
 
 	public function sendReceiptSms(array $config, string $receipt_id, string $phone380): array {

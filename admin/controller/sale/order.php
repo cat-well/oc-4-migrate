@@ -2756,7 +2756,28 @@ class Order extends \Opencart\System\Engine\Controller {
 		return $config;
 	}
 
-	private function buildCheckboxSellPayload(array $order_info): array {
+	
+	private function buildCheckboxReturnPayload(array $order_info, string $sell_receipt_id): array {
+		$payload = $this->buildCheckboxSellPayload($order_info);
+
+		// Mark as RETURN by linking to original receipt
+		$payload['id'] = $this->uuidv4();
+		$payload['related_receipt_id'] = $sell_receipt_id;
+
+		// For return receipts, payments should be negative values (money outflow).
+		if (!empty($payload['payments']) && is_array($payload['payments'])) {
+			foreach ($payload['payments'] as &$p) {
+				if (is_array($p) && isset($p['value'])) {
+					$p['value'] = 0 - (int)$p['value'];
+				}
+			}
+			unset($p);
+		}
+
+		return $payload;
+	}
+
+private function buildCheckboxSellPayload(array $order_info): array {
 		$this->load->model('sale/order');
 		$products = $this->model_sale_order->getProducts((int)$order_info['order_id']);
 
