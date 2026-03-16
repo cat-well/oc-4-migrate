@@ -237,6 +237,41 @@ class Checkbox extends \Opencart\System\Engine\Model {
 		return $this->createSellReceipt($config, $return_payload);
 	}
 
+	public function cashierMe(array $config): array {
+		$sign = $this->cashierSignIn($config);
+		if (empty($sign['success'])) {
+			return $sign;
+		}
+
+		$token = (string)$sign['token'];
+		$api_url = rtrim((string)($config['api_url'] ?? ''), '/');
+		$url = $api_url . '/api/v1/cashier/me';
+
+		$headers = [
+			'Authorization: Bearer ' . $token
+		];
+
+		if (!empty($config['client_name'])) {
+			$headers[] = 'X-Client-Name: ' . (string)$config['client_name'];
+		}
+		if (!empty($config['client_version'])) {
+			$headers[] = 'X-Client-Version: ' . (string)$config['client_version'];
+		}
+
+		$res = $this->request('GET', $url, $headers);
+
+		$data = json_decode((string)$res['body'], true);
+		if (!is_array($data)) {
+			return ['success' => false, 'error' => 'Invalid response from Checkbox cashier/me.', 'http_code' => (int)$res['code'], 'response' => (string)$res['body']];
+		}
+
+		if ((int)$res['code'] >= 400) {
+			return ['success' => false, 'error' => (string)($data['message'] ?? 'Checkbox API error.'), 'http_code' => (int)$res['code'], 'response' => $data];
+		}
+
+		return ['success' => true, 'response' => $data];
+	}
+
 	public function sendReceiptSms(array $config, string $receipt_id, string $phone380): array {
 		$sign = $this->cashierSignIn($config);
 		if (empty($sign['success'])) {

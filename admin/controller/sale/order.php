@@ -631,6 +631,9 @@ class Order extends \Opencart\System\Engine\Controller {
 		$data['novaposhta_refresh_status'] = $this->url->link('sale/order.refreshNovaposhtaStatus', 'user_token=' . $this->session->data['user_token'] . '&order_id=' . $order_id);
 		$data['checkbox_create_receipt'] = $this->url->link('sale/order.createCheckboxReceipt', 'user_token=' . $this->session->data['user_token'] . '&order_id=' . $order_id);
 		$data['checkbox_send_sms'] = $this->url->link('sale/order.sendCheckboxReceiptSms', 'user_token=' . $this->session->data['user_token'] . '&order_id=' . $order_id);
+		$data['checkbox_create_return_receipt'] = $this->url->link('sale/order.createCheckboxReturnReceipt', 'user_token=' . $this->session->data['user_token'] . '&order_id=' . $order_id);
+		$data['checkbox_send_return_sms'] = $this->url->link('sale/order.sendCheckboxReturnReceiptSms', 'user_token=' . $this->session->data['user_token'] . '&order_id=' . $order_id);
+		$data['checkbox_check_auth'] = $this->url->link('sale/order.checkCheckboxAuth', 'user_token=' . $this->session->data['user_token'] . '&order_id=' . $order_id);
 		$data['upload'] = $this->url->link('tool/upload.upload', 'user_token=' . $this->session->data['user_token']);
 		$data['customer_add'] = $this->url->link('customer/customer.form', 'user_token=' . $this->session->data['user_token']);
 
@@ -2482,6 +2485,45 @@ class Order extends \Opencart\System\Engine\Controller {
 			$this->model_customer_customer->addReward($order_info['customer_id'], $this->language->get('text_order_id') . ' #' . $order_id, $order_info['reward'], $order_id);
 
 			$json['success'] = $this->language->get('text_reward_add');
+		}
+
+		$this->response->addHeader('Content-Type: application/json');
+		$this->response->setOutput(json_encode($json));
+	}
+
+	/**
+	 * Check Checkbox authentication (show cashier profile)
+	 */
+	public function checkCheckboxAuth(): void {
+		$this->load->language('sale/order');
+
+		$json = [];
+		$order_id = $this->getOrderIdFromRequest();
+		$order_info = [];
+
+		if ($this->prepareCheckboxAction($order_id, $order_info, $json)) {
+			$this->load->model('extension/manline/integration/checkbox');
+			$module_id = 0;
+			if (isset($this->request->post['module_id'])) {
+				$module_id = (int)$this->request->post['module_id'];
+			}
+			$config = $this->getCheckboxConfig($module_id);
+
+			if (empty($config['enabled'])) {
+				$json['error'] = $this->language->get('error_checkbox_disabled');
+			} else {
+				$result = $this->model_extension_manline_integration_checkbox->cashierMe($config);
+				if (empty($result['success'])) {
+					$json['error'] = (string)($result['error'] ?? $this->language->get('error_checkbox_failed'));
+					$json['details'] = (array)($result['response'] ?? []);
+				} else {
+					$cashier = (array)($result['response'] ?? []);
+					$name = (string)($cashier['full_name'] ?? $cashier['email'] ?? '');
+					$id = (string)($cashier['id'] ?? '');
+					$json['success'] = sprintf($this->language->get('text_checkbox_auth_ok'), $name !== '' ? $name : $id);
+					$json['cashier'] = $cashier;
+				}
+			}
 		}
 
 		$this->response->addHeader('Content-Type: application/json');
