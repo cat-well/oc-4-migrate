@@ -177,13 +177,23 @@ $_['button_np_refresh_status']      = 'Refresh Status';
 
 // Checkbox
 $_['text_checkbox']                 = 'Checkbox receipt';
-$_['text_checkbox_ready']           = 'Ready to create receipt (auto mode trigger status matched).';
 $_['text_checkbox_receipt_id']      = 'Receipt ID';
 $_['text_checkbox_sms_phone']       = 'SMS phone';
 $_['button_checkbox_create']        = 'Create receipt';
 $_['button_checkbox_pdf']           = 'Open PDF';
 $_['button_checkbox_sms']           = 'Send SMS';
 
+$_['button_checkbox_return_create'] = 'Create return';
+$_['button_checkbox_return_pdf']    = 'Return PDF';
+$_['button_checkbox_return_sms']    = 'Send return SMS';
+
+$_['text_checkbox_return_created']  = 'Checkbox return receipt created.';
+$_['text_checkbox_return_sms_sent'] = 'Return receipt has been sent via SMS.';
+
+$_['text_checkbox_history_return_created'] = 'Checkbox return receipt created: %s (for %s)';
+$_['text_checkbox_history_return_sms']     = 'Checkbox return receipt %s sent via SMS to %s';
+
+$_['error_checkbox_no_return']      = 'Return receipt was not created yet.';
 $_['text_checkbox_receipt_created'] = 'Checkbox receipt created.';
 $_['text_checkbox_sms_sent']        = 'Receipt has been sent via SMS.';
 

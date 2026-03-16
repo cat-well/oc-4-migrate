@@ -6,7 +6,11 @@ class Checkbox extends \Opencart\System\Engine\Model {
 		$this->db->query(
 			"CREATE TABLE IF NOT EXISTS `" . DB_PREFIX . "order_checkbox` (
 				`order_id` INT(11) NOT NULL,
+				`module_id` INT(11) NOT NULL DEFAULT 0,
 				`receipt_id` VARCHAR(64) NOT NULL DEFAULT '',
+				`return_receipt_id` VARCHAR(64) NOT NULL DEFAULT '',
+				`return_receipt_status` VARCHAR(64) NOT NULL DEFAULT '',
+				`return_sms_sent` TINYINT(1) NOT NULL DEFAULT 0,
 				`receipt_status` VARCHAR(64) NOT NULL DEFAULT '',
 				`sms_phone` VARCHAR(32) NOT NULL DEFAULT '',
 				`sms_sent` TINYINT(1) NOT NULL DEFAULT 0,
@@ -54,7 +58,11 @@ class Checkbox extends \Opencart\System\Engine\Model {
 
 		$this->ensureTable();
 
+		$module_id = (int)($meta['module_id'] ?? 0);
 		$receipt_id = trim((string)($meta['receipt_id'] ?? ''));
+		$return_receipt_id = trim((string)($meta['return_receipt_id'] ?? ''));
+		$return_receipt_status = trim((string)($meta['return_receipt_status'] ?? ''));
+		$return_sms_sent = !empty($meta['return_sms_sent']) ? 1 : 0;
 		$receipt_status = trim((string)($meta['receipt_status'] ?? ''));
 		$sms_phone = trim((string)($meta['sms_phone'] ?? ''));
 		$sms_sent = !empty($meta['sms_sent']) ? 1 : 0;
@@ -217,6 +225,64 @@ class Checkbox extends \Opencart\System\Engine\Model {
 
 		$receipt_id = (string)($data['id'] ?? '');
 		return ['success' => true, 'receipt_id' => $receipt_id, 'response' => $data];
+	}
+
+	public function createReturnReceipt(array $config, string $sell_receipt_id): array {
+		$sign = $this->cashierSignIn($config);
+		if (empty($sign['success'])) {
+			return $sign;
+		}
+
+		$token = (string)$sign['token'];
+		$api_url = rtrim((string)($config['api_url'] ?? ''), '/');
+
+		// Try the most common endpoints used by Checkbox for return receipts.
+		$candidates = [
+			[
+				'method' => 'POST',
+				'url' => $api_url . '/api/v1/receipts/' . rawurlencode($sell_receipt_id) . '/return',
+				'body' => ''
+			],
+			[
+				'method' => 'POST',
+				'url' => $api_url . '/api/v1/receipts/return',
+				'body' => json_encode(['receipt_id' => $sell_receipt_id], JSON_UNESCAPED_UNICODE) ?: '{}'
+			],
+		];
+
+		$headers = [
+			'Content-Type: application/json',
+			'Authorization: Bearer ' . $token
+		];
+		if (!empty($config['client_name'])) {
+			$headers[] = 'X-Client-Name: ' . (string)$config['client_name'];
+		}
+		if (!empty($config['client_version'])) {
+			$headers[] = 'X-Client-Version: ' . (string)$config['client_version'];
+		}
+
+		$last = null;
+		foreach ($candidates as $c) {
+			$body = (string)($c['body'] ?? '');
+			$res = $this->request((string)$c['method'], (string)$c['url'], $headers, $body);
+			$last = $res;
+			$data = json_decode((string)$res['body'], true);
+			if (!is_array($data)) {
+				$data = ['message' => (string)$res['body']];
+			}
+			if ((int)$res['code'] >= 400) {
+				// Try next candidate only on not-found endpoints
+				if ((int)$res['code'] === 404 || (int)$res['code'] === 405) {
+					continue;
+			}
+				return ['success' => false, 'error' => (string)($data['message'] ?? 'Checkbox API error.'), 'http_code' => (int)$res['code'], 'response' => $data];
+			}
+
+			$receipt_id = (string)($data['id'] ?? '');
+			return ['success' => true, 'receipt_id' => $receipt_id, 'response' => $data];
+		}
+
+		return ['success' => false, 'error' => 'Unable to create return receipt (no compatible endpoint).', 'http_code' => (int)($last['code'] ?? 0), 'response' => (string)($last['body'] ?? '')];
 	}
 
 	public function sendReceiptSms(array $config, string $receipt_id, string $phone380): array {

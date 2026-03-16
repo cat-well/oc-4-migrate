@@ -46,11 +46,6 @@ class Checkbox extends \Opencart\System\Engine\Controller {
 		$data['cashier_password'] = $module_info['cashier_password'] ?? '';
 		$data['client_name'] = $module_info['client_name'] ?? 'Manline OpenCart';
 		$data['client_version'] = $module_info['client_version'] ?? 'oc4';
-		$data['auto_enabled'] = $module_info['auto_enabled'] ?? 0;
-		$data['auto_status_id'] = $module_info['auto_status_id'] ?? 0;
-
-		$this->load->model('localisation/order_status');
-		$data['order_statuses'] = $this->model_localisation_order_status->getOrderStatuses();
 
 		$data['module_id'] = isset($this->request->get['module_id']) ? (int)$this->request->get['module_id'] : 0;
 
@@ -78,9 +73,7 @@ class Checkbox extends \Opencart\System\Engine\Controller {
 			'cashier_login' => '',
 			'cashier_password' => '',
 			'client_name' => '',
-			'client_version' => '',
-			'auto_enabled' => 0,
-			'auto_status_id' => 0
+			'client_version' => ''
 		];
 
 		$post_info = $this->request->post + $required;

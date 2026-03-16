@@ -1063,22 +1063,35 @@ class Order extends \Opencart\System\Engine\Controller {
 			$this->load->model('setting/module');
 			$modules = $this->model_setting_module->getModulesByCode('manline.checkbox');
 
-			$checkbox_module = [];
+			$enabled_modules = [];
 			foreach ($modules as $m) {
 				$settings = json_decode($m['setting'] ?? '', true);
 				if (!is_array($settings)) {
 					$settings = [];
 				}
 				if (!empty($settings['status'])) {
-					$checkbox_module = $settings;
-					break;
+					$enabled_modules[] = [
+						'module_id' => (int)($m['module_id'] ?? 0),
+						'name' => (string)($m['name'] ?? 'Checkbox')
+					];
 				}
 			}
 
-			if ($checkbox_module) {
-				$this->load->model('extension/manline/integration/checkbox');
-				$meta = $this->model_extension_manline_integration_checkbox->getOrderMeta($order_id);
+			$checkbox_module = [];
+			$selected_module_id = 0;
 
+			$this->load->model('extension/manline/integration/checkbox');
+			$meta = $this->model_extension_manline_integration_checkbox->getOrderMeta($order_id);
+			$selected_module_id = (int)($meta['module_id'] ?? 0);
+			if ($selected_module_id <= 0 && $enabled_modules) {
+				$selected_module_id = (int)($enabled_modules[0]['module_id'] ?? 0);
+			}
+
+			if ($selected_module_id > 0) {
+				$checkbox_module = $this->getCheckboxConfig($selected_module_id);
+			}
+
+			if (!empty($checkbox_module['enabled'])) {
 				$receipt_id = trim((string)($meta['receipt_id'] ?? ''));
 				$receipt_pdf_url = '';
 				if ($receipt_id !== '') {
@@ -1086,18 +1099,25 @@ class Order extends \Opencart\System\Engine\Controller {
 					$receipt_pdf_url = $api . '/api/v1/receipts/' . $receipt_id . '/pdf';
 				}
 
-				$auto_enabled = !empty($checkbox_module['auto_enabled']);
-				$auto_status_id = (int)($checkbox_module['auto_status_id'] ?? 0);
-				$ready = $auto_enabled && $auto_status_id > 0 && (int)$data['order_status_id'] === $auto_status_id && $receipt_id === '';
+				$return_receipt_id = trim((string)($meta['return_receipt_id'] ?? ''));
+				$return_receipt_pdf_url = '';
+				if ($return_receipt_id !== '') {
+					$api = rtrim((string)($checkbox_module['api_url'] ?? 'https://api.checkbox.in.ua'), '/');
+					$return_receipt_pdf_url = $api . '/api/v1/receipts/' . $return_receipt_id . '/pdf';
+				}
 
 				$data['checkbox'] = [
 					'enabled' => true,
-					'ready' => $ready,
+					'modules' => $enabled_modules,
+					'selected_module_id' => $selected_module_id,
 					'receipt_id' => $receipt_id,
 					'receipt_pdf_url' => $receipt_pdf_url,
+					'return_receipt_id' => $return_receipt_id,
+					'return_receipt_pdf_url' => $return_receipt_pdf_url,
 					'order_phone' => (string)($order_info['telephone'] ?? ''),
 					'sms_phone' => (string)($meta['sms_phone'] ?? ''),
 					'sms_sent' => !empty($meta['sms_sent']),
+					'return_sms_sent' => !empty($meta['return_sms_sent']),
 					'error' => trim((string)($meta['error'] ?? ''))
 				];
 			}
@@ -2291,7 +2311,132 @@ class Order extends \Opencart\System\Engine\Controller {
 		$this->response->setOutput(json_encode($json));
 	}
 
+	
 	/**
+	 * Create Checkbox return receipt (manual refund/storno)
+	 */
+	public function createCheckboxReturnReceipt(): void {
+		$this->load->language('sale/order');
+
+		$json = [];
+		$order_id = $this->getOrderIdFromRequest();
+		$order_info = [];
+
+		if ($this->prepareCheckboxAction($order_id, $order_info, $json)) {
+			$this->load->model('extension/manline/integration/checkbox');
+			$module_id = 0;
+			if (isset($this->request->post['module_id'])) {
+				$module_id = (int)$this->request->post['module_id'];
+			}
+			$config = $this->getCheckboxConfig($module_id);
+
+			if (empty($config['enabled'])) {
+				$json['error'] = $this->language->get('error_checkbox_disabled');
+			} else {
+				$meta = $this->model_extension_manline_integration_checkbox->getOrderMeta($order_id);
+				$sell_receipt_id = trim((string)($meta['receipt_id'] ?? ''));
+				if ($sell_receipt_id === '') {
+					$json['error'] = $this->language->get('error_checkbox_no_receipt');
+				} else {
+					$result = $this->model_extension_manline_integration_checkbox->createReturnReceipt($config, $sell_receipt_id);
+					if (empty($result['success'])) {
+						$json['error'] = (string)($result['error'] ?? $this->language->get('error_checkbox_failed'));
+						$this->model_extension_manline_integration_checkbox->saveOrderMeta($order_id, [
+							'module_id' => $module_id,
+							'receipt_id' => $sell_receipt_id,
+							'error' => $json['error'],
+							'response' => (array)($result['response'] ?? [])
+						]);
+					} else {
+						$return_id = (string)($result['receipt_id'] ?? '');
+						$json['success'] = $this->language->get('text_checkbox_return_created');
+						$json['return_receipt_id'] = $return_id;
+						$json['pdf_url'] = rtrim((string)$config['api_url'], '/') . '/api/v1/receipts/' . $return_id . '/pdf';
+
+						$this->model_extension_manline_integration_checkbox->saveOrderMeta($order_id, [
+							'module_id' => $module_id,
+							'receipt_id' => $sell_receipt_id,
+							'return_receipt_id' => $return_id,
+							'return_receipt_status' => 'CREATED',
+							'error' => '',
+							'response' => (array)($result['response'] ?? [])
+						]);
+
+						$this->addOrderHistoryLog($order_id, sprintf($this->language->get('text_checkbox_history_return_created'), $return_id, $sell_receipt_id));
+					}
+				}
+			}
+		}
+
+		$this->response->addHeader('Content-Type: application/json');
+		$this->response->setOutput(json_encode($json));
+	}
+
+	/**
+	 * Send Checkbox return receipt via SMS
+	 */
+	public function sendCheckboxReturnReceiptSms(): void {
+		$this->load->language('sale/order');
+
+		$json = [];
+		$order_id = $this->getOrderIdFromRequest();
+		$order_info = [];
+
+		if ($this->prepareCheckboxAction($order_id, $order_info, $json)) {
+			$this->load->model('extension/manline/integration/checkbox');
+			$module_id = 0;
+			if (isset($this->request->post['module_id'])) {
+				$module_id = (int)$this->request->post['module_id'];
+			}
+			$config = $this->getCheckboxConfig($module_id);
+
+			if (empty($config['enabled'])) {
+				$json['error'] = $this->language->get('error_checkbox_disabled');
+			} else {
+				$meta = $this->model_extension_manline_integration_checkbox->getOrderMeta($order_id);
+				$return_id = trim((string)($meta['return_receipt_id'] ?? ''));
+				if ($return_id === '') {
+					$json['error'] = $this->language->get('error_checkbox_no_return');
+				} else {
+					$requested_phone = '';
+					if (!empty($this->request->post['phone'])) {
+						$requested_phone = (string)$this->request->post['phone'];
+					}
+					$phone380 = $this->model_extension_manline_integration_checkbox->normalizePhoneTo380($requested_phone !== '' ? $requested_phone : (string)($order_info['telephone'] ?? ''));
+					if ($phone380 === '') {
+						$json['error'] = $this->language->get('error_checkbox_phone');
+					} else {
+						$result = $this->model_extension_manline_integration_checkbox->sendReceiptSms($config, $return_id, $phone380);
+						if (empty($result['success'])) {
+							$json['error'] = (string)($result['error'] ?? $this->language->get('error_checkbox_failed'));
+							$this->model_extension_manline_integration_checkbox->saveOrderMeta($order_id, [
+								'module_id' => $module_id,
+								'return_receipt_id' => $return_id,
+								'sms_phone' => $phone380,
+								'return_sms_sent' => 0,
+								'error' => $json['error'],
+								'response' => (array)($result['response'] ?? [])
+							]);
+						} else {
+							$json['success'] = $this->language->get('text_checkbox_return_sms_sent');
+							$this->model_extension_manline_integration_checkbox->saveOrderMeta($order_id, [
+								'module_id' => $module_id,
+								'return_receipt_id' => $return_id,
+								'sms_phone' => $phone380,
+								'return_sms_sent' => 1,
+								'error' => ''
+							]);
+							$this->addOrderHistoryLog($order_id, sprintf($this->language->get('text_checkbox_history_return_sms'), $return_id, $phone380));
+						}
+					}
+				}
+			}
+		}
+
+		$this->response->addHeader('Content-Type: application/json');
+		$this->response->setOutput(json_encode($json));
+	}
+/**
 	 * Add Reward
 	 *
 	 * @return void
@@ -2580,12 +2725,21 @@ class Order extends \Opencart\System\Engine\Controller {
 		return true;
 	}
 
-	private function getCheckboxConfig(): array {
+	private function getCheckboxConfig(int $module_id = 0): array {
 		$config = ['enabled' => false];
 
 		$this->load->model('setting/module');
-		$modules = $this->model_setting_module->getModulesByCode('manline.checkbox');
 
+		if ($module_id > 0) {
+			$module = $this->model_setting_module->getModule($module_id);
+			if (is_array($module) && !empty($module['status'])) {
+				$module['enabled'] = true;
+				return $module;
+			}
+			return $config;
+		}
+
+		$modules = $this->model_setting_module->getModulesByCode('manline.checkbox');
 		foreach ($modules as $m) {
 			$settings = json_decode($m['setting'] ?? '', true);
 			if (!is_array($settings)) {
@@ -2593,6 +2747,8 @@ class Order extends \Opencart\System\Engine\Controller {
 			}
 			if (!empty($settings['status'])) {
 				$settings['enabled'] = true;
+				$settings['module_id'] = (int)($m['module_id'] ?? 0);
+				$settings['name'] = (string)($m['name'] ?? 'Checkbox');
 				return $settings;
 			}
 		}
