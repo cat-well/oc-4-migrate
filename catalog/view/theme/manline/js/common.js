@@ -32,8 +32,8 @@ $(document).ready(function () {
 
 
     $('#menu ul > li > a + div, #menu ul > li > span + div').each(function (index, element) {
-        if ($.browser.msie && ($.browser.version == 7 || $.browser.version == 6)) {
-            var category = $(element).find('a');
+        // Legacy IE6/7 layout fix from OC2 theme. jQuery 3.x no longer provides $.browser.
+        if ($.browser && $.browser.msie && ($.browser.version == 7 || $.browser.version == 6)) {
             var columns = $(element).find('ul').length;
             $(element).css('width', (columns * 143) + 'px');
             $(element).find('ul').css('float', 'left');
@@ -45,7 +45,8 @@ $(document).ready(function () {
             $(this).css('margin-left', '-' + (i + 5) + 'px');
         }
     });
-    if ($.browser.msie) {
+
+    if ($.browser && $.browser.msie) {
         if ($.browser.version <= 6) {
             $('#column-left + #column-right + #content, #column-left + #content').css('margin-left', '195px');
             $('#column-right + #content').css('margin-right', '195px');
