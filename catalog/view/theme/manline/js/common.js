@@ -20,7 +20,7 @@ $(document).ready(function () {
     });
 
 
-    $('#cart > .heading a').live('click', function (e) {
+    $(document).on('click', '#cart > .heading a', function (e) {
         e.preventDefault();
         $('#cart').toggleClass('active');
     });
@@ -60,7 +60,7 @@ $(document).ready(function () {
             });
         }
     }
-    $('.success img, .warning img, .attention img, .information img').live('click', function () {
+    $(document).on('click', '.success img, .warning img, .attention img, .information img', function () {
         $(this).parent().parent().removeClass("success_w");
         $(this).parent().fadeOut('slow', function () {
             $(this).remove();

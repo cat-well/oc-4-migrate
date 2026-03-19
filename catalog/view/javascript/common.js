@@ -24,13 +24,17 @@ function getURLVar(key) {
 
 // Observe
 +function($) {
-    $.fn.observe = function(callback) {
-        observer = new MutationObserver(callback);
-
-        observer.observe($(this)[0], {
+    $.fn.observe = function(callback, options) {
+        var settings = options || {
             characterData: false,
             childList: true,
             attributes: false
+        };
+
+        return this.each(function() {
+            if (!this) return;
+            var observer = new MutationObserver(callback);
+            observer.observe(this, settings);
         });
     };
 }(jQuery);
