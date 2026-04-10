@@ -356,11 +356,14 @@ class FilterproLike extends \Opencart\System\Engine\Controller {
 		$data['build_f_url'] = $build_f_url;
 
 		// Helper: apply current selection as SQL conditions (for facet counts)
+		// IMPORTANT (Manline requirement): facet totals must be computed only for IN-STOCK products,
+		// while the product list still shows out-of-stock items (sorted after in-stock).
 		$facet_where = function (string $exclude) use ($selected, $category_id): string {
 			$w = [];
 			$w[] = "p2c.category_id='" . (int)$category_id . "'";
 			$w[] = "p.status='1'";
 			$w[] = "p.date_available<=NOW()";
+			$w[] = "p.quantity > 0";
 
 			// Standard toggles
 			if (!empty($this->request->get['stock']) && $exclude !== 'stock') {
@@ -508,12 +511,17 @@ class FilterproLike extends \Opencart\System\Engine\Controller {
 			$name = (string)$row['name'];
 			$total = (int)$row['total'];
 
-			$data['manufacturers'][] = ['id' => $id, 'name' => $name, 'total' => $total];
-
 			$cur = $sel_slug;
 			$cur_ids = $cur['manufacturer'] ?? [];
 			$cur_ids = array_values(array_unique(array_filter(array_map('strval', (array)$cur_ids))));
 			$sel = in_array((string)$id, $cur_ids, true);
+
+			// Hide values that have no in-stock products (but keep selected values visible so user can unselect)
+			if ($total <= 0 && !$sel) {
+				continue;
+			}
+
+			$data['manufacturers'][] = ['id' => $id, 'name' => $name, 'total' => $total];
 
 			if ($sel) {
 				$cur_ids = array_values(array_filter($cur_ids, static fn($v) => $v !== (string)$id));
@@ -585,6 +593,17 @@ class FilterproLike extends \Opencart\System\Engine\Controller {
 			$total = (int)$row['total'];
 			$image = (string)$row['image'];
 
+			$cur = $sel_slug;
+			$key = $color_option_slug;
+			$cur_vals = $cur[$key] ?? [];
+			$cur_vals = array_values(array_unique(array_filter(array_map('strval', (array)$cur_vals))));
+			$sel = in_array($slug, $cur_vals, true);
+
+			// Hide values that have no in-stock products (but keep selected)
+			if ($total <= 0 && !$sel) {
+				continue;
+			}
+
 			$data['colors'][] = [
 				'option_id' => $color_option_id,
 				'option_slug' => $color_option_slug,
@@ -594,12 +613,6 @@ class FilterproLike extends \Opencart\System\Engine\Controller {
 				'image' => $image,
 				'total' => $total,
 			];
-
-			$cur = $sel_slug;
-			$key = $color_option_slug;
-			$cur_vals = $cur[$key] ?? [];
-			$cur_vals = array_values(array_unique(array_filter(array_map('strval', (array)$cur_vals))));
-			$sel = in_array($slug, $cur_vals, true);
 
 			if ($sel) {
 				$cur_vals = array_values(array_filter($cur_vals, static fn($v) => $v !== $slug));
@@ -649,6 +662,11 @@ class FilterproLike extends \Opencart\System\Engine\Controller {
 			$cur_vals = array_values(array_unique(array_filter(array_map('strval', (array)$cur_vals))));
 			$sel = in_array($slug, $cur_vals, true);
 
+			// Hide values that have no in-stock products (but keep selected)
+			if ($total <= 0 && !$sel) {
+				continue;
+			}
+
 			if ($sel) {
 				$cur_vals = array_values(array_filter($cur_vals, static fn($v) => $v !== $slug));
 			} else {
@@ -672,23 +690,65 @@ class FilterproLike extends \Opencart\System\Engine\Controller {
 		}
 
 		// Style attribute (attribute_id=23)
+		// IMPORTANT: product_attribute for style may contain colon-separated values (A:B:C).
+		// For UX we must split them into separate facet values and count IN-STOCK products.
 		$style_attr_id = 23;
 		$style_attr_slug = 'stil';
 		$data['styles'] = [];
 		$data['style_items'] = [];
-		$s_rows = $cacheRows(
-			"SELECT pa.slug, pa.text, COUNT(DISTINCT p.product_id) total " .
+
+		// Query one row per product and split in PHP
+		$style_rows = $cacheRows(
+			"SELECT DISTINCT p.product_id, pa.slug, pa.text " .
 			"FROM `" . DB_PREFIX . "product_to_category` p2c " .
 			"JOIN `" . DB_PREFIX . "product` p ON p.product_id=p2c.product_id " .
 			"JOIN `" . DB_PREFIX . "product_attribute` pa ON pa.product_id=p.product_id AND pa.attribute_id='" . (int)$style_attr_id . "' AND pa.language_id='" . (int)$language_id . "' " .
 			$facet_where('attribute:' . (int)$style_attr_id) .
-			" AND pa.slug != '' AND pa.text != '' " .
-			" GROUP BY pa.slug, pa.text ORDER BY pa.text"
+			" AND pa.slug != '' AND pa.text != ''"
 		);
-		foreach ($s_rows as $row) {
-			$slug = (string)$row['slug'];
-			$text = (string)$row['text'];
-			$total = (int)$row['total'];
+
+		$style_counts = [];
+		foreach ($style_rows as $r) {
+			$slug_raw = trim((string)($r['slug'] ?? ''));
+			$text_raw = trim((string)($r['text'] ?? ''));
+			if ($slug_raw === '' || $text_raw === '') continue;
+
+			$slug_parts = array_values(array_filter(array_map('trim', explode(':', $slug_raw)), static fn($v) => $v !== ''));
+			$text_parts = array_values(array_filter(array_map('trim', explode(':', $text_raw)), static fn($v) => $v !== ''));
+
+			$max = max(count($slug_parts), count($text_parts));
+			for ($i = 0; $i < $max; $i++) {
+				$sp = $slug_parts[$i] ?? '';
+				$tp = $text_parts[$i] ?? '';
+				if ($sp === '' || $tp === '') continue;
+				if (!isset($style_counts[$sp])) {
+					$style_counts[$sp] = ['slug' => $sp, 'text' => $tp, 'total' => 0];
+				}
+				$style_counts[$sp]['total'] += 1;
+			}
+		}
+
+		// Build items sorted by text
+		$style_list = array_values($style_counts);
+		usort($style_list, static function($a, $b){
+			return strcmp((string)($a['text'] ?? ''), (string)($b['text'] ?? ''));
+		});
+
+		foreach ($style_list as $row) {
+			$slug = (string)($row['slug'] ?? '');
+			$text = (string)($row['text'] ?? '');
+			$total = (int)($row['total'] ?? 0);
+
+			$cur = $sel_slug;
+			$key = $style_attr_slug;
+			$cur_vals = $cur[$key] ?? [];
+			$cur_vals = array_values(array_unique(array_filter(array_map('strval', (array)$cur_vals))));
+			$sel = in_array($slug, $cur_vals, true);
+
+			// Hide values that have no in-stock products (but keep selected)
+			if ($total <= 0 && !$sel) {
+				continue;
+			}
 
 			$data['styles'][] = [
 				'attribute_id' => $style_attr_id,
@@ -697,12 +757,6 @@ class FilterproLike extends \Opencart\System\Engine\Controller {
 				'text' => $text,
 				'total' => $total,
 			];
-
-			$cur = $sel_slug;
-			$key = $style_attr_slug;
-			$cur_vals = $cur[$key] ?? [];
-			$cur_vals = array_values(array_unique(array_filter(array_map('strval', (array)$cur_vals))));
-			$sel = in_array($slug, $cur_vals, true);
 
 			if ($sel) {
 				$cur_vals = array_values(array_filter($cur_vals, static fn($v) => $v !== $slug));
@@ -954,7 +1008,7 @@ class FilterproLike extends \Opencart\System\Engine\Controller {
 					$opt_rows = $cacheRows(
 						"SELECT pov.option_value_id, ov.image, ovd.name, ovd.slug, COUNT(DISTINCT pov.product_id) total " .
 						"FROM `" . DB_PREFIX . "product_to_category` p2c " .
-						"JOIN `" . DB_PREFIX . "product` p ON p.product_id=p2c.product_id AND p.status='1' AND p.date_available<=NOW() " .
+						"JOIN `" . DB_PREFIX . "product` p ON p.product_id=p2c.product_id AND p.status='1' AND p.date_available<=NOW() AND p.quantity > 0 " .
 						"JOIN `" . DB_PREFIX . "product_option_value` pov ON pov.product_id=p.product_id AND pov.option_id='" . (int)$option_id . "' " .
 						"JOIN `" . DB_PREFIX . "option_value` ov ON ov.option_value_id=pov.option_value_id " .
 						"JOIN `" . DB_PREFIX . "option_value_description` ovd ON ovd.option_value_id=pov.option_value_id AND ovd.option_id='" . (int)$option_id . "' AND ovd.language_id='" . (int)$language_id . "' " .
@@ -1012,7 +1066,7 @@ class FilterproLike extends \Opencart\System\Engine\Controller {
 					$attr_rows = $cacheRows(
 						"SELECT pa.slug, pa.text, COUNT(DISTINCT pa.product_id) total " .
 						"FROM `" . DB_PREFIX . "product_to_category` p2c " .
-						"JOIN `" . DB_PREFIX . "product` p ON p.product_id=p2c.product_id AND p.status='1' AND p.date_available<=NOW() " .
+						"JOIN `" . DB_PREFIX . "product` p ON p.product_id=p2c.product_id AND p.status='1' AND p.date_available<=NOW() AND p.quantity > 0 " .
 						"JOIN `" . DB_PREFIX . "product_attribute` pa ON pa.product_id=p.product_id AND pa.attribute_id='" . (int)$attribute_id . "' AND pa.language_id='" . (int)$language_id . "' " .
 						"WHERE p2c.category_id='" . (int)$category_id . "' AND pa.slug != '' AND pa.text != '' " .
 						"GROUP BY pa.slug, pa.text ORDER BY pa.text"
