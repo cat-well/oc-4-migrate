@@ -423,50 +423,54 @@
 
   function fpInitMore() {
     // Expand/collapse long lists
-    document.querySelectorAll('#filterpro a.fp_more[data-fp-more]').forEach(function(a){
-      if (a.getAttribute('data-fp-inited') === '1') return;
-      a.setAttribute('data-fp-inited', '1');
-      a.addEventListener('click', function(e){
-        e.preventDefault();
-        var group = a.closest && a.closest('.f_group[data-fp-group]');
-        if (!group) return;
-        var state = a.getAttribute('data-fp-state') || 'more';
-        var hidden = group.querySelectorAll('.fp_more_item');
-        if (!hidden.length) return;
+    // Use delegated click handler (more reliable across AJAX sidebar replaces)
+    if (window.__fpMoreInited) return;
+    window.__fpMoreInited = 1;
 
-        var limit = parseInt(a.getAttribute('data-fp-limit') || '10', 10);
-        var step = parseInt(a.getAttribute('data-fp-step') || String(limit), 10);
+    document.addEventListener('click', function(e){
+      var a = e.target && (e.target.closest ? e.target.closest('#filterpro a.fp_more[data-fp-more]') : null);
+      if (!a) return;
+      if (fpRoot && !fpRoot.contains(a)) return;
 
-        // fp_more_item marks ONLY the extra (initially hidden) items.
-        var extras = Array.from(group.querySelectorAll('.fp_more_item'));
-        if (!extras.length) return;
+      e.preventDefault();
 
-        function showMoreBatch() {
-          var hidden = extras.filter(function(it){ return it.classList.contains('fp_hidden'); });
-          var toShow = hidden.slice(0, step);
-          toShow.forEach(function(it){ it.classList.remove('fp_hidden'); });
-          return extras.filter(function(it){ return it.classList.contains('fp_hidden'); }).length;
-        }
+      var group = a.closest && a.closest('.f_group[data-fp-group]');
+      if (!group) return;
 
-        function collapseAll() {
-          extras.forEach(function(it){ it.classList.add('fp_hidden'); });
-        }
+      var state = a.getAttribute('data-fp-state') || 'more';
 
-        if (state === 'more') {
-          var remaining = showMoreBatch();
-          if (remaining <= 0) {
-            a.setAttribute('data-fp-state', 'less');
-            a.textContent = ({{ is_ua ? 'true' : 'false' }} ? 'Згорнути' : 'Скрыть');
-          } else {
-            a.setAttribute('data-fp-state', 'more');
-            a.textContent = ({{ is_ua ? 'true' : 'false' }} ? 'Показати ще' : 'Показать еще');
-          }
+      // fp_more_item marks ONLY the extra (initially hidden) items.
+      var extras = Array.from(group.querySelectorAll('.fp_more_item'));
+      if (!extras.length) return;
+
+      var limit = parseInt(a.getAttribute('data-fp-limit') || '10', 10);
+      var step = parseInt(a.getAttribute('data-fp-step') || String(limit), 10);
+
+      function showMoreBatch() {
+        var hidden = extras.filter(function(it){ return it.classList.contains('fp_hidden'); });
+        var toShow = hidden.slice(0, step);
+        toShow.forEach(function(it){ it.classList.remove('fp_hidden'); });
+        return extras.filter(function(it){ return it.classList.contains('fp_hidden'); }).length;
+      }
+
+      function collapseAll() {
+        extras.forEach(function(it){ it.classList.add('fp_hidden'); });
+      }
+
+      if (state === 'more') {
+        var remaining = showMoreBatch();
+        if (remaining <= 0) {
+          a.setAttribute('data-fp-state', 'less');
+          a.textContent = ({{ is_ua ? 'true' : 'false' }} ? 'Згорнути' : 'Скрыть');
         } else {
-          collapseAll();
           a.setAttribute('data-fp-state', 'more');
           a.textContent = ({{ is_ua ? 'true' : 'false' }} ? 'Показати ще' : 'Показать еще');
         }
-      });
+      } else {
+        collapseAll();
+        a.setAttribute('data-fp-state', 'more');
+        a.textContent = ({{ is_ua ? 'true' : 'false' }} ? 'Показати ще' : 'Показать еще');
+      }
     });
   }
 
@@ -607,6 +611,11 @@
   .filterpro_like .f_item a.active{font-weight:700;text-decoration:underline;}
   .filterpro_like .fp_nav a{color:#333;text-decoration:none;}
   .filterpro_like .f_cnt{color:#999;font-weight:400;}
+
+  /* "Показати ще" / "Показать еще" */
+  .filterpro_like .fp_hidden{display:none !important;}
+  .filterpro_like a.fp_more{display:inline-block;margin-top:6px;padding:4px 8px;border:1px solid #ddd;border-radius:4px;text-decoration:none;color:#333;background:#fff;cursor:pointer;position:relative;z-index:2;}
+  .filterpro_like a.fp_more:active{transform:translateY(1px);}
 
   .filterpro_like .fp_checks .fp_check{display:flex;gap:8px;align-items:center;cursor:pointer;}
   .filterpro_like .fp_checks input[type=checkbox]{margin:0;}
