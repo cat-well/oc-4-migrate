@@ -325,39 +325,106 @@ class Product extends \Opencart\System\Engine\Controller {
 			$color_value_map = [];
 			$color_opt_names = ['цвет', 'колір', 'color'];
 
-			// Manline OC2: extra breadcrumb injection based on attribute "Стиль" (RU only)
+			// Manline: Style attribute (attribute_id=23, slug key=stil)
+			// 1) Breadcrumb injection (legacy OC2 behavior; keep for RU)
+			// 2) Render colon-separated styles as clickable tags linking to /f/ filter
 			$data['style_breadcrumb'] = null;
-			if ($data['lang'] === 'ru-ru') {
+			$data['style_tags'] = [];
+			try {
 				$this->load->model('catalog/product');
-				$attr_groups = $this->model_catalog_product->getAttributes($product_id);
-				$style_value = '';
-				foreach ($attr_groups as $ag) {
-					if (empty($ag['attribute'])) continue;
-					foreach ($ag['attribute'] as $a) {
-						if (($a['name'] ?? '') === 'Стиль') {
-							$style_value = (string)($a['text'] ?? '');
-							break 2;
-						}
+
+				// Fetch raw style value + stored slug from product_attribute (our migration keeps slug)
+				$q = $this->db->query("SELECT `text`, `slug` FROM `" . DB_PREFIX . "product_attribute` WHERE product_id='" . (int)$product_id . "' AND attribute_id='23' AND language_id='" . (int)$this->config->get('config_language_id') . "' LIMIT 1");
+				$style_text = $q->num_rows ? trim((string)$q->row['text']) : '';
+				$style_slug = $q->num_rows ? trim((string)$q->row['slug']) : '';
+
+				$style_parts = $style_text !== '' ? array_map('trim', explode(':', $style_text)) : [];
+				$slug_parts = $style_slug !== '' ? array_map('trim', explode(':', $style_slug)) : [];
+
+				// Build base category URL (best-effort):
+				// 1) if coming from category page, OC passes path=...; use it
+				// 2) otherwise take one of product categories (lowest sort_order)
+				// 3) fallback to legacy /muzhskie-trusy
+				$base_cat_href = '';
+
+				$req_path = $this->request->get['path'] ?? '';
+				if (is_string($req_path) && $req_path !== '') {
+					$base_cat_href = $this->url->link('product/category', 'language=' . $this->config->get('config_language') . '&path=' . $req_path);
+				}
+
+				if ($base_cat_href === '') {
+					$cat_q = $this->db->query("SELECT c.category_id
+						FROM `" . DB_PREFIX . "product_to_category` p2c
+						LEFT JOIN `" . DB_PREFIX . "category` c ON (c.category_id = p2c.category_id)
+						WHERE p2c.product_id='" . (int)$product_id . "'
+						ORDER BY c.sort_order ASC, c.category_id ASC
+						LIMIT 1");
+					if ($cat_q->num_rows) {
+						$cid = (int)$cat_q->row['category_id'];
+						$base_cat_href = $this->url->link('product/category', 'language=' . $this->config->get('config_language') . '&path=' . $cid);
 					}
 				}
 
-				$style_value = trim($style_value);
-				// In OC2 style could contain compound values like "Слипы:Комплекты белья".
-				$style_main = trim(explode(':', $style_value)[0]);
-				$map = [
-					'Свободные боксеры' => '/muzhskie-trusy/svobodnye-boksery/',
-					'Слипы' => '/muzhskie-trusy/slipy/',
-					'Трусы боксеры' => '/muzhskie-trusy/trusy-boksery/',
-					'Майка' => '/majki-futbolki/mayki/',
-					'Футболка' => '/majki-futbolki/futbolki/',
-				];
+				if ($base_cat_href === '' && isset($data['breadcrumbs']) && is_array($data['breadcrumbs']) && count($data['breadcrumbs']) >= 2) {
+					// fallback to breadcrumb before product
+					$base_cat_href = (string)($data['breadcrumbs'][count($data['breadcrumbs']) - 2]['href'] ?? '');
+				}
 
-				if ($style_main !== '' && isset($map[$style_main])) {
-					$data['style_breadcrumb'] = [
-						'text' => $style_main,
-						'href' => $map[$style_main],
+				// Normalize to path-only (no query/hash)
+				$base_path = $base_cat_href;
+				$hpos = strpos($base_path, '#');
+				if ($hpos !== false) $base_path = substr($base_path, 0, $hpos);
+				$qpos = strpos($base_path, '?');
+				if ($qpos !== false) $base_path = substr($base_path, 0, $qpos);
+				$base_path = rtrim($base_path, '/');
+				if ($base_path === '') $base_path = '/muzhskie-trusy';
+
+				$slugify = function(string $s): string {
+					$s = oc_strtolower(trim($s));
+					$s = preg_replace('/[^a-z0-9\p{Cyrillic}]+/u', '-', $s);
+					$s = trim((string)$s, '-');
+					// basic translit for UA/RU to ascii-ish slugs (fallback)
+					$map = [
+						'а'=>'a','б'=>'b','в'=>'v','г'=>'g','ґ'=>'g','д'=>'d','е'=>'e','є'=>'e','ж'=>'zh','з'=>'z','и'=>'y','і'=>'i','ї'=>'i','й'=>'y','к'=>'k','л'=>'l','м'=>'m','н'=>'n','о'=>'o','п'=>'p','р'=>'r','с'=>'s','т'=>'t','у'=>'u','ф'=>'f','х'=>'h','ц'=>'c','ч'=>'ch','ш'=>'sh','щ'=>'sch','ь'=>'','ы'=>'y','ъ'=>'','э'=>'e','ю'=>'yu','я'=>'ya',
+					];
+					$s = strtr($s, $map);
+					$s = preg_replace('/[^a-z0-9-]+/', '-', $s);
+					$s = trim((string)$s, '-');
+					return $s;
+				};
+
+				foreach ($style_parts as $idx => $part) {
+					if ($part === '') continue;
+					$sp = $slug_parts[$idx] ?? '';
+					if ($sp === '') $sp = $slugify($part);
+					if ($sp === '') continue;
+
+					$data['style_tags'][] = [
+						'text' => $part,
+						'slug' => $sp,
+						'href' => $base_path . '/f/stil_' . $sp,
 					];
 				}
+
+				// Breadcrumb injection uses the first (main) style part and a legacy map (RU only)
+				if ($data['lang'] === 'ru-ru' && !empty($style_parts[0])) {
+					$style_main = (string)$style_parts[0];
+					$map = [
+						'Свободные боксеры' => '/muzhskie-trusy/svobodnye-boksery/',
+						'Слипы' => '/muzhskie-trusy/slipy/',
+						'Трусы боксеры' => '/muzhskie-trusy/trusy-boksery/',
+						'Майка' => '/majki-futbolki/mayki/',
+						'Футболка' => '/majki-futbolki/futbolki/',
+					];
+					if ($style_main !== '' && isset($map[$style_main])) {
+						$data['style_breadcrumb'] = [
+							'text' => $style_main,
+							'href' => $map[$style_main],
+						];
+					}
+				}
+			} catch (\Throwable $e) {
+				// ignore
 			}
 
 			// Image

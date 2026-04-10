@@ -120,11 +120,15 @@
                     </div>
                   </li>
 
-                {% elseif attribute.attribute_id == 23 and first_cat == 'Мужские плавки' %}
+                {% elseif attribute.attribute_id == 23 %}
                   <li>
                     <div class="hara_n">{{ attribute.name }}</div>
                     <div class="hara_t">
-                      {% if attribute.text|lower == 'шорты' %}
+                      {% if style_tags is defined and style_tags %}
+                        {% for t in style_tags %}
+                          <a href="{{ t.href }}">{{ t.text }}</a>{% if not loop.last %}, {% endif %}
+                        {% endfor %}
+                      {% elseif first_cat == 'Мужские плавки' and attribute.text|lower == 'шорты' %}
                         <a href="/plyazhnaya-odezhda/shorty/">{{ attribute.text }}</a>
                       {% else %}
                         {{ attribute.text }}
