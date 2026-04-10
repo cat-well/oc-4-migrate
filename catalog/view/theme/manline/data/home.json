@@ -1,8 +1,9 @@
 {
   "slider": [
-    {"image": "catalog/view/theme/manline/image/promo1.jpg", "href": "/sale/"},
-    {"image": "catalog/view/theme/manline/image/promo2.jpg", "href": "/muzhskie-trusy/"},
-    {"image": "catalog/view/theme/manline/image/promo3.jpg", "href": "/plyazhnaya-odezhda/"}
+    {"image": "image/data/banera/cholovicha-bilbzna-1.jpg", "href": "/"},
+    {"image": "image/data/banera/cholovichi-trusi.png", "href": "/muzhskie-trusy/"},
+    {"image": "image/data/banera/plavki.jpg", "href": "/plyazhnaya-odezhda/"},
+    {"image": "image/data/banera/cholovichi-futbolki-3.jpg", "href": "/majki-futbolki/"}
   ],
 
   "features": [
