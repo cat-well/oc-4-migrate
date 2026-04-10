@@ -430,9 +430,14 @@
     document.addEventListener('click', function(e){
       var a = e.target && (e.target.closest ? e.target.closest('#filterpro a.fp_more[data-fp-more]') : null);
       if (!a) return;
-      if (fpRoot && !fpRoot.contains(a)) return;
 
+      // Always prevent default early: href="#" + <base href="/"> may navigate to home.
       e.preventDefault();
+      e.stopPropagation();
+
+      // filter sidebar can be replaced via AJAX; re-resolve current root each click
+      var rootNow = document.getElementById('filterpro');
+      if (rootNow && !rootNow.contains(a)) return;
 
       var group = a.closest && a.closest('.f_group[data-fp-group]');
       if (!group) return;
@@ -614,8 +619,8 @@
 
   /* "Показати ще" / "Показать еще" */
   .filterpro_like .fp_hidden{display:none !important;}
-  .filterpro_like a.fp_more{display:inline-block;margin-top:6px;padding:4px 8px;border:1px solid #ddd;border-radius:4px;text-decoration:none;color:#333;background:#fff;cursor:pointer;position:relative;z-index:2;}
-  .filterpro_like a.fp_more:active{transform:translateY(1px);}
+  /* Keep link-like look (as in OC2), just make it reliably clickable */
+  .filterpro_like a.fp_more{display:inline-block;margin-top:6px;cursor:pointer;position:relative;z-index:2;}
 
   .filterpro_like .fp_checks .fp_check{display:flex;gap:8px;align-items:center;cursor:pointer;}
   .filterpro_like .fp_checks input[type=checkbox]{margin:0;}
