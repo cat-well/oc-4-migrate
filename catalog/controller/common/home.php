@@ -479,9 +479,11 @@ class Home extends \Opencart\System\Engine\Controller {
 
 		// Underwear category rows (OC2-like): 3 categories + 4 hand-picked products each + sizes (option_id=14)
 		try {
+			// NOTE: use /f/ style filter (attribute "Стиль" slug=stil, attribute_id=23)
+			// Requirement: tiles must link to category + preselected style.
 			$underwear_src = [
 				[
-					'href' => '/muzhskie-trusy/trusy-boksery/',
+					'href' => '/muzhskie-trusy/f/stil_trusy-boksery',
 					'bg' => '/catalog/view/theme/manline/image/style/bokseri.jpg',
 					'title_ru' => 'Боксеры',
 					'title_ua' => 'Боксери',
@@ -490,7 +492,7 @@ class Home extends \Opencart\System\Engine\Controller {
 					'product_ids' => [6130, 1467, 1555, 6027]
 				],
 				[
-					'href' => '/muzhskie-trusy/slipy/',
+					'href' => '/muzhskie-trusy/f/stil_slipy',
 					'bg' => '/catalog/view/theme/manline/image/style/slipi.jpg',
 					'title_ru' => 'Слипы',
 					'title_ua' => 'Сліпи',
@@ -499,7 +501,7 @@ class Home extends \Opencart\System\Engine\Controller {
 					'product_ids' => [6105, 1361, 500, 670]
 				],
 				[
-					'href' => '/muzhskie-trusy/#category_id=59&page=1&path=59&sort=p.sort_order&order=ASC&limit=23&route=product%2Fcategory&attribute_value%5B23%5D%5B%5D=%D0%A1%D0%B5%D0%BC%D0%B5%D0%B9%D0%BD%D1%8B%D0%B5+%D1%82%D1%80%D1%83c%D1%8B&min_price=99&max_price=2819',
+					'href' => '/muzhskie-trusy/f/stil_semeynye-trucy',
 					'bg' => '/catalog/view/theme/manline/image/style/semeynie.jpg',
 					'title_ru' => 'Семейные трусы',
 					'title_ua' => 'Сімейні труси',
