@@ -381,16 +381,21 @@ class Product extends \Opencart\System\Engine\Model {
 			'p.date_added'
 		];
 
+		// Manline requirement: show out-of-stock products, but sort them after in-stock.
+		// Keep this as the first ORDER BY key (always ASC), then apply the requested sort.
+		$stock_order_expr = "(CASE WHEN `p`.`quantity` > 0 THEN 0 ELSE 1 END)";
+		$sql .= " ORDER BY " . $stock_order_expr . " ASC, ";
+
 		if (isset($data['sort']) && in_array($data['sort'], $sort_data)) {
 			if ($data['sort'] == 'pd.name' || $data['sort'] == 'p.model') {
-				$sql .= " ORDER BY LCASE(" . $data['sort'] . ")";
+				$sql .= "LCASE(" . $data['sort'] . ")";
 			} elseif ($data['sort'] == 'p.price') {
-				$sql .= " ORDER BY (CASE WHEN `special` IS NOT NULL THEN `special` WHEN `discount` IS NOT NULL THEN `discount` ELSE `p`.`price` END)";
+				$sql .= "(CASE WHEN `special` IS NOT NULL THEN `special` WHEN `discount` IS NOT NULL THEN `discount` ELSE `p`.`price` END)";
 			} else {
-				$sql .= " ORDER BY " . $data['sort'];
+				$sql .= $data['sort'];
 			}
 		} else {
-			$sql .= " ORDER BY `p`.`sort_order`";
+			$sql .= "`p`.`sort_order`";
 		}
 
 		if (isset($data['order']) && ($data['order'] == 'DESC')) {
