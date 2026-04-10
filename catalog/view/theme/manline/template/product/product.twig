@@ -448,6 +448,52 @@
         if ($(this).prop('checked')) $(this).closest('label').addClass('checked');
       });
 
+      // Tabs anchors (Описание / Доставка и оплата / Отзывы)
+      function headerOffset(){
+        var h = 0;
+        var $hdr = $('#header');
+        if ($hdr.length) h = $hdr.outerHeight() || 0;
+        // extra spacing so the title isn't glued to header
+        return h + 10;
+      }
+      function setActiveTab(hash){
+        if (!hash) return;
+        var id = String(hash).replace(/^#/, '');
+        if (!id) return;
+        $('.product_menu li').removeClass('active_menu');
+        $('.product_menu a[href="#' + id.replace(/"/g,'\\"') + '"]').each(function(){
+          $(this).closest('li').addClass('active_menu');
+        });
+      }
+      function scrollToHash(hash, push){
+        if (!hash || hash === '#') return;
+        var $t = $(hash);
+        if (!$t.length) return;
+        setActiveTab(hash);
+        var top = Math.max(0, ($t.offset().top || 0) - headerOffset());
+        $('html, body').stop(true).animate({ scrollTop: top }, 350);
+        if (push) {
+          try { window.location.hash = hash; } catch(e) {}
+        }
+      }
+
+      // Intercept clicks inside product tab menus and other in-page links
+      $(document).on('click', 'a[href^="#"]', function(e){
+        var href = $(this).attr('href');
+        if (!href || href.length < 2) return;
+        if ($(href).length) {
+          e.preventDefault();
+          scrollToHash(href, true);
+        }
+      });
+
+      // On load: if URL has hash, scroll to it (after images/layout settle)
+      setTimeout(function(){
+        if (window.location.hash) {
+          scrollToHash(window.location.hash, false);
+        }
+      }, 200);
+
       // Add to cart (OC2-like UX)
       $(document).on('click', '#button-cart', function(){
         $.ajax({
