@@ -20,6 +20,13 @@ class Customer extends \Opencart\System\Engine\Controller {
 		} elseif ($this->customer->isLogged()) {
 			// Logged in customers
 			$this->config->set('config_customer_group_id', $this->customer->getGroupId());
+		} else {
+			// Guest visitors must still have a customer group for pricing rules (discount/special/tax).
+			// Some legacy Manline DB dumps may not include config_customer_group_id in settings.
+			$cg = (int)$this->config->get('config_customer_group_id');
+			if ($cg <= 0) {
+				$this->config->set('config_customer_group_id', 1); // Default
+			}
 		}
 	}
 }
