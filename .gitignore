@@ -8,6 +8,10 @@
 # Local reference screenshots (keep out of repo)
 /index_page_img/
 
+# Local media dumps
+/img.tar.gz
+/OLD_image/
+
 # macOS
 .DS_Store
 /example/
