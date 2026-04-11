@@ -64,7 +64,7 @@ class Footer extends \Opencart\System\Engine\Controller {
 		$data['manufacturer'] = $this->url->link('product/manufacturer', 'language=' . $this->config->get('config_language'));
 
 		// Manline theme: simple UA/RU switch.
-		// Use current REQUEST_URI to preserve SEO path (/category + /f/...) and avoid SEO rewrite bugs.
+		// Requirement: use short prefixes /ua and /ru (no ?language=...)
 		$build_lang_switch = function (string $lang_code): string {
 			$uri = (string)($this->request->server['REQUEST_URI'] ?? '/');
 			$info = parse_url($uri);
@@ -72,13 +72,17 @@ class Footer extends \Opencart\System\Engine\Controller {
 			if ($path === '') $path = '/';
 			if ($path[0] !== '/') $path = '/' . $path;
 
-			$q = [];
-			if (!empty($info['query'])) {
-				parse_str((string)$info['query'], $q);
+			// Strip existing /ua or /ru prefix
+			$path2 = preg_replace('#^/(ua|ru)(/|$)#', '/', $path);
+			$path2 = $path2 ?: '/';
+			$path2 = '/' . ltrim($path2, '/');
+			if ($path2 !== '/' && str_ends_with($path2, '/')) {
+				$path2 = rtrim($path2, '/');
 			}
-			$q['language'] = $lang_code;
-			$query = http_build_query($q);
-			return $path . ($query ? ('?' . $query) : '');
+
+			$prefix = ($lang_code === 'uk-ua') ? 'ua' : 'ru';
+			$base = '/' . $prefix;
+			return $base . ($path2 === '/' ? '' : $path2);
 		};
 
 		$data['lang_switch_ru'] = $build_lang_switch('ru-ru');

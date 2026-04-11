@@ -27,6 +27,19 @@ class SeoUrl extends \Opencart\System\Engine\Controller {
 			if (isset($this->request->get['_route_'])) {
 				$route_string = (string)$this->request->get['_route_'];
 
+				// Language short prefixes: /ua/... and /ru/...
+				// Normalize them into ?language=uk-ua / ru-ru so the standard language controller can handle it.
+				$route_string = ltrim($route_string, '/');
+				if ($route_string === 'ua' || str_starts_with($route_string, 'ua/')) {
+					$this->request->get['language'] = 'uk-ua';
+					$route_string = substr($route_string, 2);
+					$route_string = ltrim($route_string, '/');
+				} elseif ($route_string === 'ru' || str_starts_with($route_string, 'ru/')) {
+					$this->request->get['language'] = 'ru-ru';
+					$route_string = substr($route_string, 2);
+					$route_string = ltrim($route_string, '/');
+				}
+
 				// Legacy FilterPro selection URLs look like: /category-slug/f/stil_plavki-boksery
 				// Split /f/... suffix and parse it after normal SEO decode.
 				$filterpro_parts = [];
@@ -333,8 +346,25 @@ class SeoUrl extends \Opencart\System\Engine\Controller {
 			unset($query['route']);
 		}
 
+		// Language short prefixes: render as /ua and /ru instead of ?language=
+		$lang_prefix = '';
+		if (isset($query['language']) && is_string($query['language'])) {
+			$lc = (string)$query['language'];
+			if ($lc === 'uk-ua' || $lc === 'ua') {
+				$lang_prefix = 'ua';
+				unset($query['language']);
+			} elseif ($lc === 'ru-ru' || $lc === 'ru') {
+				$lang_prefix = 'ru';
+				unset($query['language']);
+			}
+		}
+
 		// Build the path
 		$url .= str_replace('/index.php', '', $url_info['path']);
+
+		if ($lang_prefix !== '') {
+			$url .= '/' . $lang_prefix;
+		}
 
 		foreach ($paths as $result) {
 			$url .= '/' . $result['keyword'];

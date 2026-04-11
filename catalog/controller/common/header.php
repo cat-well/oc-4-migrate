@@ -113,7 +113,7 @@ class Header extends \Opencart\System\Engine\Controller {
 		$data['current_language'] = $this->config->get('config_language');
 
 		// Manline theme: simple UA/RU switch (OC2-like).
-		// Use current REQUEST_URI to preserve SEO path (/category + /f/...) and avoid SEO rewrite bugs.
+		// Requirement: use short prefixes /ua and /ru (no ?language=...)
 		$build_lang_switch = function (string $lang_code): string {
 			$uri = (string)($this->request->server['REQUEST_URI'] ?? '/');
 			$info = parse_url($uri);
@@ -121,34 +121,17 @@ class Header extends \Opencart\System\Engine\Controller {
 			if ($path === '') $path = '/';
 			if ($path[0] !== '/') $path = '/' . $path;
 
-			$q = [];
-			if (!empty($info['query'])) {
-				parse_str((string)$info['query'], $q);
+			// Strip existing /ua or /ru prefix
+			$path2 = preg_replace('#^/(ua|ru)(/|$)#', '/', $path);
+			$path2 = $path2 ?: '/';
+			$path2 = '/' . ltrim($path2, '/');
+			if ($path2 !== '/' && str_ends_with($path2, '/')) {
+				$path2 = rtrim($path2, '/');
 			}
 
-			// Normalize broken keys if arg_separator output/input misconfigured (e.g. "&;search" becomes key ";search")
-			foreach (array_keys($q) as $k) {
-				if (is_string($k) && $k !== '' && ($k[0] === ';')) {
-					$kk = ltrim($k, ';');
-					if ($kk !== '' && !isset($q[$kk])) {
-						$q[$kk] = $q[$k];
-					}
-					unset($q[$k]);
-				}
-				// also normalize common html-entity leftovers
-				if (is_string($k) && str_starts_with($k, 'amp;')) {
-					$kk = substr($k, 4);
-					if ($kk !== '' && !isset($q[$kk])) {
-						$q[$kk] = $q[$k];
-					}
-					unset($q[$k]);
-				}
-			}
-
-			$q['language'] = $lang_code;
-			// Force '&' separator (some hosts set arg_separator.output to "&;" which breaks URLs)
-			$query = http_build_query($q, '', '&');
-			return $path . ($query ? ('?' . $query) : '');
+			$prefix = ($lang_code === 'uk-ua') ? 'ua' : 'ru';
+			$base = '/' . $prefix;
+			return $base . ($path2 === '/' ? '' : $path2);
 		};
 
 		$data['lang_switch_ru'] = $build_lang_switch('ru-ru');
