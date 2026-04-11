@@ -16,14 +16,17 @@
   </div>
 </div>
 
-<div id="common-success" class="container">
-  <div class="row">{{ column_left }}
-    <div id="content" class="col">{{ content_top }}
-      <h1>{{ heading_title }}</h1>
-      {{ text_message }}
-      <div class="text-end"><a href="{{ continue }}" class="btn btn-primary">{{ button_continue }}</a></div>
-      {{ content_bottom }}</div>
-    {{ column_right }}</div>
+<div class="container" id="content">
+  {{ content_top }}
+
+  <div class="title mb-40">
+    <h1>{{ heading_title_oc2|default(heading_title) }}</h1>
+  </div>
+
+  <div class="citata">
+    <div class="title_clean">{{ success_subtitle_oc2|default('') }}</div>
+    {{ success_text_oc2|default('') }}
+  </div>
 </div>
 
 {{ footer }}

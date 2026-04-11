@@ -28,7 +28,16 @@ class Success extends \Opencart\System\Engine\Controller {
 			unset($this->session->data['reward']);
 		}
 
+		// Manline: custom success copy (OC2-like)
 		$this->document->setTitle($this->language->get('heading_title'));
+
+		$data['lang'] = (string)$this->config->get('config_language');
+		$data['heading_title_oc2'] = ($data['lang'] === 'uk-ua') ? 'Ваше замовлення сформовано!' : 'Ваш заказ сформирован!';
+		$data['success_subtitle_oc2'] = ($data['lang'] === 'uk-ua') ? 'Дякуємо за замовлення' : 'Благодарим за заказ';
+		$data['success_text_oc2'] = ($data['lang'] === 'uk-ua')
+			? 'Ваше замовлення прийняте. Очікуйте повідомлення про відправлення замовлення на Viber або E-Mail найближчим часом'
+			: 'Ваш заказ принят в обработку. Ожидайте уведомление об отправке заказа на Viber или E-Mail в ближайшее время';
+
 
 		$data['breadcrumbs'] = [];
 
