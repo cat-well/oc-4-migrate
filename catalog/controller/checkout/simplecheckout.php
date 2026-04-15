@@ -37,12 +37,16 @@ class Simplecheckout extends \Opencart\System\Engine\Controller {
 		$this->loadSimpleLanguages();
 
 		if ($create_order && !$state['errors']) {
-			// For offline payment methods (COD etc.) we confirm immediately and redirect to success.
+			// Always generate/confirm the order first (this sets session order_id, totals, etc.).
+			// For online payments it returns the payment form HTML; for offline methods it may be empty.
+			$payment_form = $this->load->controller('checkout/confirm');
+
+			$this->persistNovaPoshtaOrderMeta();
+
 			$payment_code = (string)($state['payment_code'] ?? '');
 
+			// For offline payment methods (COD etc.) we confirm immediately and redirect to success.
 			if (in_array($payment_code, ['cod.cod', 'cheque.cheque', 'bank_transfer.bank_transfer', 'free_checkout.free_checkout'], true)) {
-				$this->persistNovaPoshtaOrderMeta();
-
 				if (isset($this->session->data['order_id'])) {
 					$this->load->model('checkout/order');
 
@@ -69,11 +73,8 @@ class Simplecheckout extends \Opencart\System\Engine\Controller {
 				$json['redirect'] = $this->url->link('checkout/success', 'language=' . $language, true);
 				unset($this->session->data['simplecheckout_show_errors']);
 			} else {
-				$payment_form = $this->load->controller('checkout/confirm');
-
 				if ($payment_form) {
 					$state['payment_form'] = $payment_form;
-					$this->persistNovaPoshtaOrderMeta();
 					$json['order_created'] = true;
 					unset($this->session->data['simplecheckout_show_errors']);
 				} else {
