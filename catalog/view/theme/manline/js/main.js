@@ -279,7 +279,7 @@ $(document).ready(function () {
         e.preventDefault();
         const lang_pref = window.location.href.indexOf('/ua/') === -1 ? '' : '/ua/';
         $.magnificPopup.close();
-        $('#header #cart').load(lang_pref+'index.php?route=common/cart #cart > *');
+        $('#header #cart').load(lang_pref+'index.php?route=common/cart.info #cart > *');
     });
 
     // Info/help popups (OC2 legacy): links like <a class="title_href" href="#some_popup">...
@@ -1026,7 +1026,7 @@ function freeDelivery() {
         return;
     }
 
-    $.get(lang_pref+"/index.php?route=common/cart", function (data) {
+    $.get(lang_pref+"/index.php?route=common/cart.info", function (data) {
         var total_cart = moneyToInt($(data).find('.total_money').first().text());
         renderBanner(total_cart);
     }, 'html');

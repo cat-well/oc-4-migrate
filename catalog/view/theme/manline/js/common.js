@@ -69,7 +69,7 @@ $(document).ready(function () {
     });
     $('#button-cart').bind('click', function () {
         $.ajax({
-            url: '/' + lang_pref + 'index.php?route=checkout/cart/add',
+            url: '/' + lang_pref + 'index.php?route=checkout/cart.add',
             type: 'post',
             data: $('.product-info input[type=\'text\'], .product-info input[type=\'hidden\'], .product-info input[type=\'radio\']:checked, .product-info input[type=\'checkbox\']:checked, .product-info select, .product-info textarea'),
             dataType: 'json',
@@ -84,7 +84,7 @@ $(document).ready(function () {
                 }
                 if (json['success']) {
                     $.magnificPopup.open({
-                        items: {src: '/'+lang_pref+'index.php?route=common/cart #cart > *'},
+                        items: {src: '/'+lang_pref+'index.php?route=common/cart.info #cart > *'},
                         closeBtnInside: false,
                         showCloseBtn: false,
                         type: 'ajax',
@@ -99,7 +99,7 @@ $(document).ready(function () {
                                 console.log('asd');
                             }, close: function () {
                                 $('.zoomContainer').removeClass('none');
-                                $('#header #cart').load('/'+lang_pref+'index.php?route=common/cart #cart > *');
+                                $('#header #cart').load('/'+lang_pref+'index.php?route=common/cart.info #cart > *');
                             }
                         }
                     });
@@ -132,7 +132,7 @@ function addToCart(product_id, quantity) {
     const lang_pref = window.location.href.indexOf('/ua/') === -1 ? '' : '/ua/';
     quantity = typeof(quantity) != 'undefined' ? quantity : 1;
     $.ajax({
-        url: lang_pref+'index.php?route=checkout/cart/add',
+        url: lang_pref+'index.php?route=checkout/cart.add',
         type: 'post',
         data: 'product_id=' + product_id + '&quantity=' + quantity,
         dataType: 'json',
@@ -143,7 +143,7 @@ function addToCart(product_id, quantity) {
             }
             if (json['success']) {
                 $.magnificPopup.open({
-                    items: {src: lang_pref+'index.php?route=common/cart #cart > *'},
+                    items: {src: lang_pref+'index.php?route=common/cart.info #cart > *'},
                     closeBtnInside: false,
                     showCloseBtn: false,
                     type: 'ajax',
@@ -154,7 +154,7 @@ function addToCart(product_id, quantity) {
                     tLoading: 'Загрузка...',
                     callbacks: {
                         close: function () {
-                            $('#header #cart').load(lang_pref+'index.php?route=common/cart #cart > *');
+                            $('#header #cart').load(lang_pref+'index.php?route=common/cart.info #cart > *');
                         }
                     }
                 });
