@@ -545,6 +545,56 @@ class FilterproLike extends \Opencart\System\Engine\Controller {
 			];
 		}
 
+		// UX requirement: keep Manufacturer facet visible even when current filter combination yields no products.
+		// Fallback: if facet query returned nothing, show manufacturers available in the CATEGORY (in-stock only),
+		// ignoring other selected facets. Selected manufacturers remain selectable/unselectable.
+		if (empty($data['manufacturer_items'])) {
+			$all_rows = $cacheRows(
+				"SELECT p.manufacturer_id, m.name, COUNT(DISTINCT p.product_id) total " .
+				"FROM `" . DB_PREFIX . "product_to_category` p2c " .
+				"JOIN `" . DB_PREFIX . "product` p ON p.product_id=p2c.product_id AND p.status='1' AND p.date_available<=NOW() AND p.quantity > 0 " .
+				"JOIN `" . DB_PREFIX . "manufacturer` m ON m.manufacturer_id=p.manufacturer_id " .
+				"WHERE p2c.category_id='" . (int)$category_id . "' AND p.manufacturer_id > 0 " .
+				"GROUP BY p.manufacturer_id ORDER BY m.name"
+			);
+
+			foreach ($all_rows as $row) {
+				$id = (int)$row['manufacturer_id'];
+				$name = (string)$row['name'];
+				$total = (int)$row['total'];
+
+				$cur = $sel_slug;
+				$cur_ids = $cur['manufacturer'] ?? [];
+				$cur_ids = array_values(array_unique(array_filter(array_map('strval', (array)$cur_ids))));
+				$sel = in_array((string)$id, $cur_ids, true);
+
+				if ($total <= 0 && !$sel) {
+					continue;
+				}
+
+				if ($sel) {
+					$cur_ids = array_values(array_filter($cur_ids, static fn($v) => $v !== (string)$id));
+				} else {
+					$cur_ids[] = (string)$id;
+					$cur_ids = array_values(array_unique($cur_ids));
+				}
+
+				if ($cur_ids) {
+					$cur['manufacturer'] = $cur_ids;
+				} else {
+					unset($cur['manufacturer']);
+				}
+
+				$data['manufacturer_items'][] = [
+					'id' => $id,
+					'name' => $name,
+					'total' => $total,
+					'selected' => $sel,
+					'url' => $build_url($cur),
+				];
+			}
+		}
+
 		// Price bounds for category (base product price)
 		$price_q = $this->db->query(
 			"SELECT MIN(p.price) min_price, MAX(p.price) max_price " .
