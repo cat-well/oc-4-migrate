@@ -63,7 +63,20 @@ class SeoUrl extends \Opencart\System\Engine\Controller {
 						$lookup = substr($lookup, 0, -5);
 					}
 
-					$seo_url_info = $this->model_design_seo_url->getSeoUrlByKeyword($lookup);
+					// Prefer FilterPro SEO landing slugs (route=filter_id=NNN) only for *non-first* segments,
+					// and only when we already have a category context. This avoids breaking plain category URLs
+					// if a filter landing slug happens to equal a category slug (keyword collision).
+					$seo_url_info = [];
+					if ($key > 0 && isset($this->request->get['path']) && $this->request->get['path'] !== '') {
+						$pref = $this->db->query("SELECT * FROM `" . DB_PREFIX . "seo_url` WHERE `keyword` = '" . $this->db->escape($lookup) . "' AND `store_id` = '" . (int)$this->config->get('config_store_id') . "' AND `key` = 'route' AND `value` LIKE 'filter_id=%' ORDER BY sort_order DESC, seo_url_id ASC LIMIT 1");
+						if ($pref->num_rows) {
+							$seo_url_info = $pref->row;
+						}
+					}
+
+					if (!$seo_url_info) {
+						$seo_url_info = $this->model_design_seo_url->getSeoUrlByKeyword($lookup);
+					}
 
 					if ($seo_url_info) {
 						$this->request->get[$seo_url_info['key']] = html_entity_decode($seo_url_info['value'], ENT_QUOTES, 'UTF-8');
