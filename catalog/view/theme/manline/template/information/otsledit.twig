@@ -1,0 +1,73 @@
+{# Legacy OC2: information_id=7 (Отследить заказ) #}
+<div class="title mb-30"><h1>{{ heading_title }}</h1></div>
+
+{% set order_id = track.order_id|default('') %}
+
+{% if not order_id %}
+  <div class="citata info_bg mb-40">
+    <strong>{{ is_ua ? 'Тут ви можете відстежити статус і місцезнаходження вашого замовлення.' : 'Здесь вы можете отследить статус и местонахождение своего заказа.' }}</strong>
+    <br>
+    {{ is_ua
+      ? 'Просто введіть номер замовлення із SMS, який ми надіслали на ваш номер, а також продублювали на ваш e-mail.'
+      : 'Просто введите номер заказ из смс, который мы прислали на ваш номер, а также продублировали номер заказа на ваш электронный ящик.'
+    }}
+  </div>
+{% endif %}
+
+<div class="row">
+  <div class="col-md-8 col-md-offset-2">
+    <form method="get" action="" id="otsledit">
+      <input value="{{ order_id|e }}" name="nomer_zakaza" type="text" class="otsledit_inp" placeholder="{{ is_ua ? 'Введіть номер замовлення' : 'Введите номер заказа' }}">
+      <input class="btn" type="submit" value="{{ is_ua ? 'Відстежити замовлення' : 'Отследить заказ' }}">
+    </form>
+
+    {% if order_id %}
+      <div class="otslej_w">
+        {% if track.found %}
+
+          {% if track.np is defined and track.np %}
+            <div class="row">
+              <div class="col-md-3 otsl_title">{{ is_ua ? 'Статус доставки:' : 'Статус доставки:' }}</div>
+              <div class="col-md-9 otsl_text">{{ track.np.StateName|default('') }}</div>
+            </div>
+            {% if track.np.RecipientFullName is defined and track.np.RecipientFullName %}
+              <div class="row">
+                <div class="col-md-3 otsl_title">{{ is_ua ? 'Імʼя отримувача:' : 'Имя получателя:' }}</div>
+                <div class="col-md-9 otsl_text">{{ track.np.RecipientFullName }}</div>
+              </div>
+            {% endif %}
+            {% if track.np.CityRecipient is defined or track.np.CityReceiverRU is defined %}
+              <div class="row">
+                <div class="col-md-3 otsl_title">{{ is_ua ? 'Місто:' : 'Город:' }}</div>
+                <div class="col-md-9 otsl_text">{{ track.np.CityRecipient|default(track.np.CityReceiverRU|default('')) }}</div>
+              </div>
+            {% endif %}
+            {% if track.np.WarehouseRecipient is defined or track.np.AddressRU is defined %}
+              <div class="row">
+                <div class="col-md-3 otsl_title">{{ is_ua ? 'Відділення:' : 'Номер отделения:' }}</div>
+                <div class="col-md-9 otsl_text">{{ track.np.WarehouseRecipient|default(track.np.AddressRU|default('')) }}</div>
+              </div>
+            {% endif %}
+          {% endif %}
+
+          {% if track.comment %}
+            <div class="row">
+              <div class="col-md-3 otsl_title">{{ is_ua ? 'Коментар:' : 'Комментарий:' }}</div>
+              <div class="col-md-9 otsl_text">{{ track.comment }}</div>
+            </div>
+          {% endif %}
+
+          {% if track.status_name %}
+            <div class="row">
+              <div class="col-md-3 otsl_title">{{ is_ua ? 'Статус замовлення:' : 'Статус заказа:' }}</div>
+              <div class="col-md-9 otsl_text">{{ track.status_name }}</div>
+            </div>
+          {% endif %}
+
+        {% else %}
+          <div class="not_found">{{ is_ua ? 'Ми не знайшли такий номер (:' : 'Мы не нашли такой номер (:' }}</div>
+        {% endif %}
+      </div>
+    {% endif %}
+  </div>
+</div>

@@ -31,14 +31,36 @@
         </ul>
       </div>
       <div id="content" class="col-sm-9">{{ content_top }}
-        <h1>{{ heading_title }}</h1>
-        {{ description|raw }}{{ content_bottom }}
+        {% if information_id is defined and information_id == 4 %}
+          {% include 'manline/template/information/o_nas.twig' %}
+        {% elseif information_id is defined and information_id == 7 %}
+          {% include 'manline/template/information/otsledit.twig' %}
+        {% elseif information_id is defined and information_id == 17 %}
+          {% include 'manline/template/information/sotrudnichestvo.twig' %}
+        {% elseif information_id is defined and information_id == 19 %}
+          {% include 'manline/template/information/ishem_modelej.twig' %}
+        {% else %}
+          <h1>{{ heading_title }}</h1>
+          {{ description|raw }}
+        {% endif %}
+        {{ content_bottom }}
       </div>
     {% else %}
       {{ column_left }}
       <div id="content" class="col">{{ content_top }}
-        <h1>{{ heading_title }}</h1>
-        {{ description|raw }}{{ content_bottom }}
+        {% if information_id is defined and information_id == 4 %}
+          {% include 'manline/template/information/o_nas.twig' %}
+        {% elseif information_id is defined and information_id == 7 %}
+          {% include 'manline/template/information/otsledit.twig' %}
+        {% elseif information_id is defined and information_id == 17 %}
+          {% include 'manline/template/information/sotrudnichestvo.twig' %}
+        {% elseif information_id is defined and information_id == 19 %}
+          {% include 'manline/template/information/ishem_modelej.twig' %}
+        {% else %}
+          <h1>{{ heading_title }}</h1>
+          {{ description|raw }}
+        {% endif %}
+        {{ content_bottom }}
       </div>
       {{ column_right }}
     {% endif %}

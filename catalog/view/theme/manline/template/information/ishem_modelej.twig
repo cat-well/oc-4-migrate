@@ -1,0 +1,25 @@
+{# Legacy OC2: information_id=19 (Ищем моделей) #}
+<div class="title mb-40"><h1>{{ heading_title }}</h1></div>
+
+<div class="art_img">
+  <img src="catalog/view/theme/manline/image/model1.jpg" alt="">
+</div>
+
+<div class="art_img_r">
+  <strong>
+    {{ is_ua
+      ? 'Ми шукаємо чоловіків-моделей для зйомок товарів нашого магазину (нижня білизна та домашній одяг).' 
+      : 'Мы ищем моделей-мужчин для съемок товаров нашего магазина (нижнее белье и домашняя одежда).'
+    }}
+  </strong>
+  <br><br>
+
+  <div class="title_sm"><span>{{ is_ua ? 'Для чоловіків з Києва.' : 'Для мужчин из Киева.' }}</span></div>
+
+  <strong>{{ is_ua ? 'Надсилайте на e-mail:' : 'Присылайте на e-mail:' }}</strong><br>
+  - {{ is_ua ? 'своє портфоліо (+ сторінку соцмереж)' : 'свое портфолио (+ страницу соц сетей)' }}<br>
+  - {{ is_ua ? 'вкажіть ріст і вагу' : 'укажите рост и вес' }}<br>
+  - {{ is_ua ? 'напишіть про свій досвід' : 'напишите о своем опыте' }}<br>
+  - {{ is_ua ? 'не забудьте контактні дані' : 'не забудьте контактные данные' }}<br><br>
+  <strong>e-mail:</strong> <a href="mailto:manline99@gmail.com">manline99@gmail.com</a>
+</div>

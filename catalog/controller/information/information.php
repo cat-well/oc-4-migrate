@@ -43,11 +43,82 @@ class Information extends \Opencart\System\Engine\Controller {
 				'href' => $this->url->link('information/information', 'language=' . $language . '&information_id=' . $information_id)
 			];
 
+			$data['information_id'] = $information_id;
+
 			$data['heading_title'] = $information_info['title'];
 
 			$data['description'] = html_entity_decode($information_info['description'], ENT_QUOTES, 'UTF-8');
 
 			$data['continue'] = $this->url->link('common/home', 'language=' . $language);
+
+			// Manline: special legacy-like information pages (hardcoded templates in OC2 theme)
+			$lang_code = (string)$language;
+			$data['is_ua'] = in_array($lang_code, ['uk-ua', 'ua'], true);
+
+			// Track order page (legacy information_id=7): allow GET nomer_zakaza and show tracking status
+			$data['track'] = [];
+			if ((int)$information_id === 7) {
+				$nomer = trim((string)($this->request->get['nomer_zakaza'] ?? ''));
+				$data['track']['order_id'] = $nomer;
+
+				if ($nomer !== '' && ctype_digit($nomer)) {
+					$oid = (int)$nomer;
+
+					// Basic order status info
+					$q = $this->db->query(
+						"SELECT o.order_id, o.tracking, o.comment, os.name AS status_name " .
+						"FROM `" . DB_PREFIX . "order` o " .
+						"LEFT JOIN `" . DB_PREFIX . "order_status` os ON (os.order_status_id = o.order_status_id AND os.language_id = '" . (int)$this->config->get('config_language_id') . "') " .
+						"WHERE o.order_id = '" . (int)$oid . "' LIMIT 1"
+					);
+
+					if (!empty($q->num_rows)) {
+						$data['track']['found'] = true;
+						$data['track']['tracking'] = (string)($q->row['tracking'] ?? '');
+						$data['track']['comment'] = (string)($q->row['comment'] ?? '');
+						$data['track']['status_name'] = (string)($q->row['status_name'] ?? '');
+
+						// Nova Poshta API tracking (if we have API key + tracking number)
+						$api_key = trim((string)$this->config->get('shipping_novaposhta_api_key'));
+						$doc = trim((string)($q->row['tracking'] ?? ''));
+
+						if ($api_key !== '' && $doc !== '') {
+							try {
+								$payload = [
+									'apiKey' => $api_key,
+									'modelName' => 'TrackingDocument',
+									'calledMethod' => 'getStatusDocuments',
+									'methodProperties' => [
+										'Documents' => [
+											['DocumentNumber' => $doc]
+										]
+									]
+								];
+
+								$ch = curl_init('https://api.novaposhta.ua/v2.0/json/');
+								curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+								curl_setopt($ch, CURLOPT_POST, true);
+								curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+								curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
+								$resp = curl_exec($ch);
+								$err = curl_error($ch);
+								curl_close($ch);
+
+								if ($resp && !$err) {
+									$j = json_decode($resp, true);
+									if (is_array($j) && !empty($j['success']) && !empty($j['data'][0]) && is_array($j['data'][0])) {
+										$data['track']['np'] = $j['data'][0];
+									}
+								}
+							} catch (\Throwable $e) {
+								// ignore NP errors, still show order status
+							}
+						}
+					} else {
+						$data['track']['found'] = false;
+					}
+				}
+			}
 
 			// Manline: help/info menu (left sidebar) - mimic OC2 help navigation
 			$data['help_nav'] = [];
