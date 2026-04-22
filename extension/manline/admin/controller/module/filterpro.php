@@ -213,35 +213,77 @@ class FilterPro extends \Opencart\System\Engine\Controller {
 	 * - DB_PREFIX.seo_url (key='route', value='filter_id=N', keyword='<slug>')
 	 */
 	private function saveSeoLandings(array $landings): void {
-		// Replace all landings (legacy behavior in OC2 FilterPro)
-		$this->db->query("DELETE FROM `" . DB_PREFIX . "filterpro_seo`");
+		// Safer sync (vs legacy full DELETE):
+		// - Upsert provided landings
+		// - Delete landings removed from the form
+		// - Keep all writes in a transaction
 
+		// Normalize input ids
+		$incoming_ids = [];
 		foreach ($landings as $row) {
 			if (!is_array($row)) continue;
-			$filter_id = (int)($row['filter_id'] ?? 0);
-			if ($filter_id <= 0) continue;
+			$id = (int)($row['filter_id'] ?? 0);
+			if ($id > 0) $incoming_ids[] = $id;
+		}
+		$incoming_ids = array_values(array_unique($incoming_ids));
 
-			$keyword = trim((string)($row['keyword'] ?? ''));
-			$keyword = trim($keyword, " /\t\r\n");
-
-			// Landings data format compatible with legacy FilterPro
-			$payload = [
-				'url' => (string)($row['url'] ?? ''),
-				'seo' => $keyword,
-				'lang' => (is_array($row['lang'] ?? null) ? $row['lang'] : []),
-			];
-
-			$this->db->query("INSERT INTO `" . DB_PREFIX . "filterpro_seo` (`url`, `data`) VALUES ('filter_id=" . (int)$filter_id . "', '" . $this->db->escape(serialize($payload)) . "')");
-
-			// Maintain seo_url mapping for the landing keyword
-			// Use language_id NULL so the keyword works for both RU/UA.
-			$this->db->query("DELETE FROM `" . DB_PREFIX . "seo_url` WHERE store_id='0' AND `key`='route' AND `value`='filter_id=" . (int)$filter_id . "'");
-
-			if ($keyword !== '') {
-				$this->db->query(
-					"INSERT INTO `" . DB_PREFIX . "seo_url` (store_id, language_id, `key`, `value`, keyword, sort_order) VALUES (0, NULL, 'route', 'filter_id=" . (int)$filter_id . "', '" . $this->db->escape($keyword) . "', 0)"
-				);
+		// Load existing ids
+		$existing_ids = [];
+		$q = $this->db->query("SELECT `url` FROM `" . DB_PREFIX . "filterpro_seo` WHERE `url` LIKE 'filter_id=%'");
+		foreach (($q->rows ?? []) as $r) {
+			$u = (string)($r['url'] ?? '');
+			if (preg_match('/^filter_id=(\\d+)$/', $u, $m)) {
+				$existing_ids[] = (int)$m[1];
 			}
+		}
+		$existing_ids = array_values(array_unique($existing_ids));
+
+		$to_delete = array_values(array_diff($existing_ids, $incoming_ids));
+
+		$this->db->query('START TRANSACTION');
+		try {
+			// Remove deleted landings
+			foreach ($to_delete as $filter_id) {
+				$filter_id = (int)$filter_id;
+				if ($filter_id <= 0) continue;
+				$this->db->query("DELETE FROM `" . DB_PREFIX . "filterpro_seo` WHERE `url`='filter_id=" . (int)$filter_id . "'");
+				$this->db->query("DELETE FROM `" . DB_PREFIX . "seo_url` WHERE store_id='0' AND `key`='route' AND `value`='filter_id=" . (int)$filter_id . "'");
+			}
+
+			// Upsert provided landings
+			foreach ($landings as $row) {
+				if (!is_array($row)) continue;
+				$filter_id = (int)($row['filter_id'] ?? 0);
+				if ($filter_id <= 0) continue;
+
+				$keyword = trim((string)($row['keyword'] ?? ''));
+				$keyword = trim($keyword, " /\t\r\n");
+
+				$payload = [
+					'url' => (string)($row['url'] ?? ''),
+					'seo' => $keyword,
+					'lang' => (is_array($row['lang'] ?? null) ? $row['lang'] : []),
+				];
+
+				$this->db->query(
+					"INSERT INTO `" . DB_PREFIX . "filterpro_seo` (`url`, `data`) VALUES ('filter_id=" . (int)$filter_id . "', '" . $this->db->escape(serialize($payload)) . "') " .
+					"ON DUPLICATE KEY UPDATE `data`=VALUES(`data`)"
+				);
+
+				// Update seo_url mapping for the landing keyword
+				$this->db->query("DELETE FROM `" . DB_PREFIX . "seo_url` WHERE store_id='0' AND `key`='route' AND `value`='filter_id=" . (int)$filter_id . "'");
+
+				if ($keyword !== '') {
+					$this->db->query(
+						"INSERT INTO `" . DB_PREFIX . "seo_url` (store_id, language_id, `key`, `value`, keyword, sort_order) VALUES (0, NULL, 'route', 'filter_id=" . (int)$filter_id . "', '" . $this->db->escape($keyword) . "', 0)"
+					);
+				}
+			}
+
+			$this->db->query('COMMIT');
+		} catch (\Throwable $e) {
+			$this->db->query('ROLLBACK');
+			throw $e;
 		}
 	}
 
@@ -371,6 +413,7 @@ class FilterPro extends \Opencart\System\Engine\Controller {
 				if ($filter_id <= 0) continue;
 
 				$keyword = trim((string)($row['keyword'] ?? ''));
+				$keyword = trim($keyword, " /\t\r\n");
 				$url = trim((string)($row['url'] ?? ''));
 
 				$lang = [];
@@ -395,6 +438,44 @@ class FilterPro extends \Opencart\System\Engine\Controller {
 					'url' => $url,
 					'lang' => $lang,
 				];
+			}
+		}
+
+		// Validate: duplicate keywords inside the form
+		$kw_map = [];
+		$dup_kw = [];
+		foreach ($seo_landings as $l) {
+			$kw = (string)($l['keyword'] ?? '');
+			$fid = (int)($l['filter_id'] ?? 0);
+			if ($kw === '') continue;
+			if (isset($kw_map[$kw]) && (int)$kw_map[$kw] !== $fid) {
+				$dup_kw[] = $kw;
+			} else {
+				$kw_map[$kw] = $fid;
+			}
+		}
+		$dup_kw = array_values(array_unique($dup_kw));
+		if ($dup_kw) {
+			$json['error']['warning'] = 'Дубли keyword в SEO-лендингах: ' . implode(', ', $dup_kw);
+		}
+
+		// Validate: keyword conflicts with existing seo_url entries
+		if (!$json) {
+			foreach ($seo_landings as $l) {
+				$kw = (string)($l['keyword'] ?? '');
+				$fid = (int)($l['filter_id'] ?? 0);
+				if ($kw === '' || $fid <= 0) continue;
+
+				$conf = $this->db->query("SELECT `key`,`value` FROM `" . DB_PREFIX . "seo_url` WHERE store_id='0' AND keyword='" . $this->db->escape($kw) . "' LIMIT 10");
+				foreach (($conf->rows ?? []) as $r) {
+					$k = (string)($r['key'] ?? '');
+					$v = (string)($r['value'] ?? '');
+					if ($k === 'route' && $v === 'filter_id=' . (int)$fid) {
+						continue;
+					}
+					$json['error']['warning'] = 'Keyword конфликтует с существующим SEO URL: ' . $kw;
+					break 2;
+				}
 			}
 		}
 
