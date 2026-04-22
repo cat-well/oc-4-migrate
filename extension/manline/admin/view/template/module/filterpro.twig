@@ -126,6 +126,78 @@
 
           <hr/>
 
+          <h3 class="mb-3">SEO-лендинги (FilterPro)</h3>
+          <div class="alert alert-info">
+            Здесь настраиваются «красивые» короткие URL для конкретных комбинаций фильтров (legacy FilterPro), а также H1/Title/Description/SEO-текст для RU/UA.
+          </div>
+
+          <div class="table-responsive">
+            <table class="table table-bordered table-hover" id="fp-seo-landings">
+              <thead>
+                <tr>
+                  <th style="width:110px">filter_id</th>
+                  <th style="width:220px">keyword (slug)</th>
+                  <th>url params</th>
+                  <th style="width:160px">Действия</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for i, l in seo_landings %}
+                  <tr data-fp-seo-row>
+                    <td>
+                      <input type="number" class="form-control" name="seo_landings[{{ i }}][filter_id]" value="{{ l.filter_id ?? '' }}" min="1" />
+                    </td>
+                    <td>
+                      <input type="text" class="form-control" name="seo_landings[{{ i }}][keyword]" value="{{ l.keyword ?? '' }}" placeholder="krasivyj-url" />
+                      <div class="form-text">Без /ru и без слешей в начале.</div>
+                    </td>
+                    <td>
+                      <input type="text" class="form-control" name="seo_landings[{{ i }}][url]" value="{{ l.url ?? '' }}" placeholder="path=...&manufacturer=..." />
+                      <div class="row mt-2 g-2">
+                        <div class="col-md-6">
+                          <div class="card">
+                            <div class="card-header">RU</div>
+                            <div class="card-body">
+                              <input class="form-control mb-2" type="text" name="seo_landings[{{ i }}][lang][1][h1]" value="{{ l.lang[1].h1 ?? '' }}" placeholder="H1" />
+                              <input class="form-control mb-2" type="text" name="seo_landings[{{ i }}][lang][1][title]" value="{{ l.lang[1].title ?? '' }}" placeholder="Title" />
+                              <input class="form-control mb-2" type="text" name="seo_landings[{{ i }}][lang][1][meta_description]" value="{{ l.lang[1].meta_description ?? '' }}" placeholder="Meta description" />
+                              <input class="form-control mb-2" type="text" name="seo_landings[{{ i }}][lang][1][meta_keywords]" value="{{ l.lang[1].meta_keywords ?? '' }}" placeholder="Meta keywords" />
+                              <textarea class="form-control" rows="4" name="seo_landings[{{ i }}][lang][1][description]" placeholder="SEO текст (RU)">{{ l.lang[1].description ?? '' }}</textarea>
+                            </div>
+                          </div>
+                        </div>
+                        <div class="col-md-6">
+                          <div class="card">
+                            <div class="card-header">UA</div>
+                            <div class="card-body">
+                              <input class="form-control mb-2" type="text" name="seo_landings[{{ i }}][lang][4][h1]" value="{{ l.lang[4].h1 ?? '' }}" placeholder="H1" />
+                              <input class="form-control mb-2" type="text" name="seo_landings[{{ i }}][lang][4][title]" value="{{ l.lang[4].title ?? '' }}" placeholder="Title" />
+                              <input class="form-control mb-2" type="text" name="seo_landings[{{ i }}][lang][4][meta_description]" value="{{ l.lang[4].meta_description ?? '' }}" placeholder="Meta description" />
+                              <input class="form-control mb-2" type="text" name="seo_landings[{{ i }}][lang][4][meta_keywords]" value="{{ l.lang[4].meta_keywords ?? '' }}" placeholder="Meta keywords" />
+                              <textarea class="form-control" rows="4" name="seo_landings[{{ i }}][lang][4][description]" placeholder="SEO текст (UA)">{{ l.lang[4].description ?? '' }}</textarea>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                    <td class="text-end">
+                      <button type="button" class="btn btn-outline-danger btn-sm" data-fp-seo-remove>Remove</button>
+                    </td>
+                  </tr>
+                {% endfor %}
+
+                <tr>
+                  <td colspan="4">
+                    <button type="button" class="btn btn-outline-primary" id="fp-seo-add">Add SEO landing</button>
+                    <div class="form-text mt-2">filter_id должен совпадать с существующим landing’ом (или добавь новый filter_id вручную). keyword будет записан в seo_url как route=filter_id.</div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <hr/>
+
           <h3 class="mb-3">{{ text_popular_queries|default('Popular queries') }}</h3>
           <div class="row mb-3">
             <label class="col-sm-2 col-form-label">{{ entry_popular_queries|default('Links list') }}</label>
@@ -225,6 +297,47 @@
       );
     }
 
+    function nextSeoIndex() {
+      var rows = document.querySelectorAll('tr[data-fp-seo-row]');
+      return rows.length;
+    }
+
+    function seoRowTemplate(i) {
+      return (
+        '<tr data-fp-seo-row>' +
+          '<td><input type="number" class="form-control" name="seo_landings[' + i + '][filter_id]" value="" min="1" /></td>' +
+          '<td>' +
+            '<input type="text" class="form-control" name="seo_landings[' + i + '][keyword]" value="" placeholder="krasivyj-url" />' +
+            '<div class="form-text">Без /ru и без слешей в начале.</div>' +
+          '</td>' +
+          '<td>' +
+            '<input type="text" class="form-control" name="seo_landings[' + i + '][url]" value="" placeholder="path=...&manufacturer=..." />' +
+            '<div class="row mt-2 g-2">' +
+              '<div class="col-md-6">' +
+                '<div class="card"><div class="card-header">RU</div><div class="card-body">' +
+                  '<input class="form-control mb-2" type="text" name="seo_landings[' + i + '][lang][1][h1]" value="" placeholder="H1" />' +
+                  '<input class="form-control mb-2" type="text" name="seo_landings[' + i + '][lang][1][title]" value="" placeholder="Title" />' +
+                  '<input class="form-control mb-2" type="text" name="seo_landings[' + i + '][lang][1][meta_description]" value="" placeholder="Meta description" />' +
+                  '<input class="form-control mb-2" type="text" name="seo_landings[' + i + '][lang][1][meta_keywords]" value="" placeholder="Meta keywords" />' +
+                  '<textarea class="form-control" rows="4" name="seo_landings[' + i + '][lang][1][description]" placeholder="SEO текст (RU)"></textarea>' +
+                '</div></div>' +
+              '</div>' +
+              '<div class="col-md-6">' +
+                '<div class="card"><div class="card-header">UA</div><div class="card-body">' +
+                  '<input class="form-control mb-2" type="text" name="seo_landings[' + i + '][lang][4][h1]" value="" placeholder="H1" />' +
+                  '<input class="form-control mb-2" type="text" name="seo_landings[' + i + '][lang][4][title]" value="" placeholder="Title" />' +
+                  '<input class="form-control mb-2" type="text" name="seo_landings[' + i + '][lang][4][meta_description]" value="" placeholder="Meta description" />' +
+                  '<input class="form-control mb-2" type="text" name="seo_landings[' + i + '][lang][4][meta_keywords]" value="" placeholder="Meta keywords" />' +
+                  '<textarea class="form-control" rows="4" name="seo_landings[' + i + '][lang][4][description]" placeholder="SEO текст (UA)"></textarea>' +
+                '</div></div>' +
+              '</div>' +
+            '</div>' +
+          '</td>' +
+          '<td class="text-end"><button type="button" class="btn btn-outline-danger btn-sm" data-fp-seo-remove>Remove</button></td>' +
+        '</tr>'
+      );
+    }
+
     document.addEventListener('click', function(e) {
       var t = e.target;
 
@@ -241,9 +354,30 @@
 
       // Remove block
       var btn = closest(t, '[data-fp-remove]');
-      if (!btn) return;
-      var tr = closest(btn, 'tr');
-      if (tr) tr.remove();
+      if (btn) {
+        var tr = closest(btn, 'tr');
+        if (tr) tr.remove();
+        return;
+      }
+
+      // Add SEO landing
+      var seoAdd = closest(t, '#fp-seo-add');
+      if (seoAdd) {
+        var i2 = nextSeoIndex();
+        var addRowTr2 = closest(seoAdd, 'tr');
+        if (addRowTr2) {
+          addRowTr2.insertAdjacentHTML('beforebegin', seoRowTemplate(i2));
+        }
+        return;
+      }
+
+      // Remove SEO landing
+      var seoRm = closest(t, '[data-fp-seo-remove]');
+      if (seoRm) {
+        var tr2 = closest(seoRm, 'tr');
+        if (tr2) tr2.remove();
+        return;
+      }
     });
   })();
 </script>

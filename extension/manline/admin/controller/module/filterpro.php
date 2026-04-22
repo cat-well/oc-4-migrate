@@ -141,6 +141,9 @@ class FilterPro extends \Opencart\System\Engine\Controller {
 		// Popular queries (optional): per-language raw text (one per line: label|url)
 		$data['popular_queries'] = $module_info['popular_queries'] ?? [];
 
+		// SEO landings (legacy FilterPro): stored in DB_PREFIX . filterpro_seo + seo_url route=filter_id
+		$data['seo_landings'] = $this->loadSeoLandings();
+
 		// Languages
 		$this->load->model('localisation/language');
 		$data['languages'] = $this->model_localisation_language->getLanguages();
@@ -159,6 +162,89 @@ class FilterPro extends \Opencart\System\Engine\Controller {
 		$this->response->setOutput($this->load->view('extension/manline/module/filterpro', $data));
 	}
 
+	/**
+	 * Load legacy FilterPro SEO landings from DB.
+	 *
+	 * @return array<int,array<string,mixed>>
+	 */
+	private function loadSeoLandings(): array {
+		$items = [];
+
+		// Landings are stored in `filterpro_seo` with url='filter_id=N' and serialized `data`.
+		$q = $this->db->query("SELECT `url`, `data` FROM `" . DB_PREFIX . "filterpro_seo` ORDER BY `url`");
+		foreach (($q->rows ?? []) as $row) {
+			$url = (string)($row['url'] ?? '');
+			$data_raw = (string)($row['data'] ?? '');
+			$filter_id = 0;
+			if (preg_match('/^filter_id=(\\d+)$/', $url, $m)) {
+				$filter_id = (int)$m[1];
+			}
+
+			$landing = @unserialize($data_raw);
+			if (!is_array($landing)) {
+				$landing = [];
+			}
+
+			// Find current keyword from seo_url table (OC4): key='route', value='filter_id=N'.
+			$keyword = '';
+			if ($filter_id > 0) {
+				$kq = $this->db->query("SELECT keyword FROM `" . DB_PREFIX . "seo_url` WHERE store_id='0' AND `key`='route' AND `value`='filter_id=" . (int)$filter_id . "' ORDER BY sort_order DESC, seo_url_id ASC LIMIT 1");
+				if ($kq->num_rows) {
+					$keyword = (string)$kq->row['keyword'];
+				}
+			}
+
+			$items[] = [
+				'filter_id' => $filter_id,
+				'keyword' => $keyword,
+				'url' => (string)($landing['url'] ?? ''),
+				'lang' => (is_array($landing['lang'] ?? null) ? $landing['lang'] : []),
+			];
+		}
+
+		return $items;
+	}
+
+	/**
+	 * Persist legacy FilterPro SEO landings into DB.
+	 *
+	 * Writes:
+	 * - DB_PREFIX.filterpro_seo (url='filter_id=N', data=serialize(...))
+	 * - DB_PREFIX.seo_url (key='route', value='filter_id=N', keyword='<slug>')
+	 */
+	private function saveSeoLandings(array $landings): void {
+		// Replace all landings (legacy behavior in OC2 FilterPro)
+		$this->db->query("DELETE FROM `" . DB_PREFIX . "filterpro_seo`");
+
+		foreach ($landings as $row) {
+			if (!is_array($row)) continue;
+			$filter_id = (int)($row['filter_id'] ?? 0);
+			if ($filter_id <= 0) continue;
+
+			$keyword = trim((string)($row['keyword'] ?? ''));
+			$keyword = trim($keyword, " /\t\r\n");
+
+			// Landings data format compatible with legacy FilterPro
+			$payload = [
+				'url' => (string)($row['url'] ?? ''),
+				'seo' => $keyword,
+				'lang' => (is_array($row['lang'] ?? null) ? $row['lang'] : []),
+			];
+
+			$this->db->query("INSERT INTO `" . DB_PREFIX . "filterpro_seo` (`url`, `data`) VALUES ('filter_id=" . (int)$filter_id . "', '" . $this->db->escape(serialize($payload)) . "')");
+
+			// Maintain seo_url mapping for the landing keyword
+			// Use language_id NULL so the keyword works for both RU/UA.
+			$this->db->query("DELETE FROM `" . DB_PREFIX . "seo_url` WHERE store_id='0' AND `key`='route' AND `value`='filter_id=" . (int)$filter_id . "'");
+
+			if ($keyword !== '') {
+				$this->db->query(
+					"INSERT INTO `" . DB_PREFIX . "seo_url` (store_id, language_id, `key`, `value`, keyword, sort_order) VALUES (0, NULL, 'route', 'filter_id=" . (int)$filter_id . "', '" . $this->db->escape($keyword) . "', 0)"
+				);
+			}
+		}
+	}
+
 	public function save(): void {
 		$this->load->language('extension/manline/module/filterpro');
 
@@ -173,7 +259,8 @@ class FilterPro extends \Opencart\System\Engine\Controller {
 			'status' => 0,
 			'blocks' => [],
 			'popular_queries' => [],
-			'use_globally' => 0
+			'use_globally' => 0,
+			'seo_landings' => []
 		];
 
 		$post_info = $this->request->post + $required;
@@ -275,7 +362,46 @@ class FilterPro extends \Opencart\System\Engine\Controller {
 			$post_info['popular_queries'][(string)$code] = (string)$txt;
 		}
 
+		// Normalize SEO landings from POST (legacy ids: ru=1, ua=4)
+		$seo_landings = [];
+		if (is_array($post_info['seo_landings'] ?? null)) {
+			foreach ($post_info['seo_landings'] as $row) {
+				if (!is_array($row)) continue;
+				$filter_id = (int)($row['filter_id'] ?? 0);
+				if ($filter_id <= 0) continue;
+
+				$keyword = trim((string)($row['keyword'] ?? ''));
+				$url = trim((string)($row['url'] ?? ''));
+
+				$lang = [];
+				if (is_array($row['lang'] ?? null)) {
+					foreach ($row['lang'] as $lid => $ldata) {
+						$lid = (int)$lid;
+						if (!in_array($lid, [1, 4], true)) continue;
+						if (!is_array($ldata)) $ldata = [];
+						$lang[$lid] = [
+							'h1' => (string)($ldata['h1'] ?? ''),
+							'title' => (string)($ldata['title'] ?? ''),
+							'meta_description' => (string)($ldata['meta_description'] ?? ''),
+							'meta_keywords' => (string)($ldata['meta_keywords'] ?? ''),
+							'description' => (string)($ldata['description'] ?? ''),
+						];
+					}
+				}
+
+				$seo_landings[] = [
+					'filter_id' => $filter_id,
+					'keyword' => $keyword,
+					'url' => $url,
+					'lang' => $lang,
+				];
+			}
+		}
+
 		if (!$json) {
+			// Persist SEO landings into dedicated tables (outside oc_module)
+			$this->saveSeoLandings($seo_landings);
+
 			$this->load->model('setting/module');
 
 			if (empty($this->request->get['module_id'])) {
