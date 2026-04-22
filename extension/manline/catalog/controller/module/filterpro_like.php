@@ -78,6 +78,46 @@ class FilterproLike extends \Opencart\System\Engine\Controller {
 			return (int)($a['sort_order'] ?? 0) <=> (int)($b['sort_order'] ?? 0);
 		});
 
+		// Manline UX rules (customer feedback): ensure the order around key facets
+		// Manufacturer → Style → Size (even if admin config is incomplete).
+		// We reorder only these two blocks relative to manufacturer; everything else keeps admin order.
+		$style_row = null;
+		$size_row = null;
+		foreach ($blocks_list as $row) {
+			$k = is_array($row) ? (string)($row['key'] ?? '') : '';
+			if ($k === 'style') $style_row = $row;
+			if ($k === 'size') $size_row = $row;
+		}
+
+		if ($style_row || $size_row) {
+			$rebuilt = [];
+			$inserted = false;
+			foreach ($blocks_list as $row) {
+				$k = is_array($row) ? (string)($row['key'] ?? '') : '';
+
+				// Skip original style/size positions; we'll insert them after manufacturer.
+				if ($k === 'style' || $k === 'size') {
+					continue;
+				}
+
+				$rebuilt[] = $row;
+
+				if ($k === 'manufacturer') {
+					if ($style_row) $rebuilt[] = $style_row;
+					if ($size_row) $rebuilt[] = $size_row;
+					$inserted = true;
+				}
+			}
+
+			// If manufacturer isn't present, append style/size at the end.
+			if (!$inserted) {
+				if ($style_row) $rebuilt[] = $style_row;
+				if ($size_row) $rebuilt[] = $size_row;
+			}
+
+			$blocks_list = $rebuilt;
+		}
+
 		$block_on = function (string $key, bool $default = true) use ($blocks_map): bool {
 			if (!isset($blocks_map[$key]) || !is_array($blocks_map[$key])) {
 				return $default;
@@ -105,6 +145,13 @@ class FilterproLike extends \Opencart\System\Engine\Controller {
 		};
 
 		$get_expanded = function (string $key, int $default = 1) use ($blocks_map): int {
+			// Manline UX rules (customer feedback):
+			// - "Стиль" and "Размер" are key filters and must always stay expanded.
+			// Other filters may be collapsed by default via admin settings.
+			if (in_array($key, ['style', 'size'], true)) {
+				return 1;
+			}
+
 			if (!isset($blocks_map[$key]) || !is_array($blocks_map[$key])) {
 				return $default;
 			}

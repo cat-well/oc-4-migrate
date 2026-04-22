@@ -44,10 +44,15 @@ class Category extends \Opencart\System\Engine\Controller {
 			$page = 1;
 		}
 
+		// Manline requirement: category listing shows 23 products per page by default (legacy OC2 behavior)
+		$default_limit = 23;
+
 		if (isset($this->request->get['limit']) && (int)$this->request->get['limit']) {
 			$limit = (int)$this->request->get['limit'];
 		} else {
-			$limit = $this->config->get('config_pagination');
+			// Keep admin setting as fallback, but prefer legacy 23 on the storefront
+			$cfg_limit = (int)$this->config->get('config_pagination');
+			$limit = $default_limit > 0 ? $default_limit : ($cfg_limit ?: 10);
 		}
 
 		// Category
@@ -607,7 +612,7 @@ class Category extends \Opencart\System\Engine\Controller {
 
 			$data['limits'] = [];
 
-			$limits = array_unique([$this->config->get('config_pagination'), 25, 50, 75, 100]);
+			$limits = array_unique([$default_limit, (int)$this->config->get('config_pagination'), 25, 50, 75, 100]);
 
 			sort($limits);
 
