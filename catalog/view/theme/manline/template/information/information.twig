@@ -32,13 +32,13 @@
       </div>
       <div id="content" class="col-sm-9">{{ content_top }}
         {% if information_id is defined and information_id == 4 %}
-          {% include 'manline/template/information/o_nas.twig' %}
+          {% include 'information/o_nas.twig' %}
         {% elseif information_id is defined and information_id == 7 %}
-          {% include 'manline/template/information/otsledit.twig' %}
+          {% include 'information/otsledit.twig' %}
         {% elseif information_id is defined and information_id == 17 %}
-          {% include 'manline/template/information/sotrudnichestvo.twig' %}
+          {% include 'information/sotrudnichestvo.twig' %}
         {% elseif information_id is defined and information_id == 19 %}
-          {% include 'manline/template/information/ishem_modelej.twig' %}
+          {% include 'information/ishem_modelej.twig' %}
         {% else %}
           <h1>{{ heading_title }}</h1>
           {{ description|raw }}
@@ -49,13 +49,13 @@
       {{ column_left }}
       <div id="content" class="col">{{ content_top }}
         {% if information_id is defined and information_id == 4 %}
-          {% include 'manline/template/information/o_nas.twig' %}
+          {% include 'information/o_nas.twig' %}
         {% elseif information_id is defined and information_id == 7 %}
-          {% include 'manline/template/information/otsledit.twig' %}
+          {% include 'information/otsledit.twig' %}
         {% elseif information_id is defined and information_id == 17 %}
-          {% include 'manline/template/information/sotrudnichestvo.twig' %}
+          {% include 'information/sotrudnichestvo.twig' %}
         {% elseif information_id is defined and information_id == 19 %}
-          {% include 'manline/template/information/ishem_modelej.twig' %}
+          {% include 'information/ishem_modelej.twig' %}
         {% else %}
           <h1>{{ heading_title }}</h1>
           {{ description|raw }}
