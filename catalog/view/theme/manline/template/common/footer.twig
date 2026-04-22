@@ -90,6 +90,15 @@
 
 <div class="footer_bot">
   <div class="container">
+    {# Rozetka-like legal links (customer request): show key documents in the very bottom #}
+    {% if legal_links is defined and legal_links %}
+      <div class="footer_legal" style="margin: 0 0 10px; font-size: 13px; line-height: 1.6;">
+        {% for l in legal_links %}
+          <a href="{{ l.href }}" style="color:#666; text-decoration: underline; margin-right: 14px;" target="_blank" rel="nofollow noopener">{{ l.label }}</a>
+        {% endfor %}
+      </div>
+    {% endif %}
+
     <div class="copy_left">
       <span>2010-2026 © Магазин Manline</span> — Все права защищены
     </div>

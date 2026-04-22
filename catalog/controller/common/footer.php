@@ -44,12 +44,111 @@ class Footer extends \Opencart\System\Engine\Controller {
 		$data['simplecheckout_url'] = $this->url->link('checkout/simplecheckout', 'language=' . $this->config->get('config_language'));
 
 		$this->load->model('catalog/information');
+		// For footer legal links we reuse labels from SimpleCheckout language pack
+		$this->load->language('checkout/simplecheckout');
 
 		$results = $this->model_catalog_information->getInformations();
 
 		foreach ($results as $result) {
 			$data['informations'][] = ['href' => $this->url->link('information/information', 'language=' . $this->config->get('config_language') . '&information_id=' . $result['information_id'])] + $result;
 		}
+
+		// --- Manline footer: legal links (Rozetka-like block at the very bottom) ---
+		$all_informations = $results;
+
+		$titleMatches = static function (string $title, string $type): bool {
+			$title = trim($title);
+			if ($title === '') return false;
+			$norm = function_exists('mb_strtolower') ? mb_strtolower($title, 'UTF-8') : strtolower($title);
+
+			if ($type === 'checkout') {
+				return strpos($norm, 'оферт') !== false
+					|| strpos($norm, 'договор') !== false
+					|| strpos($norm, 'догов') !== false
+					|| strpos($norm, 'offer') !== false;
+			}
+			if ($type === 'gdpr') {
+				return strpos($norm, 'конфиденц') !== false
+					|| strpos($norm, 'конфіденц') !== false
+					|| strpos($norm, 'privacy') !== false
+					|| strpos($norm, 'персональн') !== false;
+			}
+			if ($type === 'returns') {
+				return strpos($norm, 'обмен') !== false
+					|| strpos($norm, 'возврат') !== false
+					|| strpos($norm, 'повернен') !== false
+					|| strpos($norm, 'обмін') !== false
+					|| strpos($norm, 'return') !== false;
+			}
+			return false;
+		};
+
+		$resolveInfoId = function (string $type) use ($all_informations, $titleMatches): int {
+			$configured_id = 0;
+			if ($type === 'checkout') {
+				$configured_id = (int)$this->config->get('config_checkout_id');
+			} elseif ($type === 'gdpr') {
+				$configured_id = (int)$this->config->get('config_gdpr_id');
+			} elseif ($type === 'returns') {
+				$configured_id = (int)$this->config->get('config_return_id');
+			}
+
+			if ($configured_id > 0) {
+				$info = $this->model_catalog_information->getInformation($configured_id);
+				if ($info) return $configured_id;
+			}
+
+			foreach ($all_informations as $info) {
+				$iid = (int)($info['information_id'] ?? 0);
+				if ($iid <= 0) continue;
+				$t = (string)($info['title'] ?? '');
+				if ($titleMatches($t, $type)) return $iid;
+			}
+
+			return 0;
+		};
+
+		$legal = [];
+		$offer_id = $resolveInfoId('checkout');
+		$privacy_id = $resolveInfoId('gdpr');
+		$returns_id = $resolveInfoId('returns');
+
+		$offer_label = trim((string)$this->language->get('text_agree_offer')) ?: 'Публичный договор (оферта)';
+		$privacy_label = trim((string)$this->language->get('text_agree_privacy')) ?: 'Политика конфиденциальности';
+		$returns_label = trim((string)$this->language->get('text_agree_returns')) ?: 'Обмен и возврат';
+
+		if ($offer_id > 0) {
+			$legal[] = [
+				'key' => 'offer',
+				'label' => $offer_label,
+				'href' => $this->url->link('information/information', 'language=' . $this->config->get('config_language') . '&information_id=' . $offer_id)
+			];
+		}
+		if ($privacy_id > 0) {
+			$legal[] = [
+				'key' => 'privacy',
+				'label' => $privacy_label,
+				'href' => $this->url->link('information/information', 'language=' . $this->config->get('config_language') . '&information_id=' . $privacy_id)
+			];
+		}
+		if ($returns_id > 0) {
+			$legal[] = [
+				'key' => 'returns',
+				'label' => $returns_label,
+				'href' => $this->url->link('information/information', 'language=' . $this->config->get('config_language') . '&information_id=' . $returns_id)
+			];
+		}
+
+		// Fallback (legacy route) if returns info page is not configured
+		if (!$returns_id) {
+			$legal[] = [
+				'key' => 'returns',
+				'label' => $returns_label,
+				'href' => rtrim((string)$this->config->get('config_url'), '/') . '/obmenvozvrat?language=' . $this->config->get('config_language')
+			];
+		}
+
+		$data['legal_links'] = $legal;
 
 		$data['contact'] = $this->url->link('information/contact', 'language=' . $this->config->get('config_language'));
 		$data['return'] = $this->url->link('account/returns.add', 'language=' . $this->config->get('config_language'));
