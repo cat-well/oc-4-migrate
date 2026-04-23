@@ -298,20 +298,24 @@ class Product extends \Opencart\System\Engine\Model {
 		}
 
 		// Attribute filters by SLUG (preferred, language-independent)
+		// IMPORTANT: legacy Manline data stores multiple slugs in a single column separated by ':'
+		// (e.g. "klassicheskie-mayki:odnotonnye-mayki:mayka-alkogolichka").
+		// So we must match a slug as a token, not only by equality.
 		if (!empty($data['filter_attribute_slug']) && is_array($data['filter_attribute_slug'])) {
 			foreach ($data['filter_attribute_slug'] as $attribute_id => $slugs) {
 				$attribute_id = (int)$attribute_id;
 				if ($attribute_id <= 0 || !is_array($slugs) || !$slugs) continue;
 
-				$in = [];
+				$ors = [];
 				foreach ($slugs as $s) {
 					$s = trim((string)$s);
 					if ($s === '') continue;
-					$in[] = "'" . $this->db->escape($s) . "'";
+					$token = $this->db->escape($s);
+					$ors[] = "CONCAT(':', pa.slug, ':') LIKE '%:" . $token . ":%'";
 				}
-				$in = array_values(array_unique($in));
-				if ($in) {
-					$sql .= " AND EXISTS (SELECT 1 FROM `" . DB_PREFIX . "product_attribute` pa WHERE pa.product_id = p.product_id AND pa.attribute_id = '" . $attribute_id . "' AND pa.slug IN (" . implode(',', $in) . "))";
+				$ors = array_values(array_unique($ors));
+				if ($ors) {
+					$sql .= " AND EXISTS (SELECT 1 FROM `" . DB_PREFIX . "product_attribute` pa WHERE pa.product_id = p.product_id AND pa.attribute_id = '" . $attribute_id . "' AND (" . implode(' OR ', $ors) . "))";
 				}
 			}
 		} elseif (!empty($data['filter_attribute_value']) && is_array($data['filter_attribute_value'])) {
@@ -574,20 +578,24 @@ class Product extends \Opencart\System\Engine\Model {
 		}
 
 		// Attribute filters by SLUG (preferred, language-independent)
+		// IMPORTANT: legacy Manline data stores multiple slugs in a single column separated by ':'
+		// (e.g. "klassicheskie-mayki:odnotonnye-mayki:mayka-alkogolichka").
+		// So we must match a slug as a token, not only by equality.
 		if (!empty($data['filter_attribute_slug']) && is_array($data['filter_attribute_slug'])) {
 			foreach ($data['filter_attribute_slug'] as $attribute_id => $slugs) {
 				$attribute_id = (int)$attribute_id;
 				if ($attribute_id <= 0 || !is_array($slugs) || !$slugs) continue;
 
-				$in = [];
+				$ors = [];
 				foreach ($slugs as $s) {
 					$s = trim((string)$s);
 					if ($s === '') continue;
-					$in[] = "'" . $this->db->escape($s) . "'";
+					$token = $this->db->escape($s);
+					$ors[] = "CONCAT(':', pa.slug, ':') LIKE '%:" . $token . ":%'";
 				}
-				$in = array_values(array_unique($in));
-				if ($in) {
-					$sql .= " AND EXISTS (SELECT 1 FROM `" . DB_PREFIX . "product_attribute` pa WHERE pa.product_id = p.product_id AND pa.attribute_id = '" . $attribute_id . "' AND pa.slug IN (" . implode(',', $in) . "))";
+				$ors = array_values(array_unique($ors));
+				if ($ors) {
+					$sql .= " AND EXISTS (SELECT 1 FROM `" . DB_PREFIX . "product_attribute` pa WHERE pa.product_id = p.product_id AND pa.attribute_id = '" . $attribute_id . "' AND (" . implode(' OR ', $ors) . "))";
 				}
 			}
 		} elseif (!empty($data['filter_attribute_value']) && is_array($data['filter_attribute_value'])) {
