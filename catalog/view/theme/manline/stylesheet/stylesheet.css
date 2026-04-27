@@ -1532,8 +1532,12 @@ div#filter_box_w {
 }
 
 @media (min-width: 1200px) {
+    /* Legacy Manline layout is wide (not Bootstrap's fixed 1170px).
+       Keep padding from .container, but allow content to use the full window.
+       Cap at 1900px to avoid ultra-wide stretching on very large monitors. */
     .container {
-        width: 1170px
+        width: 100%;
+        max-width: 1900px;
     }
 }
 
