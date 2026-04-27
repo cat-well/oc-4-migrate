@@ -1537,6 +1537,30 @@ div#filter_box_w {
     height: auto;
 }
 
+/* If theme/OC4 adds spacing inside <main>, remove it so slider hugs the menu like on prod */
+main {
+    padding-top: 0 !important;
+}
+/* Some pages may add a default top margin before first block; keep home hero flush */
+#home-slider {
+    margin-top: 0 !important;
+}
+
+/* Make hero feel "bigger" on desktop like legacy/prod by using a fixed visual height.
+   This avoids cases where images are smaller on test. */
+@media (min-width: 992px) {
+    #home-slider .slider_item img {
+        height: 520px;
+        object-fit: cover;
+    }
+}
+@media (max-width: 991px) {
+    #home-slider .slider_item img {
+        height: auto;
+        object-fit: contain;
+    }
+}
+
 .container, .container-fluid {
     margin-right: auto;
     margin-left: auto;
