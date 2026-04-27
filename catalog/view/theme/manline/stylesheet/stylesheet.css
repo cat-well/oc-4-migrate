@@ -1515,9 +1515,26 @@ div#filter_box_w {
 /* Home page: full-width hero slider (should not be constrained by .container) */
 .home-slider-full {
     width: 100%;
+    margin: 0;
+    padding: 0;
 }
 .home-slider-full .slider_w {
     margin: 0;
+}
+/* Remove any accidental spacing between menu bar and the hero slider */
+.main_nav_w {
+    margin-bottom: 0;
+}
+.home-slider-full .slick-list,
+.home-slider-full .slick-track,
+.home-slider-full .slick-slide {
+    margin: 0;
+    padding: 0;
+}
+.home-slider-full img {
+    display: block; /* avoid baseline gap under images */
+    width: 100%;
+    height: auto;
 }
 
 .container, .container-fluid {
