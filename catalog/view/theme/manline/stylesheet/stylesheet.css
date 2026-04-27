@@ -1512,6 +1512,14 @@ div#filter_box_w {
     color: #666;
 }
 
+/* Home page: full-width hero slider (should not be constrained by .container) */
+.home-slider-full {
+    width: 100%;
+}
+.home-slider-full .slider_w {
+    margin: 0;
+}
+
 .container, .container-fluid {
     margin-right: auto;
     margin-left: auto;
