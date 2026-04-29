@@ -1,17 +1,17 @@
-user-agent: *
-Disallow: /*?page=$
-Disallow: /*&page=$
-Disallow: /*?sort=
-Disallow: /*&sort=
-Disallow: /*?order=
-Disallow: /*&order=
-Disallow: /*?limit=
-Disallow: /*&limit=
-Disallow: /*?filter_name=
-Disallow: /*&filter_name=
-Disallow: /*?filter_sub_category=
-Disallow: /*&filter_sub_category=
-Disallow: /*?filter_description=
-Disallow: /*&filter_description=
-Disallow: /*?filter_group=
-Disallow: /*&filter_group=
+User-agent: *
+Disallow: /*utm_
+Disallow: /*gclid=
+Disallow: /search
+# Block checkout pages from indexing
+Disallow: /checkout
+Disallow: /simplecheckout
+
+Allow: /*.css
+Allow: /*.js
+Allow: /*.jpg
+Allow: /*.png
+Allow: /*.pdf
+Allow: /*.gif
+Allow: /*.txt
+
+Sitemap: https://manline.com.ua/sitemap.xml
