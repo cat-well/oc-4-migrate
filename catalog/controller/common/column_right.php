@@ -86,14 +86,6 @@ class ColumnRight extends \Opencart\System\Engine\Controller {
 		foreach ($modules as $module) {
 			$part = explode('.', $module['code']);
 
-			if (isset($part[1]) && $this->config->get('module_' . $part[1] . '_status')) {
-				$module_data = $this->load->controller('extension/' . $part[0] . '/module/' . $part[1]);
-
-				if ($module_data) {
-					$data['modules'][] = $module_data;
-				}
-			}
-
 			if (isset($part[2])) {
 				$setting_info = $this->model_setting_module->getModule((int)$part[2]);
 
@@ -103,6 +95,13 @@ class ColumnRight extends \Opencart\System\Engine\Controller {
 					if ($output) {
 						$data['modules'][] = $output;
 					}
+				}
+			} elseif (isset($part[1]) && $this->config->get('module_' . $part[1] . '_status')) {
+				// Non-instance module (no module_id in code)
+				$module_data = $this->load->controller('extension/' . $part[0] . '/module/' . $part[1]);
+
+				if ($module_data) {
+					$data['modules'][] = $module_data;
 				}
 			}
 		}
