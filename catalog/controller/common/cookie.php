@@ -72,25 +72,25 @@ class Cookie extends \Opencart\System\Engine\Controller {
 				$cookie_path = '/';
 			}
 
-			// Make cookie work across language paths and (optionally) www/non-www.
-			$host = (string)($this->request->server['HTTP_HOST'] ?? '');
-			$host = preg_replace('~:\\d+$~', '', $host);
-
-			// If we are on www.example.com, set domain=.example.com so the cookie survives host normalization.
-			$cookie_domain = '';
-			if ($host && str_starts_with($host, 'www.')) {
-				$cookie_domain = '.' . substr($host, 4);
-			}
+			// Consent must persist across language paths.
+			// Use site-wide path and keep domain default unless we explicitly need to share between www/non-www.
+			$cookie_path = '/';
 
 			$option = [
 				'expires'  => time() + 60 * 60 * 24 * 365,
 				'path'     => $cookie_path,
-				'domain'   => $cookie_domain,
 				'secure'   => !empty($this->request->server['HTTPS']),
 				'httponly' => false,
 				// PHP expects 'samesite' (lowercase) in the options array.
 				'samesite' => $this->config->get('config_session_samesite')
 			];
+
+			// If host is www.*, set cookie domain to the apex so it survives host normalization.
+			$host = (string)($this->request->server['HTTP_HOST'] ?? '');
+			$host = preg_replace('~:\\d+$~', '', $host);
+			if ($host && str_starts_with($host, 'www.')) {
+				$option['domain'] = '.' . substr($host, 4);
+			}
 
 			setcookie('policy', $agree, $option);
 
