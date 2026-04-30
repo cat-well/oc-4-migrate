@@ -23,9 +23,23 @@ class Slider extends \Opencart\System\Engine\Controller {
 				}
 
 				if ($image) {
+					$href = (string)($result['link'] ?? '');
+					$href = trim($href);
+
+					// Normalize absolute URLs (e.g. leftover opencart.test) to current domain by stripping scheme+host.
+					if (str_starts_with($href, 'http://') || str_starts_with($href, 'https://')) {
+						$u = @parse_url($href);
+						if (is_array($u)) {
+							$path = $u['path'] ?? '/';
+							$query = isset($u['query']) ? ('?' . $u['query']) : '';
+							$fragment = isset($u['fragment']) ? ('#' . $u['fragment']) : '';
+							$href = $path . $query . $fragment;
+						}
+					}
+
 					$data['slides'][] = [
 						'title' => $result['title'] ?? '',
-						'href'  => $result['link'] ?? '',
+						'href'  => $href,
 						'image' => $image
 					];
 				}
