@@ -11,3 +11,48 @@
     </div>
   </div>
 </div>
+
+<script>
+// Force cookie consent confirm via POST to avoid intermediary caching of GET requests.
+// Also unbind any previously attached handlers (e.g. from cached common.js).
+(function() {
+  if (!window.jQuery) return;
+
+  function postConfirm(url) {
+    try {
+      var u = new URL(url, window.location.origin);
+      var agree = u.searchParams.get('agree') || '0';
+
+      return $.ajax({
+        url: url,
+        type: 'post',
+        cache: false,
+        dataType: 'json',
+        data: { agree: agree }
+      });
+    } catch (e) {
+      return $.Deferred().reject(e).promise();
+    }
+  }
+
+  $('#cookie button').off('click').on('click', function(e) {
+    e.preventDefault();
+
+    var url = $(this).val();
+
+    postConfirm(url)
+      .done(function(json) {
+        if (json && json.success) {
+          $('#cookie').fadeOut(400, function() {
+            $('#cookie').remove();
+          });
+        }
+      })
+      .fail(function(xhr) {
+        console.log('Cookie confirm failed', xhr);
+      });
+
+    return false;
+  });
+})();
+</script>
