@@ -92,7 +92,25 @@ class Cookie extends \Opencart\System\Engine\Controller {
 				$option['domain'] = '.' . substr($host, 4);
 			}
 
-			setcookie('policy', $agree, $option);
+			// setcookie() can fail silently if headers are considered already sent in some hosting/CDN setups.
+			// Use the OpenCart response header pipeline so headers are emitted together.
+			$ttl = 60 * 60 * 24 * 365;
+			$expires = gmdate('D, d M Y H:i:s \G\M\T', time() + $ttl);
+			$cookie = 'policy=' . rawurlencode((string)$agree) . '; Expires=' . $expires . '; Max-Age=' . $ttl . '; Path=' . $option['path'];
+
+			if (!empty($option['domain'])) {
+				$cookie .= '; Domain=' . $option['domain'];
+			}
+
+			if (!empty($option['secure'])) {
+				$cookie .= '; Secure';
+			}
+
+			if (!empty($option['samesite'])) {
+				$cookie .= '; SameSite=' . $option['samesite'];
+			}
+
+			$this->response->addHeader('Set-Cookie: ' . $cookie);
 
 			$json['success'] = $this->language->get('text_success');
 		}
