@@ -66,11 +66,24 @@ class Cookie extends \Opencart\System\Engine\Controller {
 				$cookie_path = '/';
 			}
 
+			// Make cookie work across language paths and (optionally) www/non-www.
+			$host = (string)($this->request->server['HTTP_HOST'] ?? '');
+			$host = preg_replace('~:\\d+$~', '', $host);
+
+			// If we are on www.example.com, set domain=.example.com so the cookie survives host normalization.
+			$cookie_domain = '';
+			if ($host && str_starts_with($host, 'www.')) {
+				$cookie_domain = '.' . substr($host, 4);
+			}
+
 			$option = [
 				'expires'  => time() + 60 * 60 * 24 * 365,
 				'path'     => $cookie_path,
+				'domain'   => $cookie_domain,
 				'secure'   => !empty($this->request->server['HTTPS']),
-				'SameSite' => $this->config->get('config_session_samesite')
+				'httponly' => false,
+				// PHP expects 'samesite' (lowercase) in the options array.
+				'samesite' => $this->config->get('config_session_samesite')
 			];
 
 			setcookie('policy', $agree, $option);
