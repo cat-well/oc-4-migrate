@@ -1,30 +1,7 @@
 {{ header }}
 
-{# Allow modules to render at the top of home (place Manline Slider module here via Layouts) #}
+{# Allow modules to render at the top of home (Homepage Slideshow / Index Banner is managed via admin → Design → Layouts → Home → Content Top) #}
 {{ content_top }}
-
-{# Legacy Home slider (from home.json) - render only if no module slider present in content_top.
-   IMPORTANT: slider should be full-width (not constrained by .container). #}
-{% set content_top_html = content_top|default('') %}
-{% if home_slider is defined and home_slider and ('slider_w' not in content_top_html) %}
-  <div id="home-slider" class="home-slider-full">
-    <div class="slider_w">
-      {% for s in home_slider %}
-        <div>
-          <div class="slider_item">
-            {% set img_src = s.image|default('') %}
-            {% if img_src and (img_src starts with 'http' or img_src starts with '/') %}
-              <img src="{{ img_src }}" alt="" loading="lazy" style="width:100%"/>
-            {% else %}
-              <img src="/{{ img_src }}" alt="" loading="lazy" style="width:100%"/>
-            {% endif %}
-            {% if s.href %}<a class="slider_link" href="{{ s.href }}"></a>{% endif %}
-          </div>
-        </div>
-      {% endfor %}
-    </div>
-  </div>
-{% endif %}
 
 <div id="common-home" class="container">
   <div class="row">
