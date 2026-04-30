@@ -35,6 +35,29 @@ class Home extends \Opencart\System\Engine\Controller {
 		}
 
 		$data['home_slider'] = $home_cfg['slider'] ?? [];
+
+		// Normalize slider links: home.json may contain absolute URLs from a previous environment (e.g. opencart.test).
+		// We want them to always point to the current storefront domain.
+		if (is_array($data['home_slider']) && $data['home_slider']) {
+			foreach ($data['home_slider'] as &$slide) {
+				if (!is_array($slide) || empty($slide['href']) || !is_string($slide['href'])) {
+					continue;
+				}
+
+				$href = trim($slide['href']);
+
+				if (str_starts_with($href, 'http://') || str_starts_with($href, 'https://')) {
+					$u = @parse_url($href);
+					if (is_array($u)) {
+						$path = $u['path'] ?? '/';
+						$query = isset($u['query']) ? ('?' . $u['query']) : '';
+						$fragment = isset($u['fragment']) ? ('#' . $u['fragment']) : '';
+						$slide['href'] = $path . $query . $fragment;
+					}
+				}
+			}
+			unset($slide);
+		}
 		$data['home_features'] = $home_cfg['features'] ?? [];
 
 		// Category tiles (OC2-like). Allow JSON to specify either:
