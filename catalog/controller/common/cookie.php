@@ -59,7 +59,10 @@ class Cookie extends \Opencart\System\Engine\Controller {
 	public function confirm(): void {
 		$json = [];
 
-		if (isset($this->request->get['agree'])) {
+		// Accept agree either from POST (preferred, to avoid intermediary caching) or GET.
+		if (isset($this->request->post['agree'])) {
+			$agree = $this->request->post['agree'];
+		} elseif (isset($this->request->get['agree'])) {
 			$agree = $this->request->get['agree'];
 		} else {
 			$agree = '0';

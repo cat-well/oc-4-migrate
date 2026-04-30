@@ -455,7 +455,8 @@ $(document).ready(function() {
 
         $.ajax({
             url: $(this).val(),
-            type: 'get',
+            type: 'post',
+            cache: false,
             dataType: 'json',
             beforeSend: function() {
                 $(element).button('loading');
