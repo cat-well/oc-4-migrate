@@ -32,8 +32,14 @@ class Cookie extends \Opencart\System\Engine\Controller {
 						$data['text_cookie'] = $text_cookie;
 					}
 
-				$data['agree'] = $this->url->link('common/cookie.confirm', 'language=' . $this->config->get('config_language') . '&agree=1');
-				$data['disagree'] = $this->url->link('common/cookie.confirm', 'language=' . $this->config->get('config_language') . '&agree=0');
+				// IMPORTANT: this endpoint must bypass SEO URL rewriting; otherwise it can resolve to `/ua?...` and get cached (304),
+				// preventing Set-Cookie from ever reaching the browser.
+				$base = defined('HTTPS_SERVER') ? (string)HTTPS_SERVER : (string)$this->config->get('config_url');
+				$base = rtrim($base, '/') . '/';
+				$lang = (string)$this->config->get('config_language');
+
+				$data['agree'] = $base . 'index.php?route=common/cookie.confirm&language=' . rawurlencode($lang) . '&agree=1';
+				$data['disagree'] = $base . 'index.php?route=common/cookie.confirm&language=' . rawurlencode($lang) . '&agree=0';
 
 				return $this->load->view('common/cookie', $data);
 			}
@@ -91,7 +97,11 @@ class Cookie extends \Opencart\System\Engine\Controller {
 			$json['success'] = $this->language->get('text_success');
 		}
 
+		// Do not allow caches/CDNs to store this response (it carries Set-Cookie).
 		$this->response->addHeader('Content-Type: application/json');
+		$this->response->addHeader('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+		$this->response->addHeader('Pragma: no-cache');
+		$this->response->addHeader('Expires: 0');
 		$this->response->setOutput(json_encode($json));
 	}
 }
