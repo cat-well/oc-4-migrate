@@ -59,10 +59,17 @@ class Cookie extends \Opencart\System\Engine\Controller {
 		if ($this->config->get('config_cookie_id') && !isset($this->request->cookie['policy'])) {
 			$this->load->language('common/cookie');
 
+			// Cookie consent must persist across the whole storefront.
+			// Using session_path here can accidentally scope the cookie to a sub-path and make the banner reappear on other pages.
+			$cookie_path = (string)($this->config->get('session_path') ?? '');
+			if ($cookie_path === '' || $cookie_path[0] !== '/') {
+				$cookie_path = '/';
+			}
+
 			$option = [
 				'expires'  => time() + 60 * 60 * 24 * 365,
-				'path'     => $this->config->get('session_path'),
-				'secure'   => $this->request->server['HTTPS'],
+				'path'     => $cookie_path,
+				'secure'   => !empty($this->request->server['HTTPS']),
 				'SameSite' => $this->config->get('config_session_samesite')
 			];
 
