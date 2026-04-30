@@ -38,8 +38,11 @@ class Cookie extends \Opencart\System\Engine\Controller {
 				$base = rtrim($base, '/') . '/';
 				$lang = (string)$this->config->get('config_language');
 
-				$data['agree'] = $base . 'index.php?route=common/cookie.confirm&language=' . rawurlencode($lang) . '&agree=1';
-				$data['disagree'] = $base . 'index.php?route=common/cookie.confirm&language=' . rawurlencode($lang) . '&agree=0';
+				// Add a cache-buster because some setups (e.g. Cloudflare Cache Everything) may cache this JSON endpoint and strip Set-Cookie.
+				$cb = (string)time();
+
+				$data['agree'] = $base . 'index.php?route=common/cookie.confirm&language=' . rawurlencode($lang) . '&agree=1&_cb=' . $cb;
+				$data['disagree'] = $base . 'index.php?route=common/cookie.confirm&language=' . rawurlencode($lang) . '&agree=0&_cb=' . $cb;
 
 				return $this->load->view('common/cookie', $data);
 			}
