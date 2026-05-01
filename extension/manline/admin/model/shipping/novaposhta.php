@@ -121,13 +121,29 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 
 			$sender = $this->fetchSenderData($api_key, $api_url);
 			$recipient = $this->fetchOrCreateRecipientData($order_info, $city_ref, $api_key, $api_url);
-			$order_data = $this->getOrderData($order_id, $order_info);
+			$order_data = $this->getOrderData($order_id, $order_info, $delivery_type);
+
+			// Locker delivery has its own validator at NP API and the
+			// payload shape differs from branch/courier. Specifically:
+			//   • CargoType must be Parcel (not Cargo)
+			//   • SeatsAmount is hard-capped at 1
+			//   • OptionsSeat must contain exactly one entry
+			//   • Cost is capped at 10 000 UAH
+			//   • ServiceType only accepts WarehouseWarehouse or DoorsWarehouse
+			// getOrderData() already handles the seats/options_seat split.
+			$is_locker = $delivery_type === 'locker';
+
+			if ($is_locker && (float)$order_data['cost'] > 10000.0) {
+				throw new \RuntimeException(
+					sprintf('Cost %s UAH exceeds Nova Poshta locker limit of 10000 UAH. Use branch delivery for this order.', $order_data['cost'])
+				);
+			}
 
 			$payload = [
 				'PayerType' => 'Recipient',
 				'PaymentMethod' => 'Cash',
 				'DateTime' => date('d.m.Y'),
-				'CargoType' => 'Cargo',
+				'CargoType' => $is_locker ? 'Parcel' : 'Cargo',
 				'VolumeGeneral' => '0.0004',
 				'Weight' => $order_data['weight'],
 				'ServiceType' => $this->mapServiceType($delivery_type),
@@ -365,7 +381,7 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 		];
 	}
 
-	private function getOrderData(int $order_id, array $order_info): array {
+	private function getOrderData(int $order_id, array $order_info, string $delivery_type = ''): array {
 		$this->load->model('sale/order');
 
 		$products = $this->model_sale_order->getProducts($order_id);
@@ -396,13 +412,20 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 		$cost = (float)($order_info['total'] ?? 0.0);
 		$cost = $cost > 0 ? $cost : 1.0;
 
+		// Locker shipments are hard-limited by NP to a single seat per
+		// document, regardless of how many items the customer ordered.
+		// Doc says: "Під час створення відправлення на поштомат можна
+		// вказувати лише одне місце на одне відправлення".
+		$is_locker = $delivery_type === 'locker';
+		$seats = $is_locker ? 1 : max($seats_amount, 1);
+
 		// NP's InternetDocument.save now rejects payloads without OptionsSeat
 		// even for CargoType=Cargo ("OptionsSeat is empty" / errorCode
-		// 20000200226). Build a per-seat array from seats_amount, distributing
-		// the total weight evenly. Dimensions are a sensible underwear-shop
-		// default (20×10×10 cm ≈ 0.002 m³ per package); NP recalculates
-		// volumetric weight server-side anyway.
-		$seats = max($seats_amount, 1);
+		// 20000200226). Build a per-seat array. For non-locker the total
+		// weight is split evenly across seats; for locker everything goes
+		// into the single seat. Dimensions are a sensible underwear-shop
+		// default (20×10×10 cm ≈ 0.002 m³); locker limits are W≤40,
+		// L≤60, H≤30 so we are well within the envelope.
 		$weight_total = 1.0;
 		$weight_per_seat = round($weight_total / $seats, 3);
 		if ($weight_per_seat <= 0) {
@@ -422,7 +445,7 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 
 		return [
 			'description'  => $description,
-			'seats_amount' => (string)$seats_amount,
+			'seats_amount' => (string)$seats,
 			'weight'       => (string)$weight_total,
 			'cost'         => number_format($cost, 2, '.', ''),
 			'options_seat' => $options_seat,
@@ -1182,7 +1205,11 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 			case 'courier':
 				return 'WarehouseDoors';
 			case 'locker':
-				return 'WarehousePostomat';
+				// NP's locker-specific InternetDocument.save validator only
+				// accepts WarehouseWarehouse or DoorsWarehouse. The legacy
+				// "WarehousePostomat" value used to work but is not in the
+				// current API contract and risks rejection.
+				return 'WarehouseWarehouse';
 			case 'branch':
 			default:
 				return 'WarehouseWarehouse';
