@@ -419,6 +419,17 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 			throw new \RuntimeException('Recipient first name and last name are required for TTN creation.');
 		}
 
+		// NP's Counterparty.save validator now rejects Latin characters with
+		// "FirstName/LastName has invalid characters". Transliterate Latin
+		// → Ukrainian Cyrillic when the input has no Cyrillic letters of its
+		// own. Cyrillic-mixed input is left alone (already valid for NP).
+		$firstname = $this->normalizeNameForNp($firstname);
+		$lastname  = $this->normalizeNameForNp($lastname);
+
+		if ($firstname === '' || $lastname === '') {
+			throw new \RuntimeException('Recipient first name and last name became empty after sanitisation. Please re-enter using letters only.');
+		}
+
 		$phone = $this->normalizePhone((string)($order_info['telephone'] ?? ''));
 
 		if ($phone === '') {
@@ -1018,6 +1029,90 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 				country = VALUES(country),
 				date_modified = NOW()"
 		);
+	}
+
+	/**
+	 * Sanitise a recipient name for the Nova Poshta Counterparty.save endpoint.
+	 *
+	 * NP's validator rejects names that contain anything other than Cyrillic
+	 * letters / spaces / hyphens / apostrophes — Latin alphabet, digits and
+	 * punctuation get bounced with "FirstName has invalid characters".
+	 *
+	 * Behaviour:
+	 *   - Transliterate Latin → Ukrainian Cyrillic unconditionally. The map
+	 *     only touches Latin letters, so existing Cyrillic input passes through
+	 *     unchanged; mixed input (e.g. "Petro Іваненко") gets both halves in
+	 *     Cyrillic instead of losing the Latin half to the strip step.
+	 *   - Strip everything that isn't a Cyrillic letter / space / hyphen /
+	 *     apostrophe — digits, brackets, punctuation, emoji.
+	 *   - Collapse whitespace and trim.
+	 */
+	private function normalizeNameForNp(string $name): string {
+		$name = trim($name);
+
+		if ($name === '') {
+			return '';
+		}
+
+		$name = $this->transliterateLatinToUkrainian($name);
+
+		// Allow Cyrillic letters, ASCII space, hyphen, apostrophe (both ASCII
+		// ' and Unicode ’). Drop everything else — digits, brackets, dots, etc.
+		$name = preg_replace('/[^\p{Cyrillic}\s\-\'’]/u', '', $name) ?? '';
+		$name = preg_replace('/\s+/u', ' ', $name) ?? '';
+
+		return trim($name);
+	}
+
+	/**
+	 * Latin → Ukrainian Cyrillic transliteration. Order matters: digraphs
+	 * (Shch, Yo, Zh, Ch, Sh, Kh, Ts, Ya, Yu, Yi) must be replaced before the
+	 * single letters they start with. PHP's strtr() handles longest-key-first
+	 * automatically when given an array, so the order in the source is for
+	 * readability only.
+	 */
+	private function transliterateLatinToUkrainian(string $s): string {
+		$map = [
+			'Shch' => 'Щ', 'shch' => 'щ',
+			'Yo' => 'Йо', 'yo' => 'йо',
+			'Ya' => 'Я',  'ya' => 'я',
+			'Yu' => 'Ю',  'yu' => 'ю',
+			'Ye' => 'Є',  'ye' => 'є',
+			'Yi' => 'Ї',  'yi' => 'ї',
+			'Zh' => 'Ж',  'zh' => 'ж',
+			'Ch' => 'Ч',  'ch' => 'ч',
+			'Sh' => 'Ш',  'sh' => 'ш',
+			'Kh' => 'Х',  'kh' => 'х',
+			'Ts' => 'Ц',  'ts' => 'ц',
+			'A' => 'А', 'a' => 'а',
+			'B' => 'Б', 'b' => 'б',
+			'V' => 'В', 'v' => 'в',
+			'H' => 'Г', 'h' => 'г',
+			'G' => 'Ґ', 'g' => 'ґ',
+			'D' => 'Д', 'd' => 'д',
+			'E' => 'Е', 'e' => 'е',
+			'Z' => 'З', 'z' => 'з',
+			'I' => 'І', 'i' => 'і',
+			'Y' => 'И', 'y' => 'и',
+			'K' => 'К', 'k' => 'к',
+			'L' => 'Л', 'l' => 'л',
+			'M' => 'М', 'm' => 'м',
+			'N' => 'Н', 'n' => 'н',
+			'O' => 'О', 'o' => 'о',
+			'P' => 'П', 'p' => 'п',
+			'R' => 'Р', 'r' => 'р',
+			'S' => 'С', 's' => 'с',
+			'T' => 'Т', 't' => 'т',
+			'U' => 'У', 'u' => 'у',
+			'F' => 'Ф', 'f' => 'ф',
+			'C' => 'Ц', 'c' => 'ц',
+			'J' => 'Й', 'j' => 'й',
+			'X' => 'Кс', 'x' => 'кс',
+			'Q' => 'К', 'q' => 'к',
+			'W' => 'В', 'w' => 'в',
+		];
+
+		return strtr($s, $map);
 	}
 
 	private function normalizePhone(string $phone): string {
