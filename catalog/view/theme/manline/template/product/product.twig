@@ -499,7 +499,14 @@
       }, 200);
 
       // Add to cart (OC2-like UX)
+      // Guard against double-click/double-tap: can send 2 requests and add 2 items.
+      var __manlineCartAdding = false;
       $(document).on('click', '#button-cart', function(){
+        if (__manlineCartAdding) return;
+        __manlineCartAdding = true;
+        var $btn = $(this);
+        try { $btn.prop('disabled', true).addClass('is-loading'); } catch(e) {}
+
         $.ajax({
           url: 'index.php?route=checkout/cart.add&language={{ language }}',
           type: 'post',
@@ -546,6 +553,15 @@
                 $('#cart').load('index.php?route=common/cart.info&language={{ language }}');
               }
             }
+          },
+          complete: function(){
+            __manlineCartAdding = false;
+            try { $btn.prop('disabled', false).removeClass('is-loading'); } catch(e) {}
+          },
+          error: function(){
+            // also release lock on hard error
+            __manlineCartAdding = false;
+            try { $btn.prop('disabled', false).removeClass('is-loading'); } catch(e) {}
           }
         });
       });
