@@ -143,7 +143,8 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 				'Recipient' => $recipient['ref'],
 				'RecipientAddress' => $address_ref,
 				'ContactRecipient' => $recipient['contact_ref'],
-				'RecipientsPhone' => $recipient['phone']
+				'RecipientsPhone' => $recipient['phone'],
+				'OptionsSeat' => $order_data['options_seat'],
 			];
 
 			$response = $this->callApi($api_key, $api_url, 'InternetDocument', 'save', $payload);
@@ -395,11 +396,36 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 		$cost = (float)($order_info['total'] ?? 0.0);
 		$cost = $cost > 0 ? $cost : 1.0;
 
+		// NP's InternetDocument.save now rejects payloads without OptionsSeat
+		// even for CargoType=Cargo ("OptionsSeat is empty" / errorCode
+		// 20000200226). Build a per-seat array from seats_amount, distributing
+		// the total weight evenly. Dimensions are a sensible underwear-shop
+		// default (20×10×10 cm ≈ 0.002 m³ per package); NP recalculates
+		// volumetric weight server-side anyway.
+		$seats = max($seats_amount, 1);
+		$weight_total = 1.0;
+		$weight_per_seat = round($weight_total / $seats, 3);
+		if ($weight_per_seat <= 0) {
+			$weight_per_seat = 0.1;
+		}
+
+		$options_seat = [];
+		for ($i = 0; $i < $seats; $i++) {
+			$options_seat[] = [
+				'volumetricVolume' => '0.002',
+				'volumetricWidth'  => 10,
+				'volumetricLength' => 20,
+				'volumetricHeight' => 10,
+				'weight'           => $weight_per_seat,
+			];
+		}
+
 		return [
-			'description' => $description,
+			'description'  => $description,
 			'seats_amount' => (string)$seats_amount,
-			'weight' => '1',
-			'cost' => number_format($cost, 2, '.', '')
+			'weight'       => (string)$weight_total,
+			'cost'         => number_format($cost, 2, '.', ''),
+			'options_seat' => $options_seat,
 		];
 	}
 
