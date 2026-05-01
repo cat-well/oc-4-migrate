@@ -25,3 +25,6 @@
 # Logs
 /system/storage/logs/*.log
 /system/storage/logs/*.txt
+
+# Personal migration notes (kept local, not shared)
+/MIGRATION_TODO.md
