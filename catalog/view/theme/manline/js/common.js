@@ -78,48 +78,11 @@ $(document).ready(function () {
         return '&language=' + encodeURIComponent(lang);
     }
 
-    $('#button-cart').bind('click', function () {
-        $.ajax({
-            url: '/index.php?route=checkout/cart.add' + ocLangParam(),
-            type: 'post',
-            data: $('.product-info input[type=\'text\'], .product-info input[type=\'hidden\'], .product-info input[type=\'radio\']:checked, .product-info input[type=\'checkbox\']:checked, .product-info select, .product-info textarea'),
-            dataType: 'json',
-            success: function (json) {
-                $('.success, .warning, .attention, information, .error').remove();
-                if (json['error']) {
-                    if (json['error']['option']) {
-                        for (i in json['error']['option']) {
-                            $('#option-' + i).after('<span class="error">' + json['error']['option'][i] + '</span>');
-                        }
-                    }
-                }
-                if (json['success']) {
-                    $.magnificPopup.open({
-                        items: {src: '/index.php?route=common/cart.info' + ocLangParam() + ' #cart > *'},
-                        closeBtnInside: false,
-                        showCloseBtn: false,
-                        type: 'ajax',
-                        overflowY: 'scroll',
-                        tLoading: '',
-                        removalDelay: 500,
-                        mainClass: 'mfp-with-anim mfp-zoom-in',
-                        tLoading: 'Загрузка...',
-                        callbacks: {
-                            open: function () {
-                                $('.zoomContainer').addClass('none');
-                                console.log('asd');
-                            }, close: function () {
-                                $('.zoomContainer').removeClass('none');
-                                $('#header #cart').load('/index.php?route=common/cart.info' + ocLangParam() + ' #cart > *');
-                            }
-                        }
-                    });
-                    $('#cart-total').html(json['total']);
-                    freeDelivery();
-                }
-            }
-        });
-    });
+    // IMPORTANT: do NOT bind add-to-cart here.
+    // Product page has its own handler in product/product.twig.
+    // Binding here can cause duplicate requests (quantity sometimes +2).
+    // Keep common.js focused on global UI behaviors.
+
 });
 function getURLVar(key) {
     var value = [];

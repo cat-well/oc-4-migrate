@@ -24,10 +24,11 @@
         <img src="{{ thumb }}" data-default="{{ thumb }}" title="{{ name }}" alt="{{ name }}" loading="lazy"/>
       </a>
 
-      {# Button markup: keep OC2 look & hover (CSS targets #button-cart) #}
-      <button class="button" id="button-cart" type="submit">
-        <a href="{{ href }}" style="display:block;color:inherit">{{ is_ua ? 'Купити' : 'Купить' }}</a>
-      </button>
+      {# Listing tiles should NOT use id="button-cart" (duplicates on page, can cause double cart adds).
+         Keep OC2 look via CSS class hooks instead. #}
+      <a class="button button-cart" href="{{ href }}">
+        <span>{{ is_ua ? 'Купити' : 'Купить' }}</span>
+      </a>
 
       <div class="prod_name_w">
         <a class="prod_name" href="{{ href }}">{{ name }}</a>
