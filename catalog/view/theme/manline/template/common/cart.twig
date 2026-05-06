@@ -42,7 +42,7 @@
                 </div>
               </div>
 
-              <img class="cart-close" src="catalog/view/theme/manline/image/remove-small.png" alt="{{ button_remove|default('Удалить') }}" title="{{ button_remove|default('Удалить') }}" onclick="$('#cart').load('{{ list }} #cart > *');" />
+              <img class="cart-close" src="catalog/view/theme/manline/image/remove-small.png" alt="{{ button_remove|default('Удалить') }}" title="{{ button_remove|default('Удалить') }}" onclick="poltoCartRemove('{{ product.key }}');" />
             </div>
           {% endfor %}
         </div>
@@ -74,8 +74,43 @@
 </div>
 
 <script type="text/javascript">
-function poltoQntUpdate(key, quantity) {
-  // Minimal stub: refresh cart block (full legacy behavior can be added later)
-  $('#cart').load('{{ list }} #cart > *');
-}
+(function() {
+  function refreshMiniCart() {
+    // Refresh header cart block (and any open popup content, since it uses the same #cart markup)
+    $('#header #cart').load('{{ list }} #cart > *');
+  }
+
+  window.poltoQntUpdate = function(key, quantity) {
+    quantity = parseInt(quantity, 10);
+
+    // legacy theme sometimes calls -1 / 0 → treat as remove
+    if (!quantity || quantity < 1) {
+      return window.poltoCartRemove(key);
+    }
+
+    $.ajax({
+      url: 'index.php?route=checkout/cart.edit&language={{ language }}',
+      type: 'post',
+      data: {
+        key: key,
+        quantity: quantity
+      },
+      dataType: 'json',
+      complete: function() {
+        refreshMiniCart();
+      }
+    });
+  };
+
+  window.poltoCartRemove = function(key) {
+    $.ajax({
+      url: 'index.php?route=checkout/cart.remove&language={{ language }}&key=' + encodeURIComponent(key),
+      type: 'get',
+      dataType: 'json',
+      complete: function() {
+        refreshMiniCart();
+      }
+    });
+  };
+})();
 </script>
