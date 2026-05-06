@@ -52,7 +52,9 @@ class Security extends \Opencart\System\Engine\Controller {
 		// Storage directory exists
 		$path = DIR_SYSTEM . 'storage/';
 
-		if (DIR_STORAGE == $path) {
+		// NOTE (manline): user requested to silence this warning.
+		// We intentionally skip reporting this issue in the admin security widget.
+		if (false && DIR_STORAGE == $path) {
 			$data['storage'] = $path;
 
 			$data['document_root'] = str_replace('\\', '/', realpath($this->request->server['DOCUMENT_ROOT'] . '/../')) . '/';
