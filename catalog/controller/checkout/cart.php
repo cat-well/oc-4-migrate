@@ -310,10 +310,11 @@ class Cart extends \Opencart\System\Engine\Controller {
 
 		$json = [];
 
+		// IMPORTANT: cart key is an opaque string (not an int)
 		if (isset($this->request->post['key'])) {
-			$key = (int)$this->request->post['key'];
+			$key = (string)$this->request->post['key'];
 		} else {
-			$key = 0;
+			$key = '';
 		}
 
 		if (isset($this->request->post['quantity'])) {
@@ -351,10 +352,11 @@ class Cart extends \Opencart\System\Engine\Controller {
 
 		$json = [];
 
+		// IMPORTANT: cart key is an opaque string (not an int)
 		if (isset($this->request->get['key'])) {
-			$key = (int)$this->request->get['key'];
+			$key = (string)$this->request->get['key'];
 		} else {
-			$key = 0;
+			$key = '';
 		}
 
 		// Remove
