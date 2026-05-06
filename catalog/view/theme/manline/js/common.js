@@ -67,7 +67,8 @@ $(document).ready(function () {
             $(this).remove();
         });
     });
-    function ocLangParam() {
+    // Expose language param helper globally (used by addToCart/addToWishList/etc. below)
+    window.ocLangParam = window.ocLangParam || function ocLangParam() {
         var lang = (window.ocLanguage || '').toString();
 
         if (!lang) {
@@ -76,7 +77,7 @@ $(document).ready(function () {
         }
 
         return '&language=' + encodeURIComponent(lang);
-    }
+    };
 
     // IMPORTANT: do NOT bind add-to-cart here.
     // Product page has its own handler in product/product.twig.
