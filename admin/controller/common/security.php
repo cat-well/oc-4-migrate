@@ -88,7 +88,9 @@ class Security extends \Opencart\System\Engine\Controller {
 		// Check admin directory is renamed
 		$path = DIR_OPENCART . 'admin/';
 
-		if (DIR_APPLICATION == $path) {
+		// NOTE (manline): user requested to silence this warning.
+		// We intentionally skip reporting this issue in the admin security widget.
+		if (false && DIR_APPLICATION == $path) {
 			$data['admin'] = 'admin';
 		} else {
 			$data['admin'] = '';
