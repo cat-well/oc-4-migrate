@@ -21,7 +21,7 @@ RewriteEngine On
 
 RewriteBase /
 RewriteCond %{HTTP:SSL} !=1 [NC]
-RewriteRule ^(.*) https://test.manline.com.ua/$1 [L,R=301]
+RewriteRule ^(.*) https://manline.com.ua/$1 [L,R=301]
 #RewriteRule ^sitemap.xml$ index.php?route=feed/google_sitemap [L]
 RewriteRule ^sitemap\.xml$ index.php?route=extension/feed/sitemap [L,QSA]
 RewriteRule ^googlebase.xml$ index.php?route=feed/google_base [L]
