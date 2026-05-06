@@ -20,6 +20,7 @@ RewriteEngine On
 # If your opencart installation does not run on the main web folder make sure you folder it does run in ie. / becomes /shop/
 
 RewriteBase /
+RewriteCond %{HTTP_HOST} ^test\.manline\.com\.ua$ [NC]
 RewriteCond %{HTTP:SSL} !=1 [NC]
 RewriteRule ^(.*) https://test.manline.com.ua/$1 [L,R=301]
 #RewriteRule ^sitemap.xml$ index.php?route=feed/google_sitemap [L]

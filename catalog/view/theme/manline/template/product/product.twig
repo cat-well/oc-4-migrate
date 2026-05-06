@@ -499,9 +499,17 @@
       }, 200);
 
       // Add to cart (OC2-like UX)
+      // IMPORTANT: OC core common.js also binds #button-cart and can cause a duplicate add.
+      // Remove any previously-bound handlers first.
+      try {
+        $('#button-cart').off('click');
+        $(document).off('click', '#button-cart');
+      } catch(e) {}
+
       // Guard against double-click/double-tap: can send 2 requests and add 2 items.
       var __manlineCartAdding = false;
-      $(document).on('click', '#button-cart', function(){
+      $(document).on('click', '#button-cart', function(e){
+        if (e && e.preventDefault) e.preventDefault();
         if (__manlineCartAdding) return;
         __manlineCartAdding = true;
         var $btn = $(this);
