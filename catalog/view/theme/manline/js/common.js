@@ -20,13 +20,23 @@ $(document).ready(function () {
     });
 
 
-    $(document).on('click', '#cart > .heading a', function (e) {
+    // Header mini-cart dropdown
+    $(document).on('click', '#header #cart > .heading a', function (e) {
+        // prevent navigation to checkout; this link acts as a dropdown toggle
         e.preventDefault();
-        $('#cart').toggleClass('active');
+        $(this).closest('#cart').toggleClass('active');
     });
+
+    // Close button inside mini-cart
+    $(document).on('click', '#header #cart .mfp-close', function (e) {
+        e.preventDefault();
+        $(this).closest('#cart').removeClass('active');
+    });
+
+    // Click outside closes dropdown
     $(document).on('click', function (event) {
-        if (!$(event.target).closest('#cart > .heading a').length && !$(event.target).closest('#header #cart.active .content').length) {
-            $('#cart > .heading a').closest('#cart').removeClass("active");
+        if (!$(event.target).closest('#header #cart > .heading a').length && !$(event.target).closest('#header #cart.active .content').length) {
+            $('#header #cart').removeClass('active');
         }
     });
 
