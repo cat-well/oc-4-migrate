@@ -195,7 +195,8 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 
 	private function formatCost(float $cost, int $tax_class_id): string {
 		if ($cost <= 0) {
-			return (string)$this->language->get('text_free');
+			// For checkout we do not include delivery into totals; show informational text instead.
+			return (string)$this->language->get('text_by_carrier_tariff');
 		}
 
 		return $this->currency->format(
