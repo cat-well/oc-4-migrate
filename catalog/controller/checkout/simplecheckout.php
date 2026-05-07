@@ -144,6 +144,12 @@ class Simplecheckout extends \Opencart\System\Engine\Controller {
 			}
 
 			$json = $this->getNovaPoshtaWarehouses($city_ref, $search, $method);
+		} elseif ($action === 'getPrice') {
+			if ($city_ref === '' && $city !== '') {
+				$city_ref = $this->resolveNovaPoshtaCityRef($city, $zone_id);
+			}
+
+			$json = $this->getNovaPoshtaPrice($city_ref, $method);
 		}
 
 		$this->outputJson($json);
@@ -1309,6 +1315,114 @@ class Simplecheckout extends \Opencart\System\Engine\Controller {
 		}
 
 		return $data;
+	}
+
+	private function getNovaPoshtaPrice(string $city_ref, string $shipping_method): array {
+		$city_ref = trim($city_ref);
+
+		if ($city_ref === '' || strpos($shipping_method, 'novaposhta.') !== 0) {
+			return [];
+		}
+
+		// Map methods like OC2 did (sender_address_type=Warehouse from legacy config).
+		$service_type = 'WarehouseWarehouse';
+
+		if ($shipping_method === 'novaposhta.courier') {
+			$service_type = 'WarehouseDoors';
+		}
+
+		// Weight: reuse the existing cart weight, but avoid 0 (NP rejects 0).
+		$weight = (float)$this->cart->getWeight();
+
+		if ($weight <= 0) {
+			$weight = 1.0;
+		}
+
+		// Cost: declared cost = cart subtotal in UAH (store currency is UAH on manline).
+		$cost = (float)$this->cart->getSubTotal();
+
+		if ($cost <= 0) {
+			$cost = 1.0;
+		}
+
+		$sender_city_ref = $this->getNovaPoshtaSenderCityRef();
+
+		if ($sender_city_ref === '') {
+			return [];
+		}
+
+		$rows = $this->requestNovaPoshta('InternetDocument', 'getDocumentPrice', [
+			// Sender/recipient cities.
+			'CitySender'    => $sender_city_ref,
+			'CityRecipient' => $city_ref,
+			'ServiceType'   => $service_type,
+			'Weight'        => $weight,
+			'SeatsAmount'   => '1',
+			'Cost'          => $cost,
+			'CargoType'     => 'Parcel',
+			'DateTime'      => date('d.m.Y')
+		]);
+
+		if (!$rows) {
+			return [];
+		}
+
+		$first = $rows[0] ?? [];
+		$price = (float)($first['Cost'] ?? $first['cost'] ?? 0);
+
+		if ($price <= 0) {
+			return [];
+		}
+
+		return [
+			'price' => $price,
+			'text'  => rtrim(rtrim(number_format($price, 2, '.', ''), '0'), '.') . ' грн'
+		];
+	}
+
+	private function getNovaPoshtaSenderCityRef(): string {
+		if (!empty($this->session->data['novaposhta_sender_city_ref'])) {
+			return (string)$this->session->data['novaposhta_sender_city_ref'];
+		}
+
+		$counterparties = $this->requestNovaPoshta('Counterparty', 'getCounterparties', [
+			'CounterpartyProperty' => 'Sender',
+			'Page' => 1
+		]);
+
+		$sender_ref = trim((string)($counterparties[0]['Ref'] ?? ''));
+
+		if ($sender_ref === '') {
+			return '';
+		}
+
+		$addresses = $this->requestNovaPoshta('Counterparty', 'getCounterpartyAddresses', [
+			'Ref' => $sender_ref,
+			'Page' => 1
+		]);
+
+		if (!$addresses) {
+			return '';
+		}
+
+		$city_ref = '';
+
+		foreach ($addresses as $address) {
+			if (($address['AddressType'] ?? '') === 'Warehouse' && !empty($address['CityRef'])) {
+				$city_ref = trim((string)$address['CityRef']);
+				break;
+			}
+		}
+
+		if ($city_ref === '') {
+			$city_ref = trim((string)($addresses[0]['CityRef'] ?? ''));
+		}
+
+		if ($city_ref !== '') {
+			$this->session->data['novaposhta_sender_city_ref'] = $city_ref;
+		}
+
+		return $city_ref;
 	}
 
 	private function resolveNovaPoshtaCityRef(string $city, int $zone_id = 0): string {

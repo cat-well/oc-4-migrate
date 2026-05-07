@@ -856,6 +856,62 @@ function initNovaPoshtaAutocomplete() {
         $('#shipping_address_address_ref').val('');
     });
 
+    function updateNovaPoshtaPrice() {
+        var method = selectedShippingMethodSimplecheckout();
+
+        if (!isNovaPoshtaMethodSimplecheckout(method)) {
+            return;
+        }
+
+        var cityRef = String($('#shipping_address_city_ref').val() || '');
+        var cityName = String($('input[name="shipping_city"]').val() || '');
+        var zoneId = String($('select[name="shipping_zone_id"]').val() || '');
+
+        if (!cityRef && !cityName) {
+            return;
+        }
+
+        $.ajax({
+            url: endpoint,
+            type: 'POST',
+            dataType: 'json',
+            data: {
+                action: 'getPrice',
+                shipping_method: method,
+                zone_id: zoneId,
+                city_ref: cityRef,
+                city: cityName
+            },
+            global: false
+        }).done(function (json) {
+            if (!json || !json.text) {
+                return;
+            }
+
+            var $checked = $('#simplecheckout_shipping input[name="shipping_method"]:checked');
+            var $row = $checked.closest('tr');
+
+            if (!$row.length) {
+                return;
+            }
+
+            var $cell = $row.find('td.quote label').first();
+
+            if (!$cell.length) {
+                $cell = $row.find('td.quote').first();
+            }
+
+            if (!$cell.length) {
+                return;
+            }
+
+            $row.find('.np-price').remove();
+            $('<span class="np-price" style="margin-left:8px; white-space:nowrap;"></span>')
+                .text(String(json.text))
+                .appendTo($cell);
+        });
+    }
+
     $('body').on('focus.simpleNp', '#simplecheckout_form_0 input[name="shipping_city"], #simplecheckout_form_0 input[name="shipping_address_1"]', function () {
         var method = selectedShippingMethodSimplecheckout();
         var isCityInput = this.name === 'shipping_city';
@@ -909,8 +965,14 @@ function initNovaPoshtaAutocomplete() {
                 }
 
                 $target.trigger('change');
+
+                updateNovaPoshtaPrice();
             }
         });
+    });
+
+    $(document).on('change.simpleNpPrice', '#simplecheckout_form_0 [name="shipping_method"]', function () {
+        updateNovaPoshtaPrice();
     });
 }
 
