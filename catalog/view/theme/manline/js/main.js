@@ -971,8 +971,30 @@ function initNovaPoshtaAutocomplete() {
         });
     });
 
+    function debounce(fn, delay) {
+        var timer = null;
+        return function () {
+            var args = arguments;
+            clearTimeout(timer);
+            timer = setTimeout(function () {
+                fn.apply(null, args);
+            }, delay);
+        };
+    }
+
+    var debouncedPriceUpdate = debounce(updateNovaPoshtaPrice, 300);
+
     $(document).on('change.simpleNpPrice', '#simplecheckout_form_0 [name="shipping_method"]', function () {
         updateNovaPoshtaPrice();
+    });
+
+    // If user types city manually (without selecting from autocomplete), still try to resolve and fetch price.
+    $(document).on('input.simpleNpPrice', '#simplecheckout_form_0 [name="shipping_city"]', function () {
+        debouncedPriceUpdate();
+    });
+
+    $(document).on('input.simpleNpPrice', '#simplecheckout_form_0 [name="shipping_address_1"]', function () {
+        debouncedPriceUpdate();
     });
 }
 
