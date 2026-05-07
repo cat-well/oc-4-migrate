@@ -1034,6 +1034,19 @@ class Simplecheckout extends \Opencart\System\Engine\Controller {
 			return $shipping_methods;
 		}
 
+		// Only hide Flat Rate when Nova Poshta is actually available.
+		// Otherwise we can end up with an empty shipping list (e.g. when zone/city is not selected yet).
+		$has_np_quotes = false;
+
+		if (!empty($shipping_methods['novaposhta']) && is_array($shipping_methods['novaposhta'])) {
+			$np = $shipping_methods['novaposhta'];
+			$has_np_quotes = !empty($np['quote']) && is_array($np['quote']);
+		}
+
+		if (!$has_np_quotes) {
+			return $shipping_methods;
+		}
+
 		$filtered = $shipping_methods;
 		unset($filtered['flat']);
 
