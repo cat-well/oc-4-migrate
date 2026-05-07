@@ -33,15 +33,15 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 			return $method_data;
 		}
 
-		$sub_total = (float)$this->cart->getSubTotal();
-		$free_total = (float)$this->config->get('shipping_novaposhta_free_total');
-		$is_free = $free_total > 0 && $sub_total >= $free_total;
+		// NOTE: Per business rules, delivery is paid by the customer upon receipt (carrier tariff).
+		// Shipping cost must NOT be included into order totals at checkout.
+		// Therefore we always return cost=0 here and only show informational text.
 		$tax_class_id = (int)$this->config->get('shipping_novaposhta_tax_class_id');
 
 		$quote_data = [];
 
 		if ($this->config->get('shipping_novaposhta_branch_status')) {
-			$branch_cost = $is_free ? 0.0 : (float)$this->config->get('shipping_novaposhta_branch_cost');
+			$branch_cost = 0.0;
 
 			$quote_data['branch'] = [
 				'code'         => 'novaposhta.branch',
@@ -54,7 +54,7 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 		}
 
 		if ($this->config->get('shipping_novaposhta_courier_status')) {
-			$courier_cost = $is_free ? 0.0 : (float)$this->config->get('shipping_novaposhta_courier_cost');
+			$courier_cost = 0.0;
 
 			$quote_data['courier'] = [
 				'code'         => 'novaposhta.courier',
@@ -67,7 +67,7 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 		}
 
 		if ($this->config->get('shipping_novaposhta_locker_status')) {
-			$locker_cost = $is_free ? 0.0 : (float)$this->config->get('shipping_novaposhta_locker_cost');
+			$locker_cost = 0.0;
 
 			$quote_data['locker'] = [
 				'code'         => 'novaposhta.locker',
