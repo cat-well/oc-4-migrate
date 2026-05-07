@@ -1331,12 +1331,9 @@ class Simplecheckout extends \Opencart\System\Engine\Controller {
 			$service_type = 'WarehouseDoors';
 		}
 
-		// Weight: reuse the existing cart weight, but avoid 0 (NP rejects 0).
-		$weight = (float)$this->cart->getWeight();
-
-		if ($weight <= 0) {
-			$weight = 1.0;
-		}
+		// Weight: keep it simple and safe for now.
+		// cart->getWeight() can throw on some stores due to bad weight class typing; NP rejects 0 anyway.
+		$weight = 1.0;
 
 		// Cost: declared cost = cart subtotal in UAH (store currency is UAH on manline).
 		$cost = (float)$this->cart->getSubTotal();
