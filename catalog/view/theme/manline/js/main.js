@@ -884,6 +884,11 @@ function initNovaPoshtaAutocomplete() {
             },
             global: false
         }).done(function (json) {
+            if (json && json.error) {
+                console.warn('Nova Poshta price error:', json.error);
+                return;
+            }
+
             if (!json || !json.text) {
                 return;
             }

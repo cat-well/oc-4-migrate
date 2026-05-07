@@ -1364,14 +1364,22 @@ class Simplecheckout extends \Opencart\System\Engine\Controller {
 		]);
 
 		if (!$rows) {
-			return [];
+			// Provide last error for troubleshooting in UI (still read-only requests).
+			$last = $this->session->data['novaposhta_last_error'] ?? [];
+			$error_text = '';
+
+			if (is_array($last) && !empty($last['errors']) && is_array($last['errors'])) {
+				$error_text = implode('; ', array_map('strval', $last['errors']));
+			}
+
+			return $error_text !== '' ? ['error' => $error_text] : [];
 		}
 
 		$first = $rows[0] ?? [];
 		$price = (float)($first['Cost'] ?? $first['cost'] ?? 0);
 
 		if ($price <= 0) {
-			return [];
+			return ['error' => 'Nova Poshta: empty price'];
 		}
 
 		return [
@@ -1824,6 +1832,18 @@ class Simplecheckout extends \Opencart\System\Engine\Controller {
 	 * @return array<int, array<string, string>>
 	 */
 	private function requestNovaPoshta(string $model_name, string $called_method, array $method_properties): array {
+		$decoded = $this->requestNovaPoshtaRaw($model_name, $called_method, $method_properties);
+
+		if (!is_array($decoded) || empty($decoded['success']) || empty($decoded['data']) || !is_array($decoded['data'])) {
+			// Keep last API error in session for debugging (read-only).
+			$this->session->data['novaposhta_last_error'] = $decoded;
+			return [];
+		}
+
+		return $decoded['data'];
+	}
+
+	private function requestNovaPoshtaRaw(string $model_name, string $called_method, array $method_properties): array {
 		$api_key = trim((string)$this->config->get('shipping_novaposhta_api_key'));
 
 		if ($api_key === '') {
@@ -1895,11 +1915,7 @@ class Simplecheckout extends \Opencart\System\Engine\Controller {
 
 		$decoded = json_decode($response_body, true);
 
-		if (!is_array($decoded) || empty($decoded['success']) || empty($decoded['data']) || !is_array($decoded['data'])) {
-			return [];
-		}
-
-		return $decoded['data'];
+		return is_array($decoded) ? $decoded : [];
 	}
 
 	/**
