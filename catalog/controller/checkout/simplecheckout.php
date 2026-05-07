@@ -1348,6 +1348,10 @@ class Simplecheckout extends \Opencart\System\Engine\Controller {
 			return [];
 		}
 
+		// NP API can reject DateTime when it is considered "in the past" relative to their server time.
+		// Use tomorrow to keep it valid regardless of timezone differences.
+		$date_time = date('d.m.Y', time() + 86400);
+
 		$rows = $this->requestNovaPoshta('InternetDocument', 'getDocumentPrice', [
 			// Sender/recipient cities.
 			'CitySender'    => $sender_city_ref,
@@ -1357,7 +1361,7 @@ class Simplecheckout extends \Opencart\System\Engine\Controller {
 			'SeatsAmount'   => '1',
 			'Cost'          => $cost,
 			'CargoType'     => 'Parcel',
-			'DateTime'      => date('d.m.Y')
+			'DateTime'      => $date_time
 		]);
 
 		if (!$rows) {
