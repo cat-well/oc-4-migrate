@@ -694,16 +694,17 @@
           <div class="col-md-6 mb-3">
             <label for="np-edit-payer-type" class="form-label">{{ entry_np_payer_type }}</label>
             <select id="np-edit-payer-type" class="form-select">
-              <option value="Recipient">Recipient</option>
-              <option value="Sender">Sender</option>
-              <option value="ThirdPerson">Third Person</option>
+              <option value="Recipient">{{ text_np_payer_recipient }}</option>
+              <option value="Sender">{{ text_np_payer_sender }}</option>
+              <option value="ThirdPerson">{{ text_np_payer_third }}</option>
             </select>
+            <div class="form-text">{{ text_np_payer_hint }}</div>
           </div>
           <div class="col-md-6 mb-3">
             <label for="np-edit-payment-method" class="form-label">{{ entry_np_payment_method }}</label>
             <select id="np-edit-payment-method" class="form-select">
-              <option value="Cash">Cash</option>
-              <option value="NonCash">NonCash</option>
+              <option value="Cash">{{ text_np_payment_cash }}</option>
+              <option value="NonCash">{{ text_np_payment_noncash }}</option>
             </select>
           </div>
         </div>
@@ -723,9 +724,9 @@
           <div class="col-md-4 mb-3">
             <label for="np-edit-cod-payer" class="form-label">{{ entry_np_cod_payer }}</label>
             <select id="np-edit-cod-payer" class="form-select">
-              <option value="Recipient">Recipient</option>
-              <option value="Sender">Sender</option>
-              <option value="ThirdPerson">Third Person</option>
+              <option value="Recipient">{{ text_np_payer_recipient }}</option>
+              <option value="Sender">{{ text_np_payer_sender }}</option>
+              <option value="ThirdPerson">{{ text_np_payer_third }}</option>
             </select>
           </div>
         </div>

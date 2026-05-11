@@ -80,6 +80,14 @@ $_['entry_np_recipient_address']    = 'Відділення / поштомат /
 $_['entry_np_delivery_type']        = 'Тип доставки';
 $_['entry_np_internal_number']      = 'Внутрішній номер відправлення';
 
+// ── Edit modal — select option labels ──
+$_['text_np_payer_recipient']       = 'Отримувач (клієнт сплачує НП при отриманні)';
+$_['text_np_payer_sender']          = 'Відправник (доставку сплачуємо ми)';
+$_['text_np_payer_third']           = 'Третя особа';
+$_['text_np_payer_hint']            = 'Оберіть «Відправник», щоб надати клієнту безкоштовну доставку — Нова Пошта спише вартість із нашого рахунку відправника, а не з клієнта при отриманні.';
+$_['text_np_payment_cash']          = 'Готівка';
+$_['text_np_payment_noncash']       = 'Безготівка';
+
 // ── Buttons ──
 $_['button_np_create_ttn']          = 'Створити TTN';
 $_['button_np_recreate_ttn']        = 'Перестворити TTN';
