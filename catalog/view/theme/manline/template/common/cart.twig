@@ -76,8 +76,8 @@
 <script type="text/javascript">
 (function() {
   function refreshMiniCart() {
-    // Refresh header cart block (and any open popup content, since it uses the same #cart markup)
-    $('#header #cart').load('{{ list }} #cart > *');
+    // Refresh cart block markup (works both for header and popup)
+    $('#cart').load('{{ list }} #cart > *');
   }
 
   window.poltoQntUpdate = function(key, quantity) {
