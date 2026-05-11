@@ -1492,15 +1492,20 @@ $(document).on('click', '#button-np-edit-ttn', function() {
     $('#np-edit-cod-total').val(cod ? cod.RedeliveryString : '');
     $('#np-edit-cod-payer').val(cod ? cod.PayerType : 'Recipient');
 
-    // Address — derive delivery_type from ServiceType. NP ServiceType doesn't
-    // distinguish branch vs locker (both map to WarehouseWarehouse); operator
-    // can switch the radio if they care to change it.
-    var serviceType = payload.ServiceType || '';
-    var deliveryType = (serviceType === 'WarehouseDoors' || serviceType === 'DoorsDoors') ? 'courier' : 'branch';
+    // Address — pre-fill from order_novaposhta meta so operator sees the
+    // CURRENT address (otherwise they have no way to verify what's set).
+    // delivery_type comes from meta directly (NP ServiceType collapses
+    // branch and locker into the same value, so meta.delivery_type is
+    // the only reliable source). We store originals on the inputs so the
+    // submit handler can detect "did the operator actually change
+    // anything?" and skip the backend re-resolution roundtrip if not.
+    var currentCity = {{ novaposhta.city|json_encode|raw }} || '';
+    var currentAddress = {{ novaposhta.address|json_encode|raw }} || '';
+    var currentDeliveryType = {{ novaposhta.delivery_type|json_encode|raw }} || 'branch';
 
-    $('#np-edit-delivery-type').val(deliveryType);
-    $('#np-edit-recipient-city').val(''); // operator must re-type if they want to change; leaving empty = keep current
-    $('#np-edit-recipient-address').val('');
+    $('#np-edit-delivery-type').val(currentDeliveryType).data('original', currentDeliveryType);
+    $('#np-edit-recipient-city').val(currentCity).data('original', currentCity);
+    $('#np-edit-recipient-address').val(currentAddress).data('original', currentAddress);
     $('#np-edit-recipient-phone').val(payload.RecipientsPhone || '');
 
     // Extra
@@ -1543,15 +1548,22 @@ $(document).on('click', '#button-np-edit-ttn-save', function() {
         internal_number: $('#np-edit-internal-number').val()
     };
 
-    // Address fields are only sent when the operator typed something new —
-    // otherwise we don't want to trigger an address-rebuild round-trip.
+    // Address fields are sent ONLY when the operator actually changed
+    // city / address / delivery_type relative to what was pre-filled.
+    // Untouched values are dropped — the backend treats "no address keys
+    // in changes" as "keep current address" and skips the findCityRef /
+    // findWarehouseRef roundtrip + the corresponding NP-side re-resolve.
     var newCity = $.trim($('#np-edit-recipient-city').val());
     var newAddress = $.trim($('#np-edit-recipient-address').val());
+    var newDeliveryType = $('#np-edit-delivery-type').val();
+    var origCity = $('#np-edit-recipient-city').data('original') || '';
+    var origAddress = $('#np-edit-recipient-address').data('original') || '';
+    var origDeliveryType = $('#np-edit-delivery-type').data('original') || 'branch';
 
-    if (newCity !== '' || newAddress !== '') {
+    if (newCity !== origCity || newAddress !== origAddress || newDeliveryType !== origDeliveryType) {
         data.recipient_city_name = newCity;
         data.recipient_address_name = newAddress;
-        data.delivery_type = $('#np-edit-delivery-type').val();
+        data.delivery_type = newDeliveryType;
     }
 
     $.ajax({
