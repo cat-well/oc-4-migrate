@@ -1168,8 +1168,57 @@ class FilterproLike extends \Opencart\System\Engine\Controller {
 						"WHERE p2c.category_id='" . (int)$category_id . "' AND pa.slug != '' AND pa.text != '' " .
 						"GROUP BY pa.slug, pa.text ORDER BY pa.text"
 					);
+					// Dedupe by slug: in some DBs the same slug may appear with different text (RU/UA mix).
+					// If we render both rows, selecting one will auto-select the other (same fp_val), and user can't unselect cleanly.
+					$by_slug = [];
+					$prefer = function (string $a, string $b) use ($data): string {
+						$is_ua = !empty($data['is_ua']);
+						$a = trim($a);
+						$b = trim($b);
+						if ($a === '') return $b;
+						if ($b === '') return $a;
+
+						// Heuristic: prefer UA-specific letters when in UA.
+						$ua_markers = ['і', 'ї', 'є', 'ґ', 'І', 'Ї', 'Є', 'Ґ'];
+						$ru_markers = ['ы', 'э', 'ъ', 'Ы', 'Э', 'Ъ'];
+						$has = function (string $s, array $markers): bool {
+							foreach ($markers as $m) {
+								if (mb_strpos($s, $m) !== false) return true;
+							}
+							return false;
+						};
+
+						if ($is_ua) {
+							$aa = $has($a, $ua_markers);
+							$bb = $has($b, $ua_markers);
+							if ($aa && !$bb) return $a;
+							if ($bb && !$aa) return $b;
+						} else {
+							$aa = $has($a, $ru_markers);
+							$bb = $has($b, $ru_markers);
+							if ($aa && !$bb) return $a;
+							if ($bb && !$aa) return $b;
+						}
+
+						// Default: keep existing
+						return $a;
+					};
+
 					foreach ($attr_rows as $r) {
 						$slug = (string)$r['slug'];
+						if ($slug === '') continue;
+						if (!isset($by_slug[$slug])) {
+							$by_slug[$slug] = [
+								'text' => (string)$r['text'],
+								'total' => (int)$r['total'],
+							];
+						} else {
+							$by_slug[$slug]['text'] = $prefer((string)$by_slug[$slug]['text'], (string)$r['text']);
+							$by_slug[$slug]['total'] += (int)$r['total'];
+						}
+					}
+
+					foreach ($by_slug as $slug => $row) {
 						$cur = $sel_slug;
 						$cur_vals = $cur[$attr_slug] ?? [];
 						$cur_vals = array_values(array_unique(array_filter(array_map('strval', (array)$cur_vals))));
@@ -1189,8 +1238,8 @@ class FilterproLike extends \Opencart\System\Engine\Controller {
 						}
 
 						$items[] = [
-							'label' => (string)$r['text'],
-							'total' => (int)$r['total'],
+							'label' => (string)($row['text'] ?? ''),
+							'total' => (int)($row['total'] ?? 0),
 							'selected' => $sel,
 							'url' => $build_url($cur),
 							'fp_val' => (string)$slug,
