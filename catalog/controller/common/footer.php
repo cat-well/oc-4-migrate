@@ -16,7 +16,7 @@ class Footer extends \Opencart\System\Engine\Controller {
 	public function index(): string {
 		$this->load->language('common/footer');
 		// Manline theme additions (subscribe/footer texts)
-		$this->load->language('extension/manline/common/footer');
+		// Note: there is no separate language file for manline footer in this repo; texts are set below.
 
 		// Article
 		$this->load->model('cms/article');
@@ -161,6 +161,16 @@ class Footer extends \Opencart\System\Engine\Controller {
 
 		$data['sitemap'] = $this->url->link('information/sitemap', 'language=' . $this->config->get('config_language'));
 		$data['manufacturer'] = $this->url->link('product/manufacturer', 'language=' . $this->config->get('config_language'));
+
+		// --- Manline footer: contact info block (requested custom text) ---
+		$lang = (string)$this->config->get('config_language');
+		if ($lang === 'uk-ua') {
+			$data['text_contact_info'] = 'Контактна інформація';
+			$data['text_contact_address'] = "ФОП Науменко П. П.<br>вул. Володимирська, 18";
+		} else {
+			$data['text_contact_info'] = 'Контактная информация';
+			$data['text_contact_address'] = "ФОП Науменко П. П.<br>ул. Владимирская, 18";
+		}
 
 		// Manline theme: simple UA/RU switch.
 		// Requirement: use short prefixes /ua and /ru (no ?language=...)
