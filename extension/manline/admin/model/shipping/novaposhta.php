@@ -198,7 +198,14 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 				return ['success' => false, 'error' => $error];
 			}
 
-			$this->updateTtnSuccess($order_id, $ttn_number, $ttn_ref, $response);
+			// Persist the REQUEST payload (what we sent to NP), not the API
+			// response. The response only contains the assigned identifiers
+			// and cost-on-site — none of the shipment fields we need as the
+			// baseline for in-place edits (updateTtnForOrder reads back this
+			// column when the operator opens the edit form). The earlier
+			// version stored $response here, which is why the edit form
+			// showed blank pre-fills for Weight / Cost / Description / etc.
+			$this->updateTtnSuccess($order_id, $ttn_number, $ttn_ref, $payload);
 
 			return [
 				'success' => true,
