@@ -307,10 +307,15 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 			];
 		}
 
-		// Whitelist of fields NP allows on update in practice. Anything
-		// outside this set is silently dropped to avoid surprising NP
-		// (it rejects payloads that touch immutable fields).
-		$allowed = ['Weight', 'SeatsAmount', 'Cost', 'CargoType', 'Description', 'PayerType', 'PaymentMethod'];
+		// Whitelist of NP-shape fields. Anything outside this set is silently
+		// dropped on the scalar branch below; structured fields (dimensions,
+		// COD, address) live in their own translation blocks further down
+		// and reach NP under their proper API names regardless of what the
+		// form called them.
+		$allowed = [
+			'Weight', 'SeatsAmount', 'Cost', 'CargoType', 'Description',
+			'PayerType', 'PaymentMethod', 'VolumeGeneral', 'RecipientsPhone',
+		];
 
 		$normalized_changes = [];
 
@@ -323,12 +328,16 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 				continue;
 			}
 
-			// Cast to the same types NP expects (numeric strings for Weight/Cost,
+			// Cast to the same types NP expects (numeric strings for Weight/Cost/Volume,
 			// integer string for SeatsAmount, plain string for the rest).
 			switch ($key) {
 				case 'Weight':
 				case 'Cost':
 					$normalized_changes[$key] = number_format((float)$value, 2, '.', '');
+					break;
+
+				case 'VolumeGeneral':
+					$normalized_changes[$key] = number_format((float)$value, 4, '.', '');
 					break;
 
 				case 'SeatsAmount':
@@ -340,35 +349,171 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 			}
 		}
 
-		if (!$normalized_changes) {
+		// High-level field: COD (post-pay). Form sends cod_enabled / cod_total /
+		// cod_payer; we translate that into the BackwardDeliveryData array NP
+		// expects. Setting cod_enabled=0 explicitly clears it via [] (NP removes
+		// existing COD when the array is empty).
+		if (array_key_exists('cod_enabled', $changes)) {
+			$cod_enabled = $changes['cod_enabled'] === '1' || $changes['cod_enabled'] === 1 || $changes['cod_enabled'] === true;
+
+			if ($cod_enabled) {
+				$cod_total = number_format((float)($changes['cod_total'] ?? 0), 2, '.', '');
+				$cod_payer = in_array($changes['cod_payer'] ?? '', ['Sender', 'Recipient', 'ThirdPerson'], true)
+					? $changes['cod_payer']
+					: 'Recipient';
+
+				$normalized_changes['BackwardDeliveryData'] = [[
+					'PayerType' => $cod_payer,
+					'CargoType' => 'Money',
+					'RedeliveryString' => $cod_total,
+				]];
+			} else {
+				// Empty array tells NP "drop any existing COD".
+				$normalized_changes['BackwardDeliveryData'] = [];
+			}
+		}
+
+		// High-level field: internal shipment number → InfoRegClientBarcodes.
+		// NP accepts a single string or comma-separated list; we forward whatever
+		// the operator typed.
+		if (array_key_exists('internal_number', $changes)) {
+			$value = trim((string)$changes['internal_number']);
+
+			$normalized_changes['InfoRegClientBarcodes'] = $value;
+		}
+
+		// High-level fields: dimensions (volume_width / volume_length /
+		// volume_height in cm). When any of them is present we rebuild the
+		// per-seat dimensions across all seats — NP requires OptionsSeat to
+		// stay consistent. VolumeGeneral is then derived from the cube unless
+		// the operator passed an explicit VolumeGeneral override above.
+		$has_dim_change = isset($changes['volume_width']) || isset($changes['volume_length']) || isset($changes['volume_height']);
+
+		if ($has_dim_change) {
+			$first_existing = $current_payload['OptionsSeat'][0] ?? [];
+
+			$width = isset($changes['volume_width']) && $changes['volume_width'] !== ''
+				? max(1, (int)$changes['volume_width'])
+				: (int)($first_existing['volumetricWidth'] ?? 10);
+			$length = isset($changes['volume_length']) && $changes['volume_length'] !== ''
+				? max(1, (int)$changes['volume_length'])
+				: (int)($first_existing['volumetricLength'] ?? 20);
+			$height = isset($changes['volume_height']) && $changes['volume_height'] !== ''
+				? max(1, (int)$changes['volume_height'])
+				: (int)($first_existing['volumetricHeight'] ?? 10);
+
+			// cm × cm × cm → m³ (NP wants volumetricVolume in m³).
+			$volume_per_seat = max(0.0001, round(($width * $length * $height) / 1000000, 4));
+
+			$normalized_changes['__rebuild_options_seat_dims'] = [
+				'width' => $width,
+				'length' => $length,
+				'height' => $height,
+				'volumetricVolume' => number_format($volume_per_seat, 4, '.', ''),
+			];
+		}
+
+		// High-level fields: recipient address. The form sends free-text
+		// city / warehouse / address along with the delivery_type radio
+		// (branch / locker / courier). We resolve refs via the existing
+		// helpers — if NP cannot find a match we surface that error and
+		// don't attempt the update at all (better than sending a half-baked
+		// payload that NP rejects with an obscure message).
+		$has_address_change = isset($changes['recipient_city_name']) || isset($changes['recipient_address_name']) || isset($changes['delivery_type']);
+
+		if ($has_address_change) {
+			$credentials_early = $this->getApiCredentials();
+
+			if (empty($credentials_early['success'])) {
+				return ['success' => false, 'error' => (string)($credentials_early['error'] ?? 'Nova Poshta API credentials are not configured.')];
+			}
+
+			$api_key_addr = (string)$credentials_early['api_key'];
+			$api_url_addr = (string)$credentials_early['api_url'];
+
+			$new_delivery_type = isset($changes['delivery_type']) ? (string)$changes['delivery_type'] : (string)($meta['delivery_type'] ?? '');
+			$city_name = trim((string)($changes['recipient_city_name'] ?? $meta['city'] ?? ''));
+			$address_name = trim((string)($changes['recipient_address_name'] ?? $meta['address'] ?? ''));
+
+			$city_ref = '';
+
+			if ($city_name !== '') {
+				$city_ref = $this->findCityRef($city_name, (string)($meta['zone'] ?? ''), $api_key_addr, $api_url_addr);
+			}
+
+			if ($city_ref === '') {
+				return ['success' => false, 'error' => 'Could not resolve recipient city "' . $city_name . '" against Nova Poshta. Check spelling and try again, or use Recreate.'];
+			}
+
+			$normalized_changes['CityRecipient'] = $city_ref;
+
+			$address_ref = '';
+
+			if ($address_name !== '' && ($new_delivery_type === 'branch' || $new_delivery_type === 'locker' || $new_delivery_type === '')) {
+				$address_ref = $this->findWarehouseRef($city_ref, $address_name, $api_key_addr, $api_url_addr);
+
+				if ($address_ref === '') {
+					return ['success' => false, 'error' => 'Could not resolve recipient warehouse "' . $address_name . '" in the chosen city. Check the branch / locker name and try again, or use Recreate.'];
+				}
+			}
+
+			if ($address_ref !== '') {
+				$normalized_changes['RecipientAddress'] = $address_ref;
+			}
+
+			if ($new_delivery_type !== '') {
+				$normalized_changes['ServiceType'] = $this->mapServiceType($new_delivery_type);
+			}
+		}
+
+		// Pull out the internal "rebuild dims" marker before we diff — it's
+		// a hint to the OptionsSeat rebuild block below, not an NP-shape field.
+		$dim_rebuild = null;
+
+		if (isset($normalized_changes['__rebuild_options_seat_dims'])) {
+			$dim_rebuild = $normalized_changes['__rebuild_options_seat_dims'];
+			unset($normalized_changes['__rebuild_options_seat_dims']);
+		}
+
+		if (!$normalized_changes && $dim_rebuild === null) {
 			return ['success' => false, 'error' => 'No editable fields were provided.'];
 		}
 
 		// Skip the call if nothing actually differs — protects NP from no-op
-		// edits and keeps the audit log clean.
+		// edits and keeps the audit log clean. Arrays (BackwardDeliveryData)
+		// are compared via JSON to avoid the "Array" string cast trap.
 		$diff_changes = [];
 
 		foreach ($normalized_changes as $key => $value) {
-			$old = isset($current_payload[$key]) ? (string)$current_payload[$key] : '';
+			$old_raw = $current_payload[$key] ?? null;
 
-			if ($old !== (string)$value) {
-				$diff_changes[$key] = $value;
+			if (is_array($value) || is_array($old_raw)) {
+				if (json_encode($old_raw) !== json_encode($value)) {
+					$diff_changes[$key] = $value;
+				}
+			} else {
+				$old = isset($current_payload[$key]) ? (string)$current_payload[$key] : '';
+
+				if ($old !== (string)$value) {
+					$diff_changes[$key] = $value;
+				}
 			}
 		}
 
-		if (!$diff_changes) {
+		if (!$diff_changes && $dim_rebuild === null) {
 			return ['success' => false, 'error' => 'No changes detected — values match the existing TTN.'];
 		}
 
 		// Merge changes onto the last-known-good payload from create.
 		$new_payload = array_merge($current_payload, $diff_changes);
 
-		// Weight / SeatsAmount drive the OptionsSeat array (NP requires
-		// per-seat breakdown, see createTtnForOrder note ~line 422). If
-		// either changed we rebuild the array preserving dimensions from
-		// the first existing seat — so the operator only re-enters the
-		// numbers they actually want to change.
-		if (isset($diff_changes['Weight']) || isset($diff_changes['SeatsAmount'])) {
+		// Weight / SeatsAmount / dimensions drive the OptionsSeat array (NP
+		// requires a per-seat breakdown — see createTtnForOrder note around
+		// line 422). When any of those change we rebuild OptionsSeat from
+		// scratch, preserving any sides the operator did NOT override.
+		$needs_seats_rebuild = isset($diff_changes['Weight']) || isset($diff_changes['SeatsAmount']) || $dim_rebuild !== null;
+
+		if ($needs_seats_rebuild) {
 			$weight_total = (float)$new_payload['Weight'];
 			$seats = max(1, (int)$new_payload['SeatsAmount']);
 			$weight_per_seat = round($weight_total / $seats, 3);
@@ -378,10 +523,18 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 			}
 
 			$first_existing = $current_payload['OptionsSeat'][0] ?? [];
-			$vol = $first_existing['volumetricVolume'] ?? '0.002';
-			$width = $first_existing['volumetricWidth'] ?? 10;
-			$length = $first_existing['volumetricLength'] ?? 20;
-			$height = $first_existing['volumetricHeight'] ?? 10;
+
+			if ($dim_rebuild !== null) {
+				$width = (int)$dim_rebuild['width'];
+				$length = (int)$dim_rebuild['length'];
+				$height = (int)$dim_rebuild['height'];
+				$vol = (string)$dim_rebuild['volumetricVolume'];
+			} else {
+				$vol = $first_existing['volumetricVolume'] ?? '0.002';
+				$width = $first_existing['volumetricWidth'] ?? 10;
+				$length = $first_existing['volumetricLength'] ?? 20;
+				$height = $first_existing['volumetricHeight'] ?? 10;
+			}
 
 			$options_seat = [];
 
@@ -396,6 +549,13 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 			}
 
 			$new_payload['OptionsSeat'] = $options_seat;
+
+			// Record OptionsSeat as a changed field for the audit log / diff
+			// summary, even though the operator entered individual dimensions
+			// or seats — they should see "dimensions changed" in the history.
+			if ($dim_rebuild !== null) {
+				$diff_changes['OptionsSeat'] = $options_seat;
+			}
 		}
 
 		// NP needs Ref to identify which document to mutate; without it

@@ -636,6 +636,8 @@
         <div class="alert alert-info">{{ text_np_edit_intro }}</div>
         <div id="np-edit-error" class="alert alert-danger d-none"></div>
         <div id="np-edit-success" class="alert alert-success d-none"></div>
+
+        <h6 class="text-uppercase text-muted mb-2">{{ text_np_section_cargo }}</h6>
         <div class="row">
           <div class="col-md-4 mb-3">
             <label for="np-edit-weight" class="form-label">{{ entry_np_weight }}</label>
@@ -666,6 +668,28 @@
             <input type="text" id="np-edit-description" class="form-control" maxlength="90"/>
           </div>
         </div>
+
+        <h6 class="text-uppercase text-muted mb-2 mt-3">{{ text_np_section_dimensions }}</h6>
+        <div class="row">
+          <div class="col-md-3 mb-3">
+            <label for="np-edit-volume-width" class="form-label">{{ entry_np_volume_width }}</label>
+            <input type="number" step="1" min="1" id="np-edit-volume-width" class="form-control"/>
+          </div>
+          <div class="col-md-3 mb-3">
+            <label for="np-edit-volume-length" class="form-label">{{ entry_np_volume_length }}</label>
+            <input type="number" step="1" min="1" id="np-edit-volume-length" class="form-control"/>
+          </div>
+          <div class="col-md-3 mb-3">
+            <label for="np-edit-volume-height" class="form-label">{{ entry_np_volume_height }}</label>
+            <input type="number" step="1" min="1" id="np-edit-volume-height" class="form-control"/>
+          </div>
+          <div class="col-md-3 mb-3">
+            <label for="np-edit-volume-general" class="form-label">{{ entry_np_volume_general }}</label>
+            <input type="number" step="0.0001" min="0.0001" id="np-edit-volume-general" class="form-control"/>
+          </div>
+        </div>
+
+        <h6 class="text-uppercase text-muted mb-2 mt-3">{{ text_np_section_payment }}</h6>
         <div class="row">
           <div class="col-md-6 mb-3">
             <label for="np-edit-payer-type" class="form-label">{{ entry_np_payer_type }}</label>
@@ -681,6 +705,62 @@
               <option value="Cash">Cash</option>
               <option value="NonCash">NonCash</option>
             </select>
+          </div>
+        </div>
+
+        <h6 class="text-uppercase text-muted mb-2 mt-3">{{ text_np_section_cod }}</h6>
+        <div class="row">
+          <div class="col-md-4 mb-3">
+            <div class="form-check form-switch mt-4">
+              <input class="form-check-input" type="checkbox" id="np-edit-cod-enabled"/>
+              <label class="form-check-label" for="np-edit-cod-enabled">{{ entry_np_cod_enabled }}</label>
+            </div>
+          </div>
+          <div class="col-md-4 mb-3">
+            <label for="np-edit-cod-total" class="form-label">{{ entry_np_cod_total }}</label>
+            <input type="number" step="0.01" min="0" id="np-edit-cod-total" class="form-control"/>
+          </div>
+          <div class="col-md-4 mb-3">
+            <label for="np-edit-cod-payer" class="form-label">{{ entry_np_cod_payer }}</label>
+            <select id="np-edit-cod-payer" class="form-select">
+              <option value="Recipient">Recipient</option>
+              <option value="Sender">Sender</option>
+              <option value="ThirdPerson">Third Person</option>
+            </select>
+          </div>
+        </div>
+
+        <h6 class="text-uppercase text-muted mb-2 mt-3">{{ text_np_section_address }}</h6>
+        <div class="row">
+          <div class="col-md-4 mb-3">
+            <label for="np-edit-delivery-type" class="form-label">{{ entry_np_delivery_type }}</label>
+            <select id="np-edit-delivery-type" class="form-select">
+              <option value="branch">{{ text_np_delivery_branch }}</option>
+              <option value="locker">{{ text_np_delivery_locker }}</option>
+              <option value="courier">{{ text_np_delivery_courier }}</option>
+            </select>
+          </div>
+          <div class="col-md-4 mb-3">
+            <label for="np-edit-recipient-city" class="form-label">{{ entry_np_recipient_city }}</label>
+            <input type="text" id="np-edit-recipient-city" class="form-control" placeholder="Kyiv"/>
+          </div>
+          <div class="col-md-4 mb-3">
+            <label for="np-edit-recipient-address" class="form-label">{{ entry_np_recipient_address }}</label>
+            <input type="text" id="np-edit-recipient-address" class="form-control" placeholder="Branch #123 / Locker №45 / street, house"/>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <label for="np-edit-recipient-phone" class="form-label">{{ entry_np_recipient_phone }}</label>
+            <input type="text" id="np-edit-recipient-phone" class="form-control" placeholder="+380XXXXXXXXX"/>
+          </div>
+        </div>
+
+        <h6 class="text-uppercase text-muted mb-2 mt-3">{{ text_np_section_extra }}</h6>
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <label for="np-edit-internal-number" class="form-label">{{ entry_np_internal_number }}</label>
+            <input type="text" id="np-edit-internal-number" class="form-control" maxlength="100"/>
           </div>
         </div>
       </div>
@@ -1388,14 +1468,44 @@ $(document).on('click', '#button-np-edit-ttn', function() {
     }
 
     var optionsSeat = (payload.OptionsSeat && payload.OptionsSeat[0]) || {};
+    var cod = (payload.BackwardDeliveryData && payload.BackwardDeliveryData[0]) || null;
 
+    // Cargo params
     $('#np-edit-weight').val(payload.Weight || optionsSeat.weight || '');
     $('#np-edit-seats').val(payload.SeatsAmount || '1');
     $('#np-edit-cost').val(payload.Cost || '');
     $('#np-edit-cargo-type').val(payload.CargoType || 'Cargo');
     $('#np-edit-description').val(payload.Description || '');
+
+    // Dimensions
+    $('#np-edit-volume-width').val(optionsSeat.volumetricWidth || '');
+    $('#np-edit-volume-length').val(optionsSeat.volumetricLength || '');
+    $('#np-edit-volume-height').val(optionsSeat.volumetricHeight || '');
+    $('#np-edit-volume-general').val(payload.VolumeGeneral || '');
+
+    // Payment
     $('#np-edit-payer-type').val(payload.PayerType || 'Recipient');
     $('#np-edit-payment-method').val(payload.PaymentMethod || 'Cash');
+
+    // COD
+    $('#np-edit-cod-enabled').prop('checked', cod !== null);
+    $('#np-edit-cod-total').val(cod ? cod.RedeliveryString : '');
+    $('#np-edit-cod-payer').val(cod ? cod.PayerType : 'Recipient');
+
+    // Address — derive delivery_type from ServiceType. NP ServiceType doesn't
+    // distinguish branch vs locker (both map to WarehouseWarehouse); operator
+    // can switch the radio if they care to change it.
+    var serviceType = payload.ServiceType || '';
+    var deliveryType = (serviceType === 'WarehouseDoors' || serviceType === 'DoorsDoors') ? 'courier' : 'branch';
+
+    $('#np-edit-delivery-type').val(deliveryType);
+    $('#np-edit-recipient-city').val(''); // operator must re-type if they want to change; leaving empty = keep current
+    $('#np-edit-recipient-address').val('');
+    $('#np-edit-recipient-phone').val(payload.RecipientsPhone || '');
+
+    // Extra
+    $('#np-edit-internal-number').val(payload.InfoRegClientBarcodes || '');
+
     $('#np-edit-error').addClass('d-none').text('');
     $('#np-edit-success').addClass('d-none').text('');
 
@@ -1412,14 +1522,37 @@ $(document).on('click', '#button-np-edit-ttn-save', function() {
 
     var data = {
         order_id: $('#input-order-id').val(),
+        // Cargo params (NP-shape, forwarded straight through)
         Weight: $('#np-edit-weight').val(),
         SeatsAmount: $('#np-edit-seats').val(),
         Cost: $('#np-edit-cost').val(),
         CargoType: $('#np-edit-cargo-type').val(),
         Description: $('#np-edit-description').val(),
+        VolumeGeneral: $('#np-edit-volume-general').val(),
+        // Payment
         PayerType: $('#np-edit-payer-type').val(),
-        PaymentMethod: $('#np-edit-payment-method').val()
+        PaymentMethod: $('#np-edit-payment-method').val(),
+        RecipientsPhone: $('#np-edit-recipient-phone').val(),
+        // High-level fields the model translates to NP-shape internally
+        cod_enabled: $('#np-edit-cod-enabled').is(':checked') ? '1' : '0',
+        cod_total: $('#np-edit-cod-total').val(),
+        cod_payer: $('#np-edit-cod-payer').val(),
+        volume_width: $('#np-edit-volume-width').val(),
+        volume_length: $('#np-edit-volume-length').val(),
+        volume_height: $('#np-edit-volume-height').val(),
+        internal_number: $('#np-edit-internal-number').val()
     };
+
+    // Address fields are only sent when the operator typed something new —
+    // otherwise we don't want to trigger an address-rebuild round-trip.
+    var newCity = $.trim($('#np-edit-recipient-city').val());
+    var newAddress = $.trim($('#np-edit-recipient-address').val());
+
+    if (newCity !== '' || newAddress !== '') {
+        data.recipient_city_name = newCity;
+        data.recipient_address_name = newAddress;
+        data.delivery_type = $('#np-edit-delivery-type').val();
+    }
 
     $.ajax({
         url: '{{ novaposhta_edit_ttn|replace({'&amp;':'&'})|escape('js') }}',

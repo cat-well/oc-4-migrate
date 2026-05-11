@@ -2127,12 +2127,34 @@ class Order extends \Opencart\System\Engine\Controller {
 		$order_info = [];
 
 		if ($this->prepareNovaposhtaAction($order_id, $order_info, $json)) {
-			// Whitelisted edit fields — anything else is dropped inside the
-			// model. We just hand the controller-side POST array through.
+			// NP-shape scalar fields — forwarded straight through.
 			$changes = [];
 
-			foreach (['Weight', 'SeatsAmount', 'Cost', 'CargoType', 'Description', 'PayerType', 'PaymentMethod'] as $field) {
+			$scalar_fields = [
+				'Weight', 'SeatsAmount', 'Cost', 'CargoType', 'Description',
+				'PayerType', 'PaymentMethod', 'VolumeGeneral', 'RecipientsPhone',
+			];
+
+			foreach ($scalar_fields as $field) {
 				if (isset($this->request->post[$field]) && $this->request->post[$field] !== '') {
+					$changes[$field] = $this->request->post[$field];
+				}
+			}
+
+			// High-level form fields — translated to NP-shape inside the model.
+			//   cod_*            → BackwardDeliveryData
+			//   volume_*         → OptionsSeat[].volumetric*
+			//   internal_number  → InfoRegClientBarcodes
+			//   recipient_*      → CityRecipient / RecipientAddress / ServiceType
+			$high_level = [
+				'cod_enabled', 'cod_total', 'cod_payer',
+				'volume_width', 'volume_length', 'volume_height',
+				'internal_number',
+				'recipient_city_name', 'recipient_address_name', 'delivery_type',
+			];
+
+			foreach ($high_level as $field) {
+				if (array_key_exists($field, $this->request->post)) {
 					$changes[$field] = $this->request->post[$field];
 				}
 			}
