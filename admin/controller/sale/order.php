@@ -627,6 +627,7 @@ class Order extends \Opencart\System\Engine\Controller {
 		$data['back'] = $this->url->link('sale/order', 'user_token=' . $this->session->data['user_token'] . $url);
 		$data['novaposhta_create_ttn'] = $this->url->link('sale/order.createNovaposhtaTtn', 'user_token=' . $this->session->data['user_token'] . '&order_id=' . $order_id);
 		$data['novaposhta_recreate_ttn'] = $this->url->link('sale/order.recreateNovaposhtaTtn', 'user_token=' . $this->session->data['user_token'] . '&order_id=' . $order_id);
+		$data['novaposhta_edit_ttn'] = $this->url->link('sale/order.editNovaposhtaTtn', 'user_token=' . $this->session->data['user_token'] . '&order_id=' . $order_id);
 		$data['novaposhta_delete_ttn'] = $this->url->link('sale/order.deleteNovaposhtaTtn', 'user_token=' . $this->session->data['user_token'] . '&order_id=' . $order_id);
 		$data['novaposhta_refresh_status'] = $this->url->link('sale/order.refreshNovaposhtaStatus', 'user_token=' . $this->session->data['user_token'] . '&order_id=' . $order_id);
 		$data['checkbox_create_receipt'] = $this->url->link('sale/order.createCheckboxReceipt', 'user_token=' . $this->session->data['user_token'] . '&order_id=' . $order_id);
@@ -656,9 +657,11 @@ class Order extends \Opencart\System\Engine\Controller {
 			'ttn_print_url' => '',
 			'can_create_ttn' => false,
 			'can_recreate_ttn' => false,
+			'can_edit_ttn' => false,
 			'can_delete_ttn' => false,
 			'can_print_ttn' => false,
-			'can_refresh_status' => false
+			'can_refresh_status' => false,
+			'ttn_payload_json' => '{}'
 		];
 
 		$data['checkbox'] = [
@@ -1054,9 +1057,14 @@ class Order extends \Opencart\System\Engine\Controller {
 					'ttn_print_url' => $ttn_print_url,
 					'can_create_ttn' => $can_modify && $ttn_number === '',
 					'can_recreate_ttn' => $can_modify && $ttn_number !== '',
+					'can_edit_ttn' => $can_modify && $ttn_number !== '' && !empty($novaposhta_meta['ttn_payload']),
 					'can_delete_ttn' => $can_modify && $ttn_number !== '',
 					'can_print_ttn' => $ttn_number !== '' && $ttn_print_url !== '',
-					'can_refresh_status' => $can_modify && $ttn_number !== ''
+					'can_refresh_status' => $can_modify && $ttn_number !== '',
+					'ttn_payload_json' => json_encode(
+						is_array($novaposhta_meta['ttn_payload'] ?? null) ? $novaposhta_meta['ttn_payload'] : [],
+						JSON_UNESCAPED_UNICODE
+					)
 				];
 			}
 		}
@@ -2089,6 +2097,73 @@ class Order extends \Opencart\System\Engine\Controller {
 				}
 
 				$this->addOrderHistoryLog($order_id, sprintf($this->language->get('text_np_history_recreated'), $history_ttn));
+			}
+		}
+
+		$this->response->addHeader('Content-Type: application/json');
+		$this->response->setOutput(json_encode($json));
+	}
+
+	/**
+	 * Edit Nova Poshta TTN in-place via NP `InternetDocument.update`.
+	 *
+	 * The TTN number / Ref stays the same — only the payload (weight,
+	 * seats, cost, cargo type, description, payer, payment method) is
+	 * updated server-side at NP. Use this when the old TTN number has
+	 * already been printed or given to the customer.
+	 *
+	 * If NP rejects the update (typically because the document is no
+	 * longer in a pre-pickup status and is therefore immutable), the
+	 * verbatim NP error is returned in `error` so the UI can offer
+	 * Recreate as a fallback.
+	 *
+	 * @return void
+	 */
+	public function editNovaposhtaTtn(): void {
+		$this->load->language('sale/order');
+
+		$json = [];
+		$order_id = $this->getOrderIdFromRequest();
+		$order_info = [];
+
+		if ($this->prepareNovaposhtaAction($order_id, $order_info, $json)) {
+			// Whitelisted edit fields — anything else is dropped inside the
+			// model. We just hand the controller-side POST array through.
+			$changes = [];
+
+			foreach (['Weight', 'SeatsAmount', 'Cost', 'CargoType', 'Description', 'PayerType', 'PaymentMethod'] as $field) {
+				if (isset($this->request->post[$field]) && $this->request->post[$field] !== '') {
+					$changes[$field] = $this->request->post[$field];
+				}
+			}
+
+			$result = $this->model_extension_manline_shipping_novaposhta->updateTtnForOrder($order_id, $changes);
+
+			if (empty($result['success'])) {
+				$json['error'] = (string)($result['error'] ?? $this->language->get('error_np_ttn_failed'));
+			} else {
+				$json['success'] = $this->language->get('text_np_ttn_edit_success');
+				$json['ttn_number'] = (string)($result['ttn_number'] ?? '');
+				$json['ttn_ref'] = (string)($result['ttn_ref'] ?? '');
+				$json['changed_fields'] = (array)($result['changed_fields'] ?? []);
+				$json['old_values'] = (array)($result['old_values'] ?? []);
+				$json['new_values'] = (array)($result['new_values'] ?? []);
+
+				// Order-history breadcrumb: "TTN N edited: Weight 0.5 → 1.0, Cost 350 → 400"
+				$diff_parts = [];
+
+				foreach ($json['new_values'] as $field => $new_value) {
+					$old_value = $json['old_values'][$field] ?? '';
+					$diff_parts[] = $field . ' ' . (string)$old_value . ' → ' . (string)$new_value;
+				}
+
+				$history_text = sprintf(
+					$this->language->get('text_np_history_edited'),
+					$json['ttn_number'],
+					$diff_parts ? implode(', ', $diff_parts) : '(no changes)'
+				);
+
+				$this->addOrderHistoryLog($order_id, $history_text);
 			}
 		}
 

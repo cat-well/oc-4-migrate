@@ -312,6 +312,9 @@
                     {% if novaposhta.can_create_ttn %}
                       <button type="button" id="button-np-create-ttn" class="btn btn-primary"><i class="fa-solid fa-plus-circle"></i> {{ button_np_create_ttn }}</button>
                     {% endif %}
+                    {% if novaposhta.can_edit_ttn %}
+                      <button type="button" id="button-np-edit-ttn" class="btn btn-secondary"><i class="fa-solid fa-pen"></i> {{ button_np_edit_ttn }}</button>
+                    {% endif %}
                     {% if novaposhta.can_recreate_ttn %}
                       <button type="button" id="button-np-recreate-ttn" class="btn btn-warning"><i class="fa-solid fa-rotate"></i> {{ button_np_recreate_ttn }}</button>
                     {% endif %}
@@ -616,6 +619,74 @@
             <div id="tab-{{ tab.code }}" class="tab-pane">{{ tab.content }}</div>
           {% endfor %}
         </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# Nova Poshta TTN edit modal — opened by #button-np-edit-ttn, submits to novaposhta_edit_ttn. #}
+<div id="modal-np-edit-ttn" class="modal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="fa-solid fa-pen"></i> {{ text_np_edit_title }}</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-info">{{ text_np_edit_intro }}</div>
+        <div id="np-edit-error" class="alert alert-danger d-none"></div>
+        <div id="np-edit-success" class="alert alert-success d-none"></div>
+        <div class="row">
+          <div class="col-md-4 mb-3">
+            <label for="np-edit-weight" class="form-label">{{ entry_np_weight }}</label>
+            <input type="number" step="0.1" min="0.1" id="np-edit-weight" class="form-control"/>
+          </div>
+          <div class="col-md-4 mb-3">
+            <label for="np-edit-seats" class="form-label">{{ entry_np_seats }}</label>
+            <input type="number" step="1" min="1" max="100" id="np-edit-seats" class="form-control"/>
+          </div>
+          <div class="col-md-4 mb-3">
+            <label for="np-edit-cost" class="form-label">{{ entry_np_cost }}</label>
+            <input type="number" step="0.01" min="1" id="np-edit-cost" class="form-control"/>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <label for="np-edit-cargo-type" class="form-label">{{ entry_np_cargo_type }}</label>
+            <select id="np-edit-cargo-type" class="form-select">
+              <option value="Cargo">Cargo</option>
+              <option value="Parcel">Parcel</option>
+              <option value="Documents">Documents</option>
+              <option value="TiresWheels">Tires &amp; Wheels</option>
+              <option value="Pallet">Pallet</option>
+            </select>
+          </div>
+          <div class="col-md-6 mb-3">
+            <label for="np-edit-description" class="form-label">{{ entry_np_description }}</label>
+            <input type="text" id="np-edit-description" class="form-control" maxlength="90"/>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <label for="np-edit-payer-type" class="form-label">{{ entry_np_payer_type }}</label>
+            <select id="np-edit-payer-type" class="form-select">
+              <option value="Recipient">Recipient</option>
+              <option value="Sender">Sender</option>
+              <option value="ThirdPerson">Third Person</option>
+            </select>
+          </div>
+          <div class="col-md-6 mb-3">
+            <label for="np-edit-payment-method" class="form-label">{{ entry_np_payment_method }}</label>
+            <select id="np-edit-payment-method" class="form-select">
+              <option value="Cash">Cash</option>
+              <option value="NonCash">NonCash</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ button_cancel }}</button>
+        <button type="button" id="button-np-edit-ttn-save" class="btn btn-primary"><i class="fa-solid fa-floppy-disk"></i> {{ button_np_save_edit }}</button>
       </div>
     </div>
   </div>
@@ -1302,6 +1373,83 @@ $(document).on('click', '#button-np-create-ttn', function() {
 
 $(document).on('click', '#button-np-recreate-ttn', function() {
     npTtnAction('{{ novaposhta_recreate_ttn|replace({'&amp;':'&'})|escape('js') }}', this);
+});
+
+// Edit TTN — opens a modal pre-filled from the last-stored TTN payload.
+// Submit goes to novaposhta_edit_ttn which calls NP InternetDocument.update
+// in place. TTN number stays the same on success.
+$(document).on('click', '#button-np-edit-ttn', function() {
+    var payload = {};
+
+    try {
+        payload = JSON.parse({{ novaposhta.ttn_payload_json|json_encode|raw }} || '{}') || {};
+    } catch (e) {
+        payload = {};
+    }
+
+    var optionsSeat = (payload.OptionsSeat && payload.OptionsSeat[0]) || {};
+
+    $('#np-edit-weight').val(payload.Weight || optionsSeat.weight || '');
+    $('#np-edit-seats').val(payload.SeatsAmount || '1');
+    $('#np-edit-cost').val(payload.Cost || '');
+    $('#np-edit-cargo-type').val(payload.CargoType || 'Cargo');
+    $('#np-edit-description').val(payload.Description || '');
+    $('#np-edit-payer-type').val(payload.PayerType || 'Recipient');
+    $('#np-edit-payment-method').val(payload.PaymentMethod || 'Cash');
+    $('#np-edit-error').addClass('d-none').text('');
+    $('#np-edit-success').addClass('d-none').text('');
+
+    new bootstrap.Modal(document.getElementById('modal-np-edit-ttn')).show();
+});
+
+$(document).on('click', '#button-np-edit-ttn-save', function() {
+    var $btn = $(this);
+    var $err = $('#np-edit-error');
+    var $ok = $('#np-edit-success');
+
+    $err.addClass('d-none').text('');
+    $ok.addClass('d-none').text('');
+
+    var data = {
+        order_id: $('#input-order-id').val(),
+        Weight: $('#np-edit-weight').val(),
+        SeatsAmount: $('#np-edit-seats').val(),
+        Cost: $('#np-edit-cost').val(),
+        CargoType: $('#np-edit-cargo-type').val(),
+        Description: $('#np-edit-description').val(),
+        PayerType: $('#np-edit-payer-type').val(),
+        PaymentMethod: $('#np-edit-payment-method').val()
+    };
+
+    $.ajax({
+        url: '{{ novaposhta_edit_ttn|replace({'&amp;':'&'})|escape('js') }}',
+        type: 'post',
+        dataType: 'json',
+        data: data,
+        beforeSend: function() {
+            $btn.prop('disabled', true);
+        },
+        complete: function() {
+            $btn.prop('disabled', false);
+        },
+        success: function(json) {
+            if (json['error']) {
+                $err.removeClass('d-none').text(json['error']);
+                return;
+            }
+
+            if (json['success']) {
+                $ok.removeClass('d-none').text(json['success']);
+
+                setTimeout(function() {
+                    location.reload();
+                }, 600);
+            }
+        },
+        error: function(xhr, ajaxOptions, thrownError) {
+            $err.removeClass('d-none').text(thrownError + ': ' + xhr.statusText);
+        }
+    });
 });
 
 $(document).on('click', '#button-np-refresh-status', function() {

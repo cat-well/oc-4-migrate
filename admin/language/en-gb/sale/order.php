@@ -166,14 +166,27 @@ $_['text_np_delivery_locker']      = 'Locker';
 $_['text_np_confirm_delete']        = 'Are you sure you want to cancel TTN in Nova Poshta and remove it from this order?';
 $_['text_np_history_created']       = 'Nova Poshta TTN created: %s';
 $_['text_np_history_recreated']     = 'Nova Poshta TTN recreated: %s';
+$_['text_np_history_edited']        = 'Nova Poshta TTN %s edited: %s';
 $_['text_np_history_deleted']       = 'Nova Poshta TTN deleted: %s';
 $_['text_np_history_status_refreshed'] = 'Nova Poshta status refreshed (TTN %s): [%s] %s';
 $_['text_np_history_order_status_sync'] = 'Order status auto-updated from Nova Poshta %s: %s -> %s';
+$_['text_np_ttn_edit_success']      = 'TTN updated successfully (number unchanged).';
+$_['text_np_edit_title']            = 'Edit Nova Poshta TTN';
+$_['text_np_edit_intro']            = 'Updates the existing TTN in place. The TTN number stays the same — printouts and tracking links remain valid. If Nova Poshta returns "Document is not editable" (the document was already scanned at a warehouse), use Recreate instead.';
+$_['entry_np_weight']               = 'Weight (kg)';
+$_['entry_np_seats']                = 'Seats';
+$_['entry_np_cost']                 = 'Declared cost (UAH)';
+$_['entry_np_cargo_type']           = 'Cargo type';
+$_['entry_np_description']          = 'Description';
+$_['entry_np_payer_type']           = 'Payer';
+$_['entry_np_payment_method']       = 'Payment method';
 $_['button_np_create_ttn']         = 'Create TTN';
 $_['button_np_recreate_ttn']       = 'Recreate TTN';
+$_['button_np_edit_ttn']           = 'Edit TTN';
 $_['button_np_delete_ttn']         = 'Delete TTN';
 $_['button_np_print_ttn']          = 'Print TTN';
 $_['button_np_refresh_status']      = 'Refresh Status';
+$_['button_np_save_edit']           = 'Save changes';
 
 // Checkbox
 $_['text_checkbox']                 = 'Checkbox receipt';

@@ -252,6 +252,193 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 		];
 	}
 
+	/**
+	 * In-place edit of an existing TTN via Nova Poshta `InternetDocument.update`.
+	 *
+	 * Keeps the same TTN number / Ref — only the payload (weight / seats /
+	 * cost / cargo type / description / payer / payment method) is updated
+	 * server-side at NP. This is the operationally-correct path when the
+	 * old TTN number has already been printed, given to the customer or
+	 * sent to NP — recreate would invalidate the printout, in-place update
+	 * does not.
+	 *
+	 * NP allows updates only while the document is in pre-pickup statuses;
+	 * once it has been scanned at the first NP warehouse it becomes
+	 * immutable and this call returns NP's "Document is not editable"
+	 * error verbatim. Callers should offer Recreate as fallback in that case.
+	 *
+	 * Edits are atomic: on NP-side success the new payload is persisted to
+	 * `order_novaposhta.ttn_payload` and `ttn_date_modified` is bumped;
+	 * `ttn_date_created` and the TTN identifiers stay as they were. On
+	 * NP-side failure nothing is written back to MySQL — the operator can
+	 * retry without our DB getting into a half-state.
+	 *
+	 * @param int $order_id
+	 * @param array<string, mixed> $changes Whitelisted fields only — see $allowed below.
+	 * @return array{success: bool, error?: string, ttn_number?: string, ttn_ref?: string, changed_fields?: list<string>, old_values?: array<string, mixed>, new_values?: array<string, mixed>}
+	 */
+	public function updateTtnForOrder(int $order_id, array $changes): array {
+		if ($order_id <= 0) {
+			return ['success' => false, 'error' => 'Order ID is missing.'];
+		}
+
+		$this->ensureOrderMetaTable();
+		$this->ensureTtnColumns();
+
+		$meta = $this->getOrderMeta($order_id);
+
+		if (!$meta) {
+			return ['success' => false, 'error' => 'Nova Poshta delivery data is missing for this order.'];
+		}
+
+		$existing_ttn_ref = trim((string)($meta['ttn_ref'] ?? ''));
+		$existing_ttn_number = trim((string)($meta['ttn_number'] ?? ''));
+
+		if ($existing_ttn_ref === '' || $existing_ttn_number === '') {
+			return ['success' => false, 'error' => 'No existing TTN to edit. Create one first.'];
+		}
+
+		$current_payload = $meta['ttn_payload'] ?? null;
+
+		if (!is_array($current_payload) || !$current_payload) {
+			return [
+				'success' => false,
+				'error' => 'Original TTN payload is not stored for this order — in-place edit cannot be performed. Use Recreate instead.'
+			];
+		}
+
+		// Whitelist of fields NP allows on update in practice. Anything
+		// outside this set is silently dropped to avoid surprising NP
+		// (it rejects payloads that touch immutable fields).
+		$allowed = ['Weight', 'SeatsAmount', 'Cost', 'CargoType', 'Description', 'PayerType', 'PaymentMethod'];
+
+		$normalized_changes = [];
+
+		foreach ($changes as $key => $value) {
+			if (!in_array($key, $allowed, true)) {
+				continue;
+			}
+
+			if ($value === '' || $value === null) {
+				continue;
+			}
+
+			// Cast to the same types NP expects (numeric strings for Weight/Cost,
+			// integer string for SeatsAmount, plain string for the rest).
+			switch ($key) {
+				case 'Weight':
+				case 'Cost':
+					$normalized_changes[$key] = number_format((float)$value, 2, '.', '');
+					break;
+
+				case 'SeatsAmount':
+					$normalized_changes[$key] = (string)max(1, (int)$value);
+					break;
+
+				default:
+					$normalized_changes[$key] = (string)$value;
+			}
+		}
+
+		if (!$normalized_changes) {
+			return ['success' => false, 'error' => 'No editable fields were provided.'];
+		}
+
+		// Skip the call if nothing actually differs — protects NP from no-op
+		// edits and keeps the audit log clean.
+		$diff_changes = [];
+
+		foreach ($normalized_changes as $key => $value) {
+			$old = isset($current_payload[$key]) ? (string)$current_payload[$key] : '';
+
+			if ($old !== (string)$value) {
+				$diff_changes[$key] = $value;
+			}
+		}
+
+		if (!$diff_changes) {
+			return ['success' => false, 'error' => 'No changes detected — values match the existing TTN.'];
+		}
+
+		// Merge changes onto the last-known-good payload from create.
+		$new_payload = array_merge($current_payload, $diff_changes);
+
+		// Weight / SeatsAmount drive the OptionsSeat array (NP requires
+		// per-seat breakdown, see createTtnForOrder note ~line 422). If
+		// either changed we rebuild the array preserving dimensions from
+		// the first existing seat — so the operator only re-enters the
+		// numbers they actually want to change.
+		if (isset($diff_changes['Weight']) || isset($diff_changes['SeatsAmount'])) {
+			$weight_total = (float)$new_payload['Weight'];
+			$seats = max(1, (int)$new_payload['SeatsAmount']);
+			$weight_per_seat = round($weight_total / $seats, 3);
+
+			if ($weight_per_seat <= 0) {
+				$weight_per_seat = 0.1;
+			}
+
+			$first_existing = $current_payload['OptionsSeat'][0] ?? [];
+			$vol = $first_existing['volumetricVolume'] ?? '0.002';
+			$width = $first_existing['volumetricWidth'] ?? 10;
+			$length = $first_existing['volumetricLength'] ?? 20;
+			$height = $first_existing['volumetricHeight'] ?? 10;
+
+			$options_seat = [];
+
+			for ($i = 0; $i < $seats; $i++) {
+				$options_seat[] = [
+					'volumetricVolume' => $vol,
+					'volumetricWidth'  => $width,
+					'volumetricLength' => $length,
+					'volumetricHeight' => $height,
+					'weight'           => $weight_per_seat,
+				];
+			}
+
+			$new_payload['OptionsSeat'] = $options_seat;
+		}
+
+		// NP needs Ref to identify which document to mutate; without it
+		// the API would treat the payload as a create attempt and fail.
+		$new_payload['Ref'] = $existing_ttn_ref;
+
+		$credentials = $this->getApiCredentials();
+
+		if (empty($credentials['success'])) {
+			return ['success' => false, 'error' => (string)($credentials['error'] ?? 'Nova Poshta API credentials are not configured.')];
+		}
+
+		$api_key = (string)$credentials['api_key'];
+		$api_url = (string)$credentials['api_url'];
+
+		try {
+			$response = $this->callApi($api_key, $api_url, 'InternetDocument', 'update', $new_payload);
+		} catch (\Throwable $e) {
+			return ['success' => false, 'error' => $e->getMessage()];
+		}
+
+		if (empty($response['success'])) {
+			$error = $this->getApiError($response, 'Nova Poshta API did not update TTN.');
+
+			// Intentionally do NOT persist the failed payload — leaving the DB
+			// row in its last-known-good state means the operator can retry
+			// the same (or a corrected) edit without us having silently
+			// shifted the baseline.
+			return ['success' => false, 'error' => $error];
+		}
+
+		$this->persistTtnUpdate($order_id, $new_payload);
+
+		return [
+			'success' => true,
+			'ttn_number' => $existing_ttn_number,
+			'ttn_ref' => $existing_ttn_ref,
+			'changed_fields' => array_keys($diff_changes),
+			'old_values' => array_intersect_key($current_payload, $diff_changes),
+			'new_values' => $diff_changes,
+		];
+	}
+
 	public function getPrintUrlByOrderId(int $order_id): string {
 		if ($order_id <= 0) {
 			return '';
@@ -990,6 +1177,23 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 				ttn_error = '',
 				ttn_payload = '" . $this->db->escape($this->encodeJson($payload)) . "',
 				ttn_date_created = NOW(),
+				ttn_date_modified = NOW(),
+				date_modified = NOW()
+			WHERE order_id = '" . (int)$order_id . "'"
+		);
+	}
+
+	/**
+	 * Persist an in-place edit of an existing TTN — payload + modified
+	 * timestamp only. Identifiers (ttn_number / ttn_ref) and the original
+	 * creation timestamp are intentionally NOT touched here, that's what
+	 * distinguishes an edit from a recreate.
+	 */
+	private function persistTtnUpdate(int $order_id, array $payload): void {
+		$this->db->query(
+			"UPDATE `" . DB_PREFIX . "order_novaposhta`
+			SET ttn_payload = '" . $this->db->escape($this->encodeJson($payload)) . "',
+				ttn_error = '',
 				ttn_date_modified = NOW(),
 				date_modified = NOW()
 			WHERE order_id = '" . (int)$order_id . "'"
