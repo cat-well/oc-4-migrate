@@ -139,11 +139,26 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 				);
 			}
 
+			// DateTime is the planned ship-out date. NP server runs in Europe/Kyiv
+			// timezone; when our PHP server is in UTC the day rolls over earlier
+			// for NP than for us, so date('d.m.Y') here can hand NP a string they
+			// consider "in the past" (returns "DateTime cannot be less then now").
+			// The price-hint flow already uses tomorrow for the same reason — see
+			// commit 9a229e5 in catalog/controller/checkout/simplecheckout.php.
+			// For TTN creation we follow the same trick: tomorrow is always
+			// "future" for both timezones, and operationally operators batch
+			// drop-offs next morning anyway.
+			$ship_date = date('d.m.Y', time() + 86400);
+
 			$payload = [
 				'PayerType' => 'Recipient',
 				'PaymentMethod' => 'Cash',
-				'DateTime' => date('d.m.Y'),
+				'DateTime' => $ship_date,
 				'CargoType' => $is_locker ? 'Parcel' : 'Cargo',
+				// Explicit RecipientType silences the "RecipientType is set to
+				// PrivatePerson" advisory that NP returns when we omit it and
+				// it has to infer from the recipient counterparty.
+				'RecipientType' => 'PrivatePerson',
 				'VolumeGeneral' => '0.0004',
 				'Weight' => $order_data['weight'],
 				'ServiceType' => $this->mapServiceType($delivery_type),
