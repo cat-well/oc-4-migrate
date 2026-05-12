@@ -1298,8 +1298,13 @@ class Simplecheckout extends \Opencart\System\Engine\Controller {
 				continue;
 			}
 
-			$description = trim((string)($warehouse['ShortAddress'] ?? $warehouse['Description'] ?? ''));
-			$label = trim((string)($warehouse['Description'] ?? $description));
+			// Write the full warehouse description ("Відділення №14 (до 30 кг
+			// на одне місце): вул. Благовісна, 372/Юрія Іллєнка, 59") into the
+			// order's shipping_address_1 — that preserves the branch number
+			// downstream (admin order view, TTN edit modal, printed invoice,
+			// confirmation email). ShortAddress drops the "Відділення №X"
+			// prefix which makes branch numbers ambiguous on the printed TTN.
+			$description = trim((string)($warehouse['Description'] ?? $warehouse['ShortAddress'] ?? ''));
 			$ref = trim((string)($warehouse['Ref'] ?? ''));
 
 			if ($description === '' || $ref === '') {
@@ -1309,7 +1314,7 @@ class Simplecheckout extends \Opencart\System\Engine\Controller {
 			$data[] = [
 				'description' => $description,
 				'value'       => $description,
-				'label'       => $label !== '' ? $label : $description,
+				'label'       => $description,
 				'ref'         => $ref
 			];
 		}
