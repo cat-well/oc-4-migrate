@@ -766,8 +766,11 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 
 	/**
 	 * Live-search Nova Poshta cities — back-end for the admin TTN edit modal
-	 * picker. Mirrors the checkout-side endpoint output so the existing
-	 * dropdown widget can be reused as-is on the admin side.
+	 * picker. Uses Address.searchSettlements (NP's autocomplete endpoint, the
+	 * same one the catalog uses), NOT Address.getCities — the latter takes
+	 * AreaRef + pagination and is not a free-text search.
+	 *
+	 * Returns DeliveryCity ref (the field accepted by Address.getWarehouses).
 	 *
 	 * @return array<int, array<string, string>> rows of {description, value, label, ref}
 	 */
@@ -779,30 +782,37 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 		}
 
 		$search = trim($search);
-		$properties = ['Limit' => 50, 'Page' => 1];
 
-		if ($search !== '') {
-			$properties['FindByString'] = $search;
+		// NP searchSettlements requires at least 2 chars; on empty/short input
+		// we just return nothing rather than spam the API with bad queries.
+		if (mb_strlen($search, 'UTF-8') < 2) {
+			return [];
 		}
 
-		$response = $this->callApi($credentials['api_key'], $credentials['api_url'], 'Address', 'getCities', $properties);
+		$response = $this->callApi(
+			$credentials['api_key'],
+			$credentials['api_url'],
+			'Address',
+			'searchSettlements',
+			['CityName' => $search, 'Limit' => '20', 'Page' => '1']
+		);
 
-		if (empty($response['success']) || empty($response['data'])) {
+		if (empty($response['success']) || empty($response['data'][0]['Addresses'])) {
 			return [];
 		}
 
 		$data = [];
 
-		foreach ($response['data'] as $row) {
-			$ref = trim((string)($row['Ref'] ?? ''));
-			$description = trim((string)($row['Description'] ?? ''));
+		foreach ($response['data'][0]['Addresses'] as $row) {
+			$ref = trim((string)($row['DeliveryCity'] ?? $row['Ref'] ?? ''));
+			$description = trim((string)($row['MainDescription'] ?? ''));
 
 			if ($ref === '' || $description === '') {
 				continue;
 			}
 
-			$area = trim((string)($row['AreaDescription'] ?? ''));
-			$label = $area !== '' ? $description . ' (' . $area . ')' : $description;
+			$present = trim((string)($row['Present'] ?? ''));
+			$label = $present !== '' ? $present : $description;
 
 			$data[] = [
 				'description' => $description,
@@ -843,7 +853,14 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 			$properties['FindByString'] = $search;
 		}
 
-		$response = $this->callApi($credentials['api_key'], $credentials['api_url'], 'Address', 'getWarehouses', $properties);
+		// AddressGeneral.getWarehouses is the newer endpoint with broader
+		// coverage (includes some lockers / temp branches missing from the
+		// legacy Address.getWarehouses). Mirror the catalog fallback chain.
+		$response = $this->callApi($credentials['api_key'], $credentials['api_url'], 'AddressGeneral', 'getWarehouses', $properties);
+
+		if (empty($response['success']) || empty($response['data'])) {
+			$response = $this->callApi($credentials['api_key'], $credentials['api_url'], 'Address', 'getWarehouses', $properties);
+		}
 
 		if (empty($response['success']) || empty($response['data'])) {
 			return [];
