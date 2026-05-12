@@ -893,12 +893,15 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 				continue;
 			}
 
-			$short = trim((string)($row['ShortAddress'] ?? ''));
-			$value = $short !== '' ? $short : $description;
-
+			// Write the full warehouse description into the form ("Відділення №14
+			// (до 30 кг на одне місце): вул. Благовісна, 372/Юрія Іллєнка, 59")
+			// — operator needs both the branch number AND the street address
+			// visible at a glance, especially when reviewing the TTN before
+			// sending. ShortAddress alone ("Черкаси, Благовісна, 269/4") drops
+			// the "Відділення №X" prefix and makes branch numbers ambiguous.
 			$data[] = [
-				'description' => $value,
-				'value'       => $value,
+				'description' => $description,
+				'value'       => $description,
 				'label'       => $description,
 				'ref'         => $ref
 			];
