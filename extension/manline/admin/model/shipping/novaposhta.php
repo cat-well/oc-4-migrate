@@ -755,16 +755,13 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 
 		$products = $this->model_sale_order->getProducts($order_id);
 
-		$description = 'Order #' . $order_id;
+		// NP cargo description is hard-set to a generic category string per
+		// shipper policy — the actual product line-up is irrelevant to NP and
+		// keeping it generic avoids accidental category-mismatch holds.
+		$description = 'Одяг';
 		$seats_amount = 1;
 
 		if ($products) {
-			$description = trim((string)$products[0]['name']);
-
-			if (count($products) > 1) {
-				$description .= ' +' . (count($products) - 1);
-			}
-
 			$quantity_total = 0;
 
 			foreach ($products as $product) {
