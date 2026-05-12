@@ -742,15 +742,17 @@
               <option value="courier">{{ text_np_delivery_courier }}</option>
             </select>
           </div>
-          <div class="col-md-6 mb-3">
+          <div class="col-md-6 mb-3 np-edit-autocomplete-wrap">
             <label for="np-edit-recipient-city" class="form-label">{{ entry_np_recipient_city }}</label>
-            <input type="text" id="np-edit-recipient-city" class="form-control" placeholder="Kyiv"/>
+            <input type="text" id="np-edit-recipient-city" class="form-control" placeholder="Kyiv" autocomplete="off"/>
+            <input type="hidden" id="np-edit-recipient-city-ref"/>
           </div>
         </div>
         <div class="row">
-          <div class="col-12 mb-3">
+          <div class="col-12 mb-3 np-edit-autocomplete-wrap">
             <label for="np-edit-recipient-address" class="form-label">{{ entry_np_recipient_address }}</label>
-            <textarea id="np-edit-recipient-address" class="form-control" rows="2" placeholder="Branch #123 / Locker №45 / street, house"></textarea>
+            <textarea id="np-edit-recipient-address" class="form-control" rows="2" placeholder="Branch #123 / Locker №45 / street, house" autocomplete="off"></textarea>
+            <input type="hidden" id="np-edit-recipient-address-ref"/>
           </div>
         </div>
         <div class="row">
@@ -1504,12 +1506,16 @@ $(document).on('click', '#button-np-edit-ttn', function() {
     // submit handler can detect "did the operator actually change
     // anything?" and skip the backend re-resolution roundtrip if not.
     var currentCity = {{ novaposhta.city|json_encode|raw }} || '';
+    var currentCityRef = {{ novaposhta.city_ref|json_encode|raw }} || '';
     var currentAddress = {{ novaposhta.address|json_encode|raw }} || '';
+    var currentAddressRef = {{ novaposhta.address_ref|json_encode|raw }} || '';
     var currentDeliveryType = {{ novaposhta.delivery_type|json_encode|raw }} || 'branch';
 
     $('#np-edit-delivery-type').val(currentDeliveryType).data('original', currentDeliveryType);
     $('#np-edit-recipient-city').val(currentCity).data('original', currentCity);
+    $('#np-edit-recipient-city-ref').val(currentCityRef);
     $('#np-edit-recipient-address').val(currentAddress).data('original', currentAddress);
+    $('#np-edit-recipient-address-ref').val(currentAddressRef);
     $('#np-edit-recipient-phone').val(payload.RecipientsPhone || '');
 
     // Extra
@@ -1518,8 +1524,186 @@ $(document).on('click', '#button-np-edit-ttn', function() {
     $('#np-edit-error').addClass('d-none').text('');
     $('#np-edit-success').addClass('d-none').text('');
 
+    bindNpEditAddressPicker();
+
     new bootstrap.Modal(document.getElementById('modal-np-edit-ttn')).show();
 });
+
+// ── Address picker (city + warehouse autocomplete) ──
+// Mirrors the catalog checkout's npAutocompleteAddress widget but inlined
+// here so the admin order page does not depend on catalog/theme JS.
+// Drops a <ul> next to the input, fetches results from sale/order.novaposhtaLookup,
+// and on pick stores the NP Ref into the matching hidden input — the submit
+// handler forwards the ref to the backend so it can skip findCityRef /
+// findWarehouseRef and avoid name-ambiguity errors.
+(function() {
+    var endpoint = '{{ novaposhta_lookup|replace({'&amp;':'&'})|escape('js') }}';
+
+    function attach($input, getPayload, onPick) {
+        if ($input.data('npAcAttached')) {
+            return;
+        }
+
+        $input.data('npAcAttached', true).attr('autocomplete', 'off');
+
+        var $wrap = $input.closest('.np-edit-autocomplete-wrap');
+
+        if (!$wrap.length) {
+            $wrap = $input.parent();
+        }
+
+        $wrap.css('position', 'relative');
+
+        var $list = $('<ul class="dropdown-menu np-edit-dropdown w-100 shadow-sm" style="position:absolute; left:0; max-height:240px; overflow:auto; z-index:1060;"></ul>').hide();
+        $input.after($list);
+
+        var items = {};
+        var timer = null;
+
+        function hide() {
+            $list.hide();
+        }
+
+        function show() {
+            var pos = $input.position();
+            $list.css({
+                top: pos.top + $input.outerHeight(),
+                left: pos.left,
+                width: $input.outerWidth()
+            }).show();
+        }
+
+        function render(data) {
+            items = {};
+            var html = '';
+
+            if (!Array.isArray(data) || !data.length) {
+                $list.html('');
+                hide();
+                return;
+            }
+
+            data.forEach(function(item, idx) {
+                var value = String(item.value || item.description || '');
+                if (!value) return;
+                var key = String(idx);
+                items[key] = item;
+                var label = String(item.label || value);
+                html += '<li><a class="dropdown-item" href="#" data-key="' + key + '" style="white-space:normal;">' +
+                    $('<div/>').text(label).html() +
+                    '</a></li>';
+            });
+
+            $list.html(html);
+
+            if (html && $input.is(':focus')) {
+                show();
+            } else {
+                hide();
+            }
+        }
+
+        function request() {
+            var payload = getPayload(String($input.val() || ''));
+
+            if (!payload) {
+                render([]);
+                return;
+            }
+
+            clearTimeout(timer);
+            timer = setTimeout(function() {
+                $.ajax({
+                    url: endpoint,
+                    type: 'POST',
+                    dataType: 'json',
+                    data: payload,
+                    global: false
+                }).done(function(json) {
+                    render(Array.isArray(json) ? json : []);
+                }).fail(function() {
+                    render([]);
+                });
+            }, 180);
+        }
+
+        $input.on('focus.npAc', request);
+        $input.on('input.npAc keyup.npAc', request);
+        $input.on('blur.npAc', function() {
+            setTimeout(hide, 200);
+        });
+
+        $list.on('mousedown.npAc touchstart.npAc', 'a', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            var key = String($(this).data('key'));
+            var item = items[key];
+
+            if (!item) return;
+
+            if (typeof onPick === 'function') {
+                onPick(item, $input);
+            }
+
+            hide();
+        });
+    }
+
+    window.bindNpEditAddressPicker = function() {
+        // City picker
+        attach(
+            $('#np-edit-recipient-city'),
+            function(search) {
+                return {
+                    action: 'getCities',
+                    search: search
+                };
+            },
+            function(item) {
+                $('#np-edit-recipient-city').val(String(item.value || ''));
+                $('#np-edit-recipient-city-ref').val(String(item.ref || ''));
+                // City changed → invalidate address ref so the next warehouse
+                // pick (or backend fallback) re-resolves against the new city.
+                $('#np-edit-recipient-address').val('');
+                $('#np-edit-recipient-address-ref').val('');
+            }
+        );
+
+        // Warehouse picker (branch / locker). Disabled for courier — there is
+        // no warehouse list to pick from when shipping to a door address.
+        attach(
+            $('#np-edit-recipient-address'),
+            function(search) {
+                var cityRef = String($('#np-edit-recipient-city-ref').val() || '');
+                var deliveryType = String($('#np-edit-delivery-type').val() || '');
+
+                if (cityRef === '' || deliveryType === 'courier') {
+                    return null;
+                }
+
+                return {
+                    action: 'getWarehouses',
+                    search: search,
+                    city_ref: cityRef,
+                    delivery_type: deliveryType
+                };
+            },
+            function(item) {
+                $('#np-edit-recipient-address').val(String(item.value || ''));
+                $('#np-edit-recipient-address-ref').val(String(item.ref || ''));
+            }
+        );
+
+        // Changing delivery type means the previously selected warehouse may
+        // no longer be valid (postomat vs branch lists are disjoint). Clear
+        // address + ref so the operator picks a fresh one from the right list.
+        $('#np-edit-delivery-type').off('change.npAc').on('change.npAc', function() {
+            $('#np-edit-recipient-address').val('');
+            $('#np-edit-recipient-address-ref').val('');
+        });
+    };
+})();
 
 $(document).on('click', '#button-np-edit-ttn-save', function() {
     var $btn = $(this);
@@ -1568,6 +1752,21 @@ $(document).on('click', '#button-np-edit-ttn-save', function() {
         data.recipient_city_name = newCity;
         data.recipient_address_name = newAddress;
         data.delivery_type = newDeliveryType;
+
+        // Forward refs when the operator picked from the dropdown — backend
+        // uses these directly and skips findCityRef / findWarehouseRef.
+        // Free-text edits leave the ref empty so the backend falls back to
+        // name-based lookup.
+        var cityRef = $.trim($('#np-edit-recipient-city-ref').val());
+        var addressRef = $.trim($('#np-edit-recipient-address-ref').val());
+
+        if (cityRef !== '') {
+            data.recipient_city_ref = cityRef;
+        }
+
+        if (addressRef !== '') {
+            data.recipient_address_ref = addressRef;
+        }
     }
 
     $.ajax({

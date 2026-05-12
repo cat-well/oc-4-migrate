@@ -441,43 +441,57 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 		// helpers — if NP cannot find a match we surface that error and
 		// don't attempt the update at all (better than sending a half-baked
 		// payload that NP rejects with an obscure message).
-		$has_address_change = isset($changes['recipient_city_name']) || isset($changes['recipient_address_name']) || isset($changes['delivery_type']);
+		// recipient_city_ref / recipient_address_ref come pre-resolved from the
+		// admin dropdown picker when the operator picks from autocomplete —
+		// that skips the findCityRef / findWarehouseRef round-trip and avoids
+		// ambiguity errors (e.g. two cities with the same name in different
+		// areas). Free-text fallback is preserved for the rare case where the
+		// operator types without picking.
+		$has_address_change = isset($changes['recipient_city_name']) || isset($changes['recipient_address_name'])
+			|| isset($changes['recipient_city_ref']) || isset($changes['recipient_address_ref'])
+			|| isset($changes['delivery_type']);
 
 		if ($has_address_change) {
-			$credentials_early = $this->getApiCredentials();
-
-			if (empty($credentials_early['success'])) {
-				return ['success' => false, 'error' => (string)($credentials_early['error'] ?? 'Nova Poshta API credentials are not configured.')];
-			}
-
-			$api_key_addr = (string)$credentials_early['api_key'];
-			$api_url_addr = (string)$credentials_early['api_url'];
-
 			$new_delivery_type = isset($changes['delivery_type']) ? (string)$changes['delivery_type'] : (string)($meta['delivery_type'] ?? '');
 			$city_name = trim((string)($changes['recipient_city_name'] ?? $meta['city'] ?? ''));
 			$address_name = trim((string)($changes['recipient_address_name'] ?? $meta['address'] ?? ''));
+			$city_ref = trim((string)($changes['recipient_city_ref'] ?? ''));
+			$address_ref = trim((string)($changes['recipient_address_ref'] ?? ''));
 
-			$city_ref = '';
+			$needs_lookup = ($city_ref === '') || ($address_ref === '' && in_array($new_delivery_type, ['branch', 'locker', ''], true) && $address_name !== '');
 
-			if ($city_name !== '') {
-				$city_ref = $this->findCityRef($city_name, (string)($meta['zone'] ?? ''), $api_key_addr, $api_url_addr);
+			if ($needs_lookup) {
+				$credentials_early = $this->getApiCredentials();
+
+				if (empty($credentials_early['success'])) {
+					return ['success' => false, 'error' => (string)($credentials_early['error'] ?? 'Nova Poshta API credentials are not configured.')];
+				}
+
+				$api_key_addr = (string)$credentials_early['api_key'];
+				$api_url_addr = (string)$credentials_early['api_url'];
+
+				if ($city_ref === '' && $city_name !== '') {
+					$city_ref = $this->findCityRef($city_name, (string)($meta['zone'] ?? ''), $api_key_addr, $api_url_addr);
+				}
+
+				if ($city_ref === '') {
+					return ['success' => false, 'error' => 'Could not resolve recipient city "' . $city_name . '" against Nova Poshta. Check spelling and try again, or use Recreate.'];
+				}
+
+				if ($address_ref === '' && $address_name !== '' && ($new_delivery_type === 'branch' || $new_delivery_type === 'locker' || $new_delivery_type === '')) {
+					$address_ref = $this->findWarehouseRef($city_ref, $address_name, $api_key_addr, $api_url_addr);
+
+					if ($address_ref === '') {
+						return ['success' => false, 'error' => 'Could not resolve recipient warehouse "' . $address_name . '" in the chosen city. Check the branch / locker name and try again, or use Recreate.'];
+					}
+				}
 			}
 
 			if ($city_ref === '') {
-				return ['success' => false, 'error' => 'Could not resolve recipient city "' . $city_name . '" against Nova Poshta. Check spelling and try again, or use Recreate.'];
+				return ['success' => false, 'error' => 'Could not resolve recipient city. Check spelling and try again, or use Recreate.'];
 			}
 
 			$normalized_changes['CityRecipient'] = $city_ref;
-
-			$address_ref = '';
-
-			if ($address_name !== '' && ($new_delivery_type === 'branch' || $new_delivery_type === 'locker' || $new_delivery_type === '')) {
-				$address_ref = $this->findWarehouseRef($city_ref, $address_name, $api_key_addr, $api_url_addr);
-
-				if ($address_ref === '') {
-					return ['success' => false, 'error' => 'Could not resolve recipient warehouse "' . $address_name . '" in the chosen city. Check the branch / locker name and try again, or use Recreate.'];
-				}
-			}
 
 			if ($address_ref !== '') {
 				$normalized_changes['RecipientAddress'] = $address_ref;
@@ -748,6 +762,132 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 			'ttn_status_date' => $status_date,
 			'changed' => $previous_code !== $status_code || $previous_text !== $status_text || $previous_date !== $status_date
 		];
+	}
+
+	/**
+	 * Live-search Nova Poshta cities — back-end for the admin TTN edit modal
+	 * picker. Mirrors the checkout-side endpoint output so the existing
+	 * dropdown widget can be reused as-is on the admin side.
+	 *
+	 * @return array<int, array<string, string>> rows of {description, value, label, ref}
+	 */
+	public function lookupCities(string $search): array {
+		$credentials = $this->getApiCredentials();
+
+		if (empty($credentials['success'])) {
+			return [];
+		}
+
+		$search = trim($search);
+		$properties = ['Limit' => 50, 'Page' => 1];
+
+		if ($search !== '') {
+			$properties['FindByString'] = $search;
+		}
+
+		$response = $this->callApi($credentials['api_key'], $credentials['api_url'], 'Address', 'getCities', $properties);
+
+		if (empty($response['success']) || empty($response['data'])) {
+			return [];
+		}
+
+		$data = [];
+
+		foreach ($response['data'] as $row) {
+			$ref = trim((string)($row['Ref'] ?? ''));
+			$description = trim((string)($row['Description'] ?? ''));
+
+			if ($ref === '' || $description === '') {
+				continue;
+			}
+
+			$area = trim((string)($row['AreaDescription'] ?? ''));
+			$label = $area !== '' ? $description . ' (' . $area . ')' : $description;
+
+			$data[] = [
+				'description' => $description,
+				'value'       => $description,
+				'label'       => $label,
+				'ref'         => $ref
+			];
+		}
+
+		return $data;
+	}
+
+	/**
+	 * Live-search NP warehouses (branches / postomats) for a given city ref.
+	 * Filters by delivery_type so the postomat dropdown shows only postomats
+	 * and the branch dropdown shows only branches. delivery_type='courier'
+	 * returns nothing — courier deliveries do not pick from a warehouse list.
+	 *
+	 * @return array<int, array<string, string>> rows of {description, value, label, ref}
+	 */
+	public function lookupWarehouses(string $city_ref, string $search, string $delivery_type): array {
+		$city_ref = trim($city_ref);
+
+		if ($city_ref === '' || $delivery_type === 'courier') {
+			return [];
+		}
+
+		$credentials = $this->getApiCredentials();
+
+		if (empty($credentials['success'])) {
+			return [];
+		}
+
+		$properties = ['CityRef' => $city_ref, 'Limit' => '50', 'Page' => '1'];
+		$search = trim($search);
+
+		if ($search !== '') {
+			$properties['FindByString'] = $search;
+		}
+
+		$response = $this->callApi($credentials['api_key'], $credentials['api_url'], 'Address', 'getWarehouses', $properties);
+
+		if (empty($response['success']) || empty($response['data'])) {
+			return [];
+		}
+
+		$need_locker = $delivery_type === 'locker';
+		$data = [];
+
+		foreach ($response['data'] as $row) {
+			$ref = trim((string)($row['Ref'] ?? ''));
+			$description = trim((string)($row['Description'] ?? ''));
+
+			if ($ref === '' || $description === '') {
+				continue;
+			}
+
+			$category = trim((string)($row['CategoryOfWarehouse'] ?? ''));
+			$category_lower = mb_strtolower($category, 'UTF-8');
+			$is_locker = $category !== '' && (
+				$category === 'Postomat' ||
+				mb_strpos($category_lower, 'поштомат') !== false ||
+				mb_strpos($category_lower, 'postomat') !== false
+			);
+
+			if ($need_locker && !$is_locker) {
+				continue;
+			}
+
+			if (!$need_locker && $is_locker) {
+				continue;
+			}
+
+			$short = trim((string)($row['ShortAddress'] ?? ''));
+			$value = $short !== '' ? $short : $description;
+
+			$data[] = [
+				'description' => $value,
+				'value'       => $value,
+				'label'       => $description,
+				'ref'         => $ref
+			];
+		}
+
+		return $data;
 	}
 
 	private function getOrderData(int $order_id, array $order_info, string $delivery_type = ''): array {

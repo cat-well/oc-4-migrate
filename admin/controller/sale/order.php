@@ -630,6 +630,7 @@ class Order extends \Opencart\System\Engine\Controller {
 		$data['novaposhta_edit_ttn'] = $this->url->link('sale/order.editNovaposhtaTtn', 'user_token=' . $this->session->data['user_token'] . '&order_id=' . $order_id);
 		$data['novaposhta_delete_ttn'] = $this->url->link('sale/order.deleteNovaposhtaTtn', 'user_token=' . $this->session->data['user_token'] . '&order_id=' . $order_id);
 		$data['novaposhta_refresh_status'] = $this->url->link('sale/order.refreshNovaposhtaStatus', 'user_token=' . $this->session->data['user_token'] . '&order_id=' . $order_id);
+		$data['novaposhta_lookup'] = $this->url->link('sale/order.novaposhtaLookup', 'user_token=' . $this->session->data['user_token'] . '&order_id=' . $order_id);
 		$data['checkbox_create_receipt'] = $this->url->link('sale/order.createCheckboxReceipt', 'user_token=' . $this->session->data['user_token'] . '&order_id=' . $order_id);
 		$data['checkbox_send_sms'] = $this->url->link('sale/order.sendCheckboxReceiptSms', 'user_token=' . $this->session->data['user_token'] . '&order_id=' . $order_id);
 		$data['checkbox_create_return_receipt'] = $this->url->link('sale/order.createCheckboxReturnReceipt', 'user_token=' . $this->session->data['user_token'] . '&order_id=' . $order_id);
@@ -644,7 +645,9 @@ class Order extends \Opencart\System\Engine\Controller {
 			'delivery_type_name' => '',
 			'shipping_code' => '',
 			'city' => '',
+			'city_ref' => '',
 			'address' => '',
+			'address_ref' => '',
 			'zone' => '',
 			'country' => '',
 			'ttn_number' => '',
@@ -1044,7 +1047,9 @@ class Order extends \Opencart\System\Engine\Controller {
 					'delivery_type_name' => $this->formatNovaposhtaDeliveryType($delivery_type),
 					'shipping_code' => $shipping_code,
 					'city' => (string)($novaposhta_meta['city'] ?? $data['shipping_city']),
+					'city_ref' => (string)($novaposhta_meta['city_ref'] ?? ''),
 					'address' => (string)($novaposhta_meta['address'] ?? $data['shipping_address_1']),
+					'address_ref' => (string)($novaposhta_meta['address_ref'] ?? ''),
 					'zone' => (string)($novaposhta_meta['zone'] ?? $data['shipping_zone']),
 					'country' => (string)($novaposhta_meta['country'] ?? $data['shipping_country']),
 					'ttn_number' => $ttn_number,
@@ -2151,6 +2156,7 @@ class Order extends \Opencart\System\Engine\Controller {
 				'volume_width', 'volume_length', 'volume_height',
 				'internal_number',
 				'recipient_city_name', 'recipient_address_name', 'delivery_type',
+				'recipient_city_ref', 'recipient_address_ref',
 			];
 
 			foreach ($high_level as $field) {
@@ -2288,6 +2294,44 @@ class Order extends \Opencart\System\Engine\Controller {
 
 				$this->addOrderHistoryLog($order_id, sprintf($this->language->get('text_np_history_deleted'), $deleted_ttn));
 			}
+		}
+
+		$this->response->addHeader('Content-Type: application/json');
+		$this->response->setOutput(json_encode($json));
+	}
+
+	/**
+	 * Live lookup endpoint for the admin TTN edit modal address pickers —
+	 * mirrors the checkout-side `simplecheckout.novaposhta` response shape so
+	 * the same dropdown widget renders results identically on both sides.
+	 *
+	 * POST params:
+	 *   action        — 'getCities' | 'getWarehouses'
+	 *   search        — free-text query (optional; empty returns top-N list)
+	 *   city_ref      — required for getWarehouses
+	 *   delivery_type — 'branch' | 'locker' | 'courier' (filters warehouse list)
+	 */
+	public function novaposhtaLookup(): void {
+		$json = [];
+
+		if (!$this->user->hasPermission('modify', 'sale/order')) {
+			$this->response->addHeader('Content-Type: application/json');
+			$this->response->setOutput(json_encode($json));
+
+			return;
+		}
+
+		$this->load->model('extension/manline/shipping/novaposhta');
+
+		$action = trim((string)($this->request->post['action'] ?? ''));
+		$search = trim((string)($this->request->post['search'] ?? ''));
+		$city_ref = trim((string)($this->request->post['city_ref'] ?? ''));
+		$delivery_type = trim((string)($this->request->post['delivery_type'] ?? ''));
+
+		if ($action === 'getCities') {
+			$json = $this->model_extension_manline_shipping_novaposhta->lookupCities($search);
+		} elseif ($action === 'getWarehouses') {
+			$json = $this->model_extension_manline_shipping_novaposhta->lookupWarehouses($city_ref, $search, $delivery_type);
 		}
 
 		$this->response->addHeader('Content-Type: application/json');
