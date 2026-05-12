@@ -2177,12 +2177,21 @@ class Order extends \Opencart\System\Engine\Controller {
 				$json['old_values'] = (array)($result['old_values'] ?? []);
 				$json['new_values'] = (array)($result['new_values'] ?? []);
 
-				// Order-history breadcrumb: "TTN N edited: Weight 0.5 → 1.0, Cost 350 → 400"
+				// Order-history breadcrumb: "TTN N edited: Weight 0.5 → 1.0, Cost 350 → 400".
+				// Array-valued fields (BackwardDeliveryData, OptionsSeat) can't be
+				// cast to string directly — PHP emits a Warning that bleeds into
+				// the JSON response and breaks parsing on the client. Compress
+				// arrays to a marker so the history entry stays clean.
 				$diff_parts = [];
 
 				foreach ($json['new_values'] as $field => $new_value) {
 					$old_value = $json['old_values'][$field] ?? '';
-					$diff_parts[] = $field . ' ' . (string)$old_value . ' → ' . (string)$new_value;
+
+					if (is_array($old_value) || is_array($new_value)) {
+						$diff_parts[] = $field . ' (updated)';
+					} else {
+						$diff_parts[] = $field . ' ' . (string)$old_value . ' → ' . (string)$new_value;
+					}
 				}
 
 				$history_text = sprintf(

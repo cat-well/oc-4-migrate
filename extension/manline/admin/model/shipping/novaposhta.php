@@ -589,8 +589,16 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 			// Record OptionsSeat as a changed field for the audit log / diff
 			// summary, even though the operator entered individual dimensions
 			// or seats — they should see "dimensions changed" in the history.
+			// Skip the marker when the rebuild produced the same per-seat
+			// breakdown that was already stored: that happens when the
+			// operator reopens the edit modal and saves without changing
+			// dimensions, and the audit log shouldn't log a no-op.
 			if ($dim_rebuild !== null) {
-				$diff_changes['OptionsSeat'] = $options_seat;
+				$old_options_seat = $current_payload['OptionsSeat'] ?? null;
+
+				if (json_encode($old_options_seat) !== json_encode($options_seat)) {
+					$diff_changes['OptionsSeat'] = $options_seat;
+				}
 			}
 		}
 
