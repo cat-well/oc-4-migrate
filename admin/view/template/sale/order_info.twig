@@ -732,6 +732,17 @@
           </div>
         </div>
 
+        <h6 class="text-uppercase text-muted mb-2 mt-3">{{ text_np_section_sender }}</h6>
+        <div class="row">
+          <div class="col-12 mb-3">
+            <label for="np-edit-sender-address" class="form-label">{{ entry_np_sender_address }}</label>
+            <select id="np-edit-sender-address" class="form-select">
+              <option value="">{{ text_np_sender_default }}</option>
+            </select>
+            <div class="form-text">{{ text_np_sender_hint }}</div>
+          </div>
+        </div>
+
         <h6 class="text-uppercase text-muted mb-2 mt-3">{{ text_np_section_address }}</h6>
         <div class="row">
           <div class="col-md-6 mb-3">
@@ -1518,6 +1529,14 @@ $(document).on('click', '#button-np-edit-ttn', function() {
     $('#np-edit-recipient-address-ref').val(currentAddressRef);
     $('#np-edit-recipient-phone').val(payload.RecipientsPhone || '');
 
+    // Sender — refresh dropdown options from NP and pre-select the saved
+    // SenderAddress ref from the stored payload so the operator can see
+    // (and change) where the TTN ships from. Empty selection == "use NP
+    // account default" (model falls back to first Warehouse-type address).
+    var currentSenderRef = String(payload.SenderAddress || '');
+    loadNpSenderAddresses(currentSenderRef);
+    $('#np-edit-sender-address').data('original', currentSenderRef);
+
     // Extra
     $('#np-edit-internal-number').val(payload.InfoRegClientBarcodes || '');
 
@@ -1528,6 +1547,47 @@ $(document).on('click', '#button-np-edit-ttn', function() {
 
     new bootstrap.Modal(document.getElementById('modal-np-edit-ttn')).show();
 });
+
+// Sender address list loader. Pulls /sale/order.novaposhtaSenderLookup
+// once per modal open. Keeps the "Default" option at the top so the
+// operator can revert to NP-account-default behaviour at any time.
+function loadNpSenderAddresses(preselectRef) {
+    var $select = $('#np-edit-sender-address');
+    // Always reset to the default-only option while loading, in case a
+    // previous open populated a stale list.
+    $select.find('option').not(':first').remove();
+    $select.prop('disabled', true);
+
+    $.ajax({
+        url: '{{ novaposhta_sender_lookup|replace({'&amp;':'&'})|escape('js') }}',
+        type: 'POST',
+        dataType: 'json',
+        global: false
+    }).done(function(rows) {
+        if (!Array.isArray(rows)) {
+            $select.prop('disabled', false);
+            return;
+        }
+        rows.forEach(function(row) {
+            var ref = String(row.ref || '');
+            if (!ref) return;
+            var label = String(row.label || row.description || ref);
+            $select.append($('<option/>').attr('value', ref).text(label));
+        });
+        if (preselectRef) {
+            $select.val(preselectRef);
+            // If the saved ref is no longer in the list (account changed
+            // since this TTN was created), fall back to "Default" — at
+            // least the operator can pick a fresh address.
+            if ($select.val() !== preselectRef) {
+                $select.val('');
+            }
+        }
+        $select.prop('disabled', false);
+    }).fail(function() {
+        $select.prop('disabled', false);
+    });
+}
 
 // ── Address picker (city + warehouse autocomplete) ──
 // Mirrors the catalog checkout's npAutocompleteAddress widget but inlined
@@ -1767,6 +1827,16 @@ $(document).on('click', '#button-np-edit-ttn-save', function() {
         if (addressRef !== '') {
             data.recipient_address_ref = addressRef;
         }
+    }
+
+    // Sender address: send only when changed. Empty value also matters
+    // (operator can revert to "default" — backend will pick the first
+    // Warehouse-type address on next re-fetch). We always send the value
+    // when it differs from what was loaded, so both directions work.
+    var newSenderRef = $.trim($('#np-edit-sender-address').val());
+    var origSenderRef = $.trim($('#np-edit-sender-address').data('original') || '');
+    if (newSenderRef !== origSenderRef) {
+        data.sender_address_ref = newSenderRef;
     }
 
     $.ajax({

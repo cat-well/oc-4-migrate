@@ -57,6 +57,10 @@ $_['text_np_section_dimensions']    = 'Габарити';
 $_['text_np_section_payment']       = 'Платник та оплата';
 $_['text_np_section_cod']           = 'Післяплата';
 $_['text_np_section_address']       = 'Адреса отримувача';
+$_['text_np_section_sender']        = 'Адреса відправника';
+$_['entry_np_sender_address']       = 'Звідки відправляємо';
+$_['text_np_sender_default']        = 'За замовчуванням (з кабінету НП)';
+$_['text_np_sender_hint']           = 'Якщо в кабінеті Нової Пошти більше однієї адреси, оберіть з якої саме відправити це замовлення. Якщо нічого не обрано — береться перша адреса типу "Warehouse" з вашого кабінету.';
 $_['text_np_section_extra']         = 'Додатково';
 
 // ── Edit modal — field labels ──

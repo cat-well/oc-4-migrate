@@ -631,6 +631,7 @@ class Order extends \Opencart\System\Engine\Controller {
 		$data['novaposhta_delete_ttn'] = $this->url->link('sale/order.deleteNovaposhtaTtn', 'user_token=' . $this->session->data['user_token'] . '&order_id=' . $order_id);
 		$data['novaposhta_refresh_status'] = $this->url->link('sale/order.refreshNovaposhtaStatus', 'user_token=' . $this->session->data['user_token'] . '&order_id=' . $order_id);
 		$data['novaposhta_lookup'] = $this->url->link('sale/order.novaposhtaLookup', 'user_token=' . $this->session->data['user_token'] . '&order_id=' . $order_id);
+		$data['novaposhta_sender_lookup'] = $this->url->link('sale/order.novaposhtaSenderLookup', 'user_token=' . $this->session->data['user_token'] . '&order_id=' . $order_id);
 		$data['checkbox_create_receipt'] = $this->url->link('sale/order.createCheckboxReceipt', 'user_token=' . $this->session->data['user_token'] . '&order_id=' . $order_id);
 		$data['checkbox_send_sms'] = $this->url->link('sale/order.sendCheckboxReceiptSms', 'user_token=' . $this->session->data['user_token'] . '&order_id=' . $order_id);
 		$data['checkbox_create_return_receipt'] = $this->url->link('sale/order.createCheckboxReturnReceipt', 'user_token=' . $this->session->data['user_token'] . '&order_id=' . $order_id);
@@ -2049,7 +2050,12 @@ class Order extends \Opencart\System\Engine\Controller {
 		$order_info = [];
 
 		if ($this->prepareNovaposhtaAction($order_id, $order_info, $json)) {
-			$result = $this->model_extension_manline_shipping_novaposhta->createTtnForOrder($order_id, false);
+			// Optional operator-chosen sender warehouse (NP Ref). Empty
+			// string keeps the legacy "first Warehouse, else first"
+			// auto-pick inside fetchSenderData.
+			$sender_address_ref = trim((string)($this->request->post['sender_address_ref'] ?? ''));
+
+			$result = $this->model_extension_manline_shipping_novaposhta->createTtnForOrder($order_id, false, $sender_address_ref);
 
 			if (empty($result['success'])) {
 				$json['error'] = (string)($result['error'] ?? $this->language->get('error_np_ttn_failed'));
@@ -2084,7 +2090,9 @@ class Order extends \Opencart\System\Engine\Controller {
 			$meta_before = $this->model_extension_manline_shipping_novaposhta->getOrderMeta($order_id);
 			$old_ttn = trim((string)($meta_before['ttn_number'] ?? ''));
 
-			$result = $this->model_extension_manline_shipping_novaposhta->createTtnForOrder($order_id, true);
+			$sender_address_ref = trim((string)($this->request->post['sender_address_ref'] ?? ''));
+
+			$result = $this->model_extension_manline_shipping_novaposhta->createTtnForOrder($order_id, true, $sender_address_ref);
 
 			if (empty($result['success'])) {
 				$json['error'] = (string)($result['error'] ?? $this->language->get('error_np_ttn_failed'));
@@ -2157,6 +2165,7 @@ class Order extends \Opencart\System\Engine\Controller {
 				'internal_number',
 				'recipient_city_name', 'recipient_address_name', 'delivery_type',
 				'recipient_city_ref', 'recipient_address_ref',
+				'sender_address_ref',
 			];
 
 			foreach ($high_level as $field) {
@@ -2342,6 +2351,35 @@ class Order extends \Opencart\System\Engine\Controller {
 		} elseif ($action === 'getWarehouses') {
 			$json = $this->model_extension_manline_shipping_novaposhta->lookupWarehouses($city_ref, $search, $delivery_type);
 		}
+
+		$this->response->addHeader('Content-Type: application/json');
+		$this->response->setOutput(json_encode($json));
+	}
+
+	/**
+	 * Lookup endpoint for the sender warehouse picker in the TTN edit /
+	 * create modal. Returns the full list of addresses configured under
+	 * the (single) sender counterparty in the connected NP account, so
+	 * the operator can pick "shipping from" instead of relying on
+	 * fetchSenderData()'s implicit "first Warehouse, else first" default.
+	 *
+	 * Idempotent GET-style POST (POST so the same permission gate as the
+	 * other Novaposhta lookup endpoints applies and we can extend later
+	 * with filter params without breaking the URL contract).
+	 */
+	public function novaposhtaSenderLookup(): void {
+		$json = [];
+
+		if (!$this->user->hasPermission('modify', 'sale/order')) {
+			$this->response->addHeader('Content-Type: application/json');
+			$this->response->setOutput(json_encode($json));
+
+			return;
+		}
+
+		$this->load->model('extension/manline/shipping/novaposhta');
+
+		$json = $this->model_extension_manline_shipping_novaposhta->lookupSenderAddresses();
 
 		$this->response->addHeader('Content-Type: application/json');
 		$this->response->setOutput(json_encode($json));

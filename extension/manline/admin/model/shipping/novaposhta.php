@@ -45,7 +45,7 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 		return $row;
 	}
 
-	public function createTtnForOrder(int $order_id, bool $force = false): array {
+	public function createTtnForOrder(int $order_id, bool $force = false, string $sender_address_ref = ''): array {
 		if ($order_id <= 0) {
 			return ['success' => false, 'error' => 'Order ID is missing.'];
 		}
@@ -119,7 +119,11 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 				throw new \RuntimeException('City or destination address ref is missing for TTN creation.');
 			}
 
-			$sender = $this->fetchSenderData($api_key, $api_url);
+			// Operator-chosen sender warehouse (from the modal dropdown) is
+			// preferred over the auto-picked "first Warehouse, else first"
+			// fallback inside fetchSenderData. Empty string keeps the
+			// legacy auto-pick behaviour.
+			$sender = $this->fetchSenderData($api_key, $api_url, $sender_address_ref);
 			$recipient = $this->fetchOrCreateRecipientData($order_info, $city_ref, $api_key, $api_url);
 			$order_data = $this->getOrderData($order_id, $order_info, $delivery_type);
 
@@ -499,6 +503,44 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 
 			if ($new_delivery_type !== '') {
 				$normalized_changes['ServiceType'] = $this->mapServiceType($new_delivery_type);
+			}
+		}
+
+		// High-level field: sender address. The form sends `sender_address_ref`
+		// = the chosen warehouse's NP Ref from the dropdown. We re-fetch the
+		// full sender block with that override so Sender / SenderAddress /
+		// CitySender / ContactSender / SendersPhone all move together as a
+		// consistent set — half-updating those refs (e.g. swap address but
+		// leave city) is what makes NP issue silent courier-pickup orders.
+		if (array_key_exists('sender_address_ref', $changes)) {
+			$override_ref = trim((string)$changes['sender_address_ref']);
+
+			if ($override_ref !== '') {
+				$credentials_sender = $this->getApiCredentials();
+
+				if (empty($credentials_sender['success'])) {
+					return ['success' => false, 'error' => (string)($credentials_sender['error'] ?? 'Nova Poshta API credentials are not configured.')];
+				}
+
+				try {
+					$sender = $this->fetchSenderData(
+						(string)$credentials_sender['api_key'],
+						(string)$credentials_sender['api_url'],
+						$override_ref
+					);
+				} catch (\Throwable $e) {
+					return ['success' => false, 'error' => 'Sender address lookup failed: ' . $e->getMessage()];
+				}
+
+				if (trim((string)$sender['address_ref']) !== $override_ref) {
+					return ['success' => false, 'error' => 'Selected sender address is no longer available in Nova Poshta.'];
+				}
+
+				$normalized_changes['Sender'] = $sender['ref'];
+				$normalized_changes['SenderAddress'] = $sender['address_ref'];
+				$normalized_changes['CitySender'] = $sender['city_ref'];
+				$normalized_changes['ContactSender'] = $sender['contact_ref'];
+				$normalized_changes['SendersPhone'] = $sender['phone'];
 			}
 		}
 
@@ -918,6 +960,96 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 		return $data;
 	}
 
+	/**
+	 * Live-list of the configured sender's warehouse/door addresses pulled
+	 * straight from Nova Poshta. Drives the "Адреса відправника" picker in
+	 * the TTN modal — operator picks the actual ship-from warehouse instead
+	 * of relying on fetchSenderData()'s "first Warehouse, else first"
+	 * fallback, which has historically picked the wrong city when the NP
+	 * account holds more than one address (the symptom that prompted this
+	 * change: TTNs auto-generating a courier pickup at a Lviv address while
+	 * the operator ships from a different one).
+	 *
+	 * @return array<int, array<string, string>>
+	 */
+	public function lookupSenderAddresses(): array {
+		$credentials = $this->getApiCredentials();
+
+		if (empty($credentials['success'])) {
+			return [];
+		}
+
+		$api_key = (string) $credentials['api_key'];
+		$api_url = (string) $credentials['api_url'];
+
+		$counterparties_response = $this->callApi(
+			$api_key,
+			$api_url,
+			'Counterparty',
+			'getCounterparties',
+			['CounterpartyProperty' => 'Sender', 'Page' => 1]
+		);
+
+		if (empty($counterparties_response['success']) || empty($counterparties_response['data'][0]['Ref'])) {
+			return [];
+		}
+
+		$sender_ref = trim((string) $counterparties_response['data'][0]['Ref']);
+
+		$addresses_response = $this->callApi(
+			$api_key,
+			$api_url,
+			'Counterparty',
+			'getCounterpartyAddresses',
+			['Ref' => $sender_ref, 'Page' => 1]
+		);
+
+		if (empty($addresses_response['success']) || empty($addresses_response['data'])) {
+			return [];
+		}
+
+		$data = [];
+
+		foreach ($addresses_response['data'] as $row) {
+			$ref = trim((string) ($row['Ref'] ?? ''));
+
+			if ($ref === '') {
+				continue;
+			}
+
+			$description = trim((string) ($row['Description'] ?? ''));
+			$city_description = trim((string) ($row['CityDescription'] ?? ''));
+			$address_type = trim((string) ($row['AddressType'] ?? ''));
+
+			// Build a single human-readable line for the dropdown:
+			// "Київ: вул. Хрещатик, 1 [Warehouse]" — city + address + type
+			// so the operator instantly distinguishes warehouse from doors
+			// pickup when both exist under the same counterparty.
+			$label_parts = [];
+			if ($city_description !== '') {
+				$label_parts[] = $city_description;
+			}
+			if ($description !== '') {
+				$label_parts[] = $description;
+			}
+			$label = implode(': ', $label_parts);
+			if ($address_type !== '') {
+				$label .= ' [' . $address_type . ']';
+			}
+
+			$data[] = [
+				'ref' => $ref,
+				'value' => $ref,
+				'description' => $description,
+				'city' => $city_description,
+				'address_type' => $address_type,
+				'label' => $label !== '' ? $label : $ref,
+			];
+		}
+
+		return $data;
+	}
+
 	private function getOrderData(int $order_id, array $order_info, string $delivery_type = ''): array {
 		$this->load->model('sale/order');
 
@@ -1070,7 +1202,7 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 		];
 	}
 
-	private function fetchSenderData(string $api_key, string $api_url): array {
+	private function fetchSenderData(string $api_key, string $api_url, string $override_address_ref = ''): array {
 		$counterparties_response = $this->callApi(
 			$api_key,
 			$api_url,
@@ -1110,14 +1242,31 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 		}
 
 		$sender_address = [];
+		$override_address_ref = trim($override_address_ref);
 
-		foreach ($addresses_response['data'] as $address) {
-			if (($address['AddressType'] ?? '') === 'Warehouse' && !empty($address['Ref'])) {
-				$sender_address = $address;
-				break;
+		// 1) If the operator picked an explicit address from the UI dropdown,
+		//    honour that — but only if it actually belongs to this sender's
+		//    address list (defence-in-depth against a stale/forged ref).
+		if ($override_address_ref !== '') {
+			foreach ($addresses_response['data'] as $address) {
+				if (trim((string)($address['Ref'] ?? '')) === $override_address_ref) {
+					$sender_address = $address;
+					break;
+				}
 			}
 		}
 
+		// 2) Otherwise, prefer the first Warehouse-type address.
+		if (!$sender_address) {
+			foreach ($addresses_response['data'] as $address) {
+				if (($address['AddressType'] ?? '') === 'Warehouse' && !empty($address['Ref'])) {
+					$sender_address = $address;
+					break;
+				}
+			}
+		}
+
+		// 3) Last-resort fallback: whatever NP returned first.
 		if (!$sender_address) {
 			$sender_address = $addresses_response['data'][0];
 		}
