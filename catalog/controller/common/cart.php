@@ -37,6 +37,11 @@ class Cart extends \Opencart\System\Engine\Controller {
 
 		$data['text_items'] = sprintf($this->language->get('text_items'), $this->cart->countProducts(), $this->currency->format($total, $this->session->data['currency']));
 
+		$data['heading_title']          = $this->language->get('text_cart');
+		$data['text_checkout']          = $this->language->get('text_checkout');
+		$data['text_continue_shopping'] = $this->language->get('text_continue_shopping');
+		$data['text_empty']             = $this->language->get('text_no_results');
+
 		// Products
 		$data['products'] = [];
 

@@ -1,7 +1,7 @@
 {# Manline mini-cart (ported from legacy template/module/cart.tpl) #}
 <div id="cart" class="cart-popup">
   <div class="heading">
-    <a href="{{ checkout }}" class="cart_href" title="{{ heading_title|default('Корзина') }}">
+    <a href="{{ checkout }}" class="cart_href" title="{{ heading_title }}">
       <span id="cart-total">{{ text_items|raw }}</span>
     </a>
   </div>
@@ -61,12 +61,12 @@
 
       <div class="center">
         <div class="checkout action">
-          <a href="#" class="gost">Продолжить покупки</a>
-          <a class="button btn" href="{{ checkout }}">Оформить заказ</a>
+          <a href="#" class="gost">{{ text_continue_shopping }}</a>
+          <a class="button btn" href="{{ checkout }}">{{ text_checkout }}</a>
         </div>
       </div>
     {% else %}
-      <div class="empty">{{ text_empty|default('Ваша корзина пуста!') }}</div>
+      <div class="empty">{{ text_empty }}</div>
     {% endif %}
   </div>
 

@@ -15,6 +15,7 @@ $_['text_no_results']            = 'Ваша корзина пуста!';
 $_['text_model']                 = 'Модель';
 $_['text_cart']                  = 'Корзина';
 $_['text_checkout']              = 'Оформить заказ';
+$_['text_continue_shopping']     = 'Продолжить покупки';
 
 // Error
 $_['error_product']              = 'Товар не найден!';

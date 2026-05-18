@@ -14,6 +14,7 @@ $_['text_no_results']            = 'Votre panier est vide!';
 $_['text_model']                 = 'Modèle';
 $_['text_cart']                  = 'Voir le panier';
 $_['text_checkout']              = 'Paiement';
+$_['text_continue_shopping']     = 'Continuer vos achats';
 
 // Erreur
 $_['error_product']              = 'Attention: Le produit est introuvable!';

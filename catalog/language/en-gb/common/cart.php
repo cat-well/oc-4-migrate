@@ -14,6 +14,7 @@ $_['text_no_results']            = 'Your shopping cart is empty!';
 $_['text_model']                 = 'Model';
 $_['text_cart']                  = 'View Cart';
 $_['text_checkout']              = 'Checkout';
+$_['text_continue_shopping']     = 'Continue Shopping';
 
 // Error
 $_['error_product']              = 'Warning: Product could not be found!';

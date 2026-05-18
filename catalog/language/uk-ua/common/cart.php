@@ -15,6 +15,7 @@ $_['text_no_results']            = 'Ваш кошик порожній!';
 $_['text_model']                 = 'Модель';
 $_['text_cart']                  = 'Кошик';
 $_['text_checkout']              = 'Оформити замовлення';
+$_['text_continue_shopping']     = 'Продовжити покупки';
 
 // Error
 $_['error_product']              = 'Товар не знайдено!';
