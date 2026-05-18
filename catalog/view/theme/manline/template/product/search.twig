@@ -36,11 +36,8 @@
 
       <div class="title"><h1>{{ heading_title }}</h1></div>
 
-      {% set is_ua = (language|default('')) in ['uk-ua','ua'] %}
       <div class="product-filter">
-        <button type="button" id="mobile-filter-toggle" aria-controls="mobile-filter-drawer" aria-expanded="false">
-          {{ is_ua ? 'Фільтри' : 'Фильтры' }}
-        </button>
+        <button type="button" id="mobile-filter-toggle" aria-controls="mobile-filter-drawer" aria-expanded="false">Фильтры</button>
 
         <div class="sort">
           <div class="product-filter-title">{{ text_sort }}:</div>
@@ -79,12 +76,12 @@
     {{ column_right }}
   </div>
 
-  {# Mobile-only filter drawer. Populated on first open by cloning #filterpro from the desktop aside. #}
+  {# Mobile-only filter drawer. On open, #filterpro is moved here from the desktop aside (preserving its event listeners). On close, it's moved back. #}
   <div id="mobile-filter-drawer" aria-hidden="true">
     <div class="mfd-backdrop"></div>
-    <aside class="mfd-panel" role="dialog" aria-modal="true" aria-label="{{ is_ua ? 'Фільтри' : 'Фильтры' }}">
+    <aside class="mfd-panel" role="dialog" aria-modal="true" aria-label="Filter">
       <div class="mfd-header">
-        <span class="mfd-title">{{ is_ua ? 'Фільтри' : 'Фильтры' }}</span>
+        <span class="mfd-title">Фильтры</span>
         <button type="button" class="mfd-close" aria-label="Close">×</button>
       </div>
       <div class="mfd-body"></div>
@@ -135,42 +132,45 @@
     var drawer = document.getElementById('mobile-filter-drawer');
     if (!btn || !drawer) return;
 
+    var isUa = String(window.ocLanguage || '').toLowerCase() === 'uk-ua';
+    var label = isUa ? 'Фільтри' : 'Фильтры';
+    btn.textContent = label;
+    var titleEl = drawer.querySelector('.mfd-title');
+    if (titleEl) titleEl.textContent = label;
+    var panelEl = drawer.querySelector('.mfd-panel');
+    if (panelEl) panelEl.setAttribute('aria-label', label);
+
+    var initialFp = document.getElementById('filterpro');
+    if (!initialFp) { btn.style.display = 'none'; return; }
+
     var body = drawer.querySelector('.mfd-body');
     var backdrop = drawer.querySelector('.mfd-backdrop');
     var closeBtn = drawer.querySelector('.mfd-close');
+    var originalParent = initialFp.parentNode;
 
-    function populate() {
-      if (body.firstChild) return;
-      var src = document.getElementById('filterpro');
-      if (!src) return;
-      var clone = src.cloneNode(true);
-      clone.id = 'filterpro-mobile';
-      clone.querySelectorAll('[id]').forEach(function (el) { el.id = el.id + '-mobile'; });
-      body.appendChild(clone);
-    }
-
-    function open() {
-      populate();
+    function openDrawer() {
+      var fp = document.getElementById('filterpro');
+      if (fp && fp.parentNode !== body) body.appendChild(fp);
       drawer.classList.add('is-open');
       drawer.setAttribute('aria-hidden', 'false');
       btn.setAttribute('aria-expanded', 'true');
       document.body.classList.add('mfd-lock');
     }
-    function close() {
+    function closeDrawer() {
       drawer.classList.remove('is-open');
       drawer.setAttribute('aria-hidden', 'true');
       btn.setAttribute('aria-expanded', 'false');
       document.body.classList.remove('mfd-lock');
+      var fp = document.getElementById('filterpro');
+      if (fp && fp.parentNode === body && originalParent) originalParent.appendChild(fp);
     }
 
-    btn.addEventListener('click', open);
-    backdrop.addEventListener('click', close);
-    closeBtn.addEventListener('click', close);
+    btn.addEventListener('click', openDrawer);
+    backdrop.addEventListener('click', closeDrawer);
+    closeBtn.addEventListener('click', closeDrawer);
     document.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape' && drawer.classList.contains('is-open')) close();
+      if (e.key === 'Escape' && drawer.classList.contains('is-open')) closeDrawer();
     });
-
-    if (!document.getElementById('filterpro')) btn.style.display = 'none';
   })();
 </script>
 
