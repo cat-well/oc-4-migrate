@@ -42,6 +42,7 @@ class Simplecheckout extends \Opencart\System\Engine\Controller {
 			$payment_form = $this->load->controller('checkout/confirm');
 
 			$this->persistNovaPoshtaOrderMeta();
+			$this->mirrorPaymentFromShipping();
 
 			$payment_code = (string)($state['payment_code'] ?? '');
 
@@ -211,6 +212,55 @@ class Simplecheckout extends \Opencart\System\Engine\Controller {
 
 		$this->load->model('extension/manline/shipping/novaposhta');
 		$this->model_extension_manline_shipping_novaposhta->saveOrderMeta($order_id, $meta);
+	}
+
+	/**
+	 * OC4's checkout/confirm intentionally leaves all payment_* fields empty when
+	 * config_checkout_payment_address = 0 (the billing-address form is skipped
+	 * for SimpleCheckout's speed). That's fine for the customer flow, but the
+	 * admin order edit screen later refuses to let the operator change the
+	 * shipping method, surfacing a "потрібні дані клієнта" warning, because it
+	 * expects a non-empty payment_firstname.
+	 *
+	 * Mirror the shipping_* columns into payment_* on the freshly-created order
+	 * so the admin UI works. Only triggers when:
+	 *   - config_checkout_payment_address is OFF (otherwise OC4 populated billing properly),
+	 *   - the just-created order's payment_firstname is empty,
+	 *   - and shipping_firstname is filled.
+	 *
+	 * Safe to run repeatedly: WHERE clause skips rows that already have payment data.
+	 */
+	private function mirrorPaymentFromShipping(): void {
+		if ($this->config->get('config_checkout_payment_address')) {
+			return;
+		}
+
+		$order_id = (int)($this->session->data['order_id'] ?? 0);
+
+		if ($order_id <= 0) {
+			return;
+		}
+
+		$this->db->query(
+			"UPDATE `" . DB_PREFIX . "order` SET
+				`payment_firstname`      = `shipping_firstname`,
+				`payment_lastname`       = `shipping_lastname`,
+				`payment_company`        = `shipping_company`,
+				`payment_address_1`      = `shipping_address_1`,
+				`payment_address_2`      = `shipping_address_2`,
+				`payment_city`           = `shipping_city`,
+				`payment_postcode`       = `shipping_postcode`,
+				`payment_country`        = `shipping_country`,
+				`payment_country_id`     = `shipping_country_id`,
+				`payment_zone`           = `shipping_zone`,
+				`payment_zone_id`        = `shipping_zone_id`,
+				`payment_address_format` = `shipping_address_format`,
+				`payment_custom_field`   = `shipping_custom_field`
+			WHERE `order_id` = '" . $order_id . "'
+			  AND (`payment_firstname` IS NULL OR `payment_firstname` = '')
+			  AND `shipping_firstname` IS NOT NULL
+			  AND `shipping_firstname` <> ''"
+		);
 	}
 
 	private function outputJson(array $json): void {
