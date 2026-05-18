@@ -145,8 +145,11 @@ img.mfp-img{width:auto;max-width:100%;height:auto;display:block;line-height:0;-w
 #cart .content.white-popup{border-radius:10px;margin:25px 20px;overflow:visible;}
 .action a.gost{background:#ececec none repeat scroll 0 0;border:1px solid #ececec;border-radius:50px;color:#333e48;float:left;font-weight:normal;line-height:27px;min-width:50px;padding:5px 15px;text-align:center;transition:all 0.3s ease-in-out 0s;}
 #cart .mfp-close{background:#fed700 none repeat scroll 0 0;border-radius:50%;color:#fff;height:40px;line-height:1.2;opacity:1;padding:0 !important;right:-20px;text-align:center;top:-20px;width:40px;}
-#cart .action .button.btn{float:right;font-size:20px;min-width:45%;padding:10px 30px;}
-#cart .action a.gost{float:left;font-size:20px;min-width:45%;padding:10px 30px;}
+#cart .action .button.btn{font-size:20px;min-width:45%;padding:10px 30px;}
+#cart .action a.gost{font-size:20px;min-width:45%;padding:10px 30px;}
+/* Cart-popup action row: flex layout so longer labels (e.g. UA) don't break alignment. */
+#cart .checkout.action{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;}
+#cart .checkout.action .button.btn,#cart .checkout.action a.gost{float:none;}
 #header .action .button.btn{float:none;width:auto;}
 .mfp-content .subtotal{margin:10px 25px 0;}
 .mfp-content .total_w{padding:5px 15px;}
