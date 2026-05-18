@@ -4,7 +4,7 @@
     <div class="simplecheckout-table-form">
       <div class="simplecheckout-table-form-left"><span class="simplecheckout-required">*</span> {{ entry_firstname }}</div>
       <div class="simplecheckout-table-form-right">
-        <input type="text" name="firstname" value="{{ customer.firstname }}" placeholder="{{ placeholder_firstname }}" data-onchange="reloadAll" />
+        <input type="text" name="firstname" value="{{ customer.firstname }}" placeholder="{{ placeholder_firstname }}" />
         {% if errors.firstname %}
           <div class="simplecheckout-error-text">{{ errors.firstname }}</div>
         {% endif %}
@@ -12,7 +12,7 @@
 
       <div class="simplecheckout-table-form-left"><span class="simplecheckout-required">*</span> {{ entry_lastname }}</div>
       <div class="simplecheckout-table-form-right">
-        <input type="text" name="lastname" value="{{ customer.lastname }}" placeholder="{{ placeholder_lastname }}" data-onchange="reloadAll" />
+        <input type="text" name="lastname" value="{{ customer.lastname }}" placeholder="{{ placeholder_lastname }}" />
         {% if errors.lastname %}
           <div class="simplecheckout-error-text">{{ errors.lastname }}</div>
         {% endif %}
@@ -20,7 +20,7 @@
 
       <div class="simplecheckout-table-form-left"><span class="simplecheckout-required">*</span> {{ entry_telephone }}</div>
       <div class="simplecheckout-table-form-right">
-        <input type="text" name="telephone" value="{{ customer.telephone }}" placeholder="{{ placeholder_telephone }}" data-onchange="reloadAll" />
+        <input type="text" name="telephone" value="{{ customer.telephone }}" placeholder="{{ placeholder_telephone }}" />
         {% if errors.telephone %}
           <div class="simplecheckout-error-text">{{ errors.telephone }}</div>
         {% endif %}
@@ -28,7 +28,7 @@
 
       <div class="simplecheckout-table-form-left"><span class="simplecheckout-required">*</span> {{ entry_email }}</div>
       <div class="simplecheckout-table-form-right">
-        <input type="text" name="email" value="{{ customer.email }}" placeholder="{{ placeholder_email }}" data-onchange="reloadAll" />
+        <input type="text" name="email" value="{{ customer.email }}" placeholder="{{ placeholder_email }}" />
         {% if errors.email %}
           <div class="simplecheckout-error-text">{{ errors.email }}</div>
         {% endif %}
