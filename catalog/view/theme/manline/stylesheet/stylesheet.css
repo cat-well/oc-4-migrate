@@ -3964,6 +3964,47 @@ a.big_image.gal {
     z-index: 9;
 }
 
+/* Product thumbnails strip — style slick prev/next as compact overlay arrows
+   (matching the look of .carusel_prod). Without these rules slick falls back
+   to raw <button>Previous</button> / <button>Next</button> in flow. */
+.additional_w {
+    position: relative;
+}
+
+.additional_w .slick-prev,
+.additional_w .slick-next {
+    background: #fffdf2 no-repeat center / 12px auto;
+    border: 1px solid #fed700;
+    border-radius: 5px;
+    color: transparent;
+    cursor: pointer;
+    font-size: 0;
+    height: 100%;
+    line-height: 0;
+    margin: 0;
+    padding: 0;
+    position: absolute;
+    top: 0;
+    width: 30px;
+    z-index: 2;
+}
+
+.additional_w .slick-prev {
+    background-image: url("/catalog/view/theme/manline/image/slick-prev-pr.png");
+    left: 0;
+}
+
+.additional_w .slick-next {
+    background-image: url("/catalog/view/theme/manline/image/slick-next-pr.png");
+    right: 0;
+}
+
+.additional_w .slick-prev.slick-disabled,
+.additional_w .slick-next.slick-disabled {
+    opacity: 0.35;
+    cursor: default;
+}
+
 .prev-next-w div:hover {
     cursor: pointer;
     background-color: #fed700;
