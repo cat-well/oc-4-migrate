@@ -36,7 +36,12 @@
 
       <div class="title"><h1>{{ heading_title }}</h1></div>
 
+      {% set is_ua = (language|default('')) in ['uk-ua','ua'] %}
       <div class="product-filter">
+        <button type="button" id="mobile-filter-toggle" aria-controls="mobile-filter-drawer" aria-expanded="false">
+          {{ is_ua ? 'Фільтри' : 'Фильтры' }}
+        </button>
+
         <div class="sort">
           <div class="product-filter-title">{{ text_sort }}:</div>
           <select id="input-sort" class="select" onchange="location = this.value;">
@@ -73,6 +78,100 @@
 
     {{ column_right }}
   </div>
+
+  {# Mobile-only filter drawer. Populated on first open by cloning #filterpro from the desktop aside. #}
+  <div id="mobile-filter-drawer" aria-hidden="true">
+    <div class="mfd-backdrop"></div>
+    <aside class="mfd-panel" role="dialog" aria-modal="true" aria-label="{{ is_ua ? 'Фільтри' : 'Фильтры' }}">
+      <div class="mfd-header">
+        <span class="mfd-title">{{ is_ua ? 'Фільтри' : 'Фильтры' }}</span>
+        <button type="button" class="mfd-close" aria-label="Close">×</button>
+      </div>
+      <div class="mfd-body"></div>
+    </aside>
+  </div>
 </div>
+
+<style>
+  #mobile-filter-toggle { display: none; }
+  #mobile-filter-drawer { display: none; }
+  @media (max-width: 991px) {
+    #mobile-filter-toggle {
+      display: inline-block;
+      background: #fed700; color: #000;
+      border: none; padding: 8px 14px;
+      font-weight: 700; font-size: 14px;
+      cursor: pointer; margin: 0 12px 8px 0;
+      border-radius: 3px; vertical-align: middle;
+    }
+    #mobile-filter-drawer.is-open { display: block; }
+    #mobile-filter-drawer .mfd-backdrop {
+      position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 9998;
+    }
+    #mobile-filter-drawer .mfd-panel {
+      position: fixed; top: 0; right: 0; bottom: 0;
+      width: 88%; max-width: 360px; background: #fff;
+      z-index: 9999; overflow-y: auto;
+      transform: translateX(100%); transition: transform .25s ease;
+      display: flex; flex-direction: column;
+    }
+    #mobile-filter-drawer.is-open .mfd-panel { transform: translateX(0); }
+    #mobile-filter-drawer .mfd-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 16px; border-bottom: 1px solid #eee; flex-shrink: 0;
+    }
+    #mobile-filter-drawer .mfd-title { font-weight: 700; }
+    #mobile-filter-drawer .mfd-close {
+      background: none; border: none; font-size: 28px; line-height: 1; cursor: pointer; padding: 0 4px;
+    }
+    #mobile-filter-drawer .mfd-body { padding: 16px; overflow-y: auto; flex: 1; }
+    body.mfd-lock { overflow: hidden; }
+  }
+</style>
+
+<script>
+  (function () {
+    var btn = document.getElementById('mobile-filter-toggle');
+    var drawer = document.getElementById('mobile-filter-drawer');
+    if (!btn || !drawer) return;
+
+    var body = drawer.querySelector('.mfd-body');
+    var backdrop = drawer.querySelector('.mfd-backdrop');
+    var closeBtn = drawer.querySelector('.mfd-close');
+
+    function populate() {
+      if (body.firstChild) return;
+      var src = document.getElementById('filterpro');
+      if (!src) return;
+      var clone = src.cloneNode(true);
+      clone.id = 'filterpro-mobile';
+      clone.querySelectorAll('[id]').forEach(function (el) { el.id = el.id + '-mobile'; });
+      body.appendChild(clone);
+    }
+
+    function open() {
+      populate();
+      drawer.classList.add('is-open');
+      drawer.setAttribute('aria-hidden', 'false');
+      btn.setAttribute('aria-expanded', 'true');
+      document.body.classList.add('mfd-lock');
+    }
+    function close() {
+      drawer.classList.remove('is-open');
+      drawer.setAttribute('aria-hidden', 'true');
+      btn.setAttribute('aria-expanded', 'false');
+      document.body.classList.remove('mfd-lock');
+    }
+
+    btn.addEventListener('click', open);
+    backdrop.addEventListener('click', close);
+    closeBtn.addEventListener('click', close);
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && drawer.classList.contains('is-open')) close();
+    });
+
+    if (!document.getElementById('filterpro')) btn.style.display = 'none';
+  })();
+</script>
 
 {{ footer }}
