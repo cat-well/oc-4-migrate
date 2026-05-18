@@ -552,7 +552,14 @@
                   removalDelay: 200,
                   mainClass: 'mfp-with-anim mfp-zoom-in',
                   callbacks: {
+                    open: function () {
+                      // elevateZoom's .zoomContainer (z-index 99999) sits above the magnific popup
+                      // and intercepts clicks on the qty +/- buttons inside the cart preview.
+                      // Hide it while the cart popup is open (mirrors what set.js does).
+                      $('.zoomContainer').addClass('none');
+                    },
                     close: function () {
+                      $('.zoomContainer').removeClass('none');
                       $('#cart').load('index.php?route=common/cart.info&language={{ language }}');
                     }
                   }
