@@ -3971,6 +3971,13 @@ a.big_image.gal {
     position: relative;
 }
 
+/* Reserve 30px on each side of the thumbnails so the absolute-positioned
+   arrows don't overlap the first / last slide. Same trick as
+   .carusel_prod .slick-list. */
+.additional_w .slick-list {
+    margin: 0 30px;
+}
+
 .additional_w .slick-prev,
 .additional_w .slick-next {
     background: #fffdf2 no-repeat center / 12px auto;
