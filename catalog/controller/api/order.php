@@ -634,22 +634,43 @@ class Order extends \Opencart\System\Engine\Controller {
 			// Order
 			$this->load->model('checkout/order');
 
+			$prev_order_info = null;
+
 			if (!$order_id) {
 				$order_id = $this->model_checkout_order->addOrder($order_data);
 			} else {
-				$order_info = $this->model_checkout_order->getOrder($order_id);
+				$prev_order_info = $this->model_checkout_order->getOrder($order_id);
 
-				if ($order_info) {
+				if ($prev_order_info) {
 					$this->model_checkout_order->editOrder($order_id, $order_data);
 				}
 			}
 
 			$output['order_id'] = $order_id;
 
-			// Set the order history
-			if (isset($post_info['order_status_id'])) {
-				$order_status_id = (int)$post_info['order_status_id'];
+			// Set the order history.
+			//
+			// $post_info has order_status_id defaulted to 0 by $required, so a
+			// plain isset() check can't distinguish "client passed it" from
+			// "we filled the default". Read $this->request->post directly so we
+			// only trust an explicit, non-zero value from the form.
+			//
+			// Without this guard, calling this endpoint to edit an existing
+			// order (admin "Підтвердити" button on sale/order_info) silently
+			// resets the order to status_id=0 — which OC4 treats as
+			// "incomplete" and hides from the standard order list.
+			$post_status_id = (int)($this->request->post['order_status_id'] ?? 0);
+
+			if ($post_status_id > 0) {
+				$order_status_id = $post_status_id;
+			} elseif ($prev_order_info) {
+				// Edit-existing flow with no status in POST: restore the prior
+				// status (editOrder above already wrote a void-history record
+				// using config_void_status_id; this addHistory call returns the
+				// order to where it was before the edit).
+				$order_status_id = (int)$prev_order_info['order_status_id'];
 			} else {
+				// Brand-new order, no explicit status: fall back to default.
 				$order_status_id = (int)$this->config->get('config_order_status_id');
 			}
 
