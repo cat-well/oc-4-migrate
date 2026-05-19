@@ -2188,7 +2188,14 @@ $('#input-product').autocomplete({
                     for (j = 0; j < option['product_option_value'].length; j++) {
                         option_value = option['product_option_value'][j];
 
-                        html += '<option value="' + option_value['product_option_value_id'] + '">' + option_value['name'];
+                        // Manline: variant is out-of-stock when stock-tracking is on
+                        // (subtract=1) AND remaining quantity is <= 0. Prefix the label
+                        // with "* " so the admin can tell unavailable variants apart
+                        // (matches the banner copy "Товари помічені зірочками відсутні...").
+                        var oos = option_value['subtract'] == 1 && option_value['quantity'] <= 0;
+
+                        html += '<option value="' + option_value['product_option_value_id'] + '"' + (oos ? ' data-out-of-stock="1"' : '') + '>';
+                        html += (oos ? '* ' : '') + option_value['name'];
 
                         if (option_value['price']) {
                             html += ' (' + option_value['price_prefix'] + option_value['price'] + ')';
@@ -2211,7 +2218,14 @@ $('#input-product').autocomplete({
                     for (j = 0; j < option['product_option_value'].length; j++) {
                         option_value = option['product_option_value'][j];
 
-                        html += '<option value="' + option_value['product_option_value_id'] + '">' + option_value['name'];
+                        // Manline: variant is out-of-stock when stock-tracking is on
+                        // (subtract=1) AND remaining quantity is <= 0. Prefix the label
+                        // with "* " so the admin can tell unavailable variants apart
+                        // (matches the banner copy "Товари помічені зірочками відсутні...").
+                        var oos = option_value['subtract'] == 1 && option_value['quantity'] <= 0;
+
+                        html += '<option value="' + option_value['product_option_value_id'] + '"' + (oos ? ' data-out-of-stock="1"' : '') + '>';
+                        html += (oos ? '* ' : '') + option_value['name'];
 
                         if (option_value['price']) {
                             html += ' (' + option_value['price_prefix'] + option_value['price'] + ')';
@@ -2260,7 +2274,14 @@ $('#input-product').autocomplete({
                     for (j = 0; j < option['product_option_value'].length; j++) {
                         option_value = option['product_option_value'][j];
 
-                        html += '<option value="' + option_value['product_option_value_id'] + '">' + option_value['name'];
+                        // Manline: variant is out-of-stock when stock-tracking is on
+                        // (subtract=1) AND remaining quantity is <= 0. Prefix the label
+                        // with "* " so the admin can tell unavailable variants apart
+                        // (matches the banner copy "Товари помічені зірочками відсутні...").
+                        var oos = option_value['subtract'] == 1 && option_value['quantity'] <= 0;
+
+                        html += '<option value="' + option_value['product_option_value_id'] + '"' + (oos ? ' data-out-of-stock="1"' : '') + '>';
+                        html += (oos ? '* ' : '') + option_value['name'];
 
                         if (option_value['price']) {
                             html += ' (' + option_value['price_prefix'] + option_value['price'] + ')';
