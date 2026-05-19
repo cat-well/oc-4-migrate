@@ -1505,7 +1505,13 @@ class Product extends \Opencart\System\Engine\Controller {
 								'option_value_id'         => $product_option_value['option_value_id'],
 								'name'                    => $option_value_info['name'],
 								'price'                   => (float)$product_option_value['price'] ? $this->currency->format($product_option_value['price'], $this->config->get('config_currency')) : false,
-								'price_prefix'            => $product_option_value['price_prefix']
+								'price_prefix'            => $product_option_value['price_prefix'],
+								// Manline: surface stock-tracking flags so the admin order-edit
+								// modal can mark out-of-stock variants with an asterisk in the
+								// dropdown. quantity = remaining stock; subtract = whether the
+								// option deducts from stock (0 → unlimited, ignore quantity).
+								'quantity'                => (int) ($product_option_value['quantity'] ?? 0),
+								'subtract'                => (int) ($product_option_value['subtract'] ?? 0),
 							];
 						}
 					}
