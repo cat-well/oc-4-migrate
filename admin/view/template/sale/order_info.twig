@@ -710,13 +710,15 @@
           </div>
         </div>
 
-        <h6 class="text-uppercase text-muted mb-2 mt-3">{{ text_np_section_cod }}</h6>
+        <h6 class="text-uppercase text-muted mb-2 mt-3">{{ text_np_section_additional_services }}</h6>
         <div class="row">
           <div class="col-md-4 mb-3">
-            <div class="form-check form-switch mt-4">
-              <input class="form-check-input" type="checkbox" id="np-edit-cod-enabled"/>
-              <label class="form-check-label" for="np-edit-cod-enabled">{{ entry_np_cod_enabled }}</label>
-            </div>
+            <label for="np-edit-additional-service" class="form-label">{{ entry_np_additional_service }}</label>
+            <select id="np-edit-additional-service" class="form-select">
+              <option value="none">{{ text_np_additional_none }}</option>
+              <option value="cod">{{ text_np_additional_cod }}</option>
+              <option value="control">{{ text_np_additional_control }}</option>
+            </select>
           </div>
           <div class="col-md-4 mb-3">
             <label for="np-edit-cod-total" class="form-label">{{ entry_np_cod_total }}</label>
@@ -731,6 +733,18 @@
             </select>
           </div>
         </div>
+
+        {# PaymentMethod for COD/control is derived from the additional-service dropdown.
+           Keep the underlying select in DOM for backward compatibility but hide it. #}
+        <script>
+          document.addEventListener('DOMContentLoaded', function() {
+            var el = document.getElementById('np-edit-payment-method');
+            if (el) {
+              var col = el.closest('.col-md-6');
+              if (col) col.classList.add('d-none');
+            }
+          });
+        </script>
 
         <h6 class="text-uppercase text-muted mb-2 mt-3">{{ text_np_section_sender }}</h6>
         <div class="row">
@@ -1502,12 +1516,36 @@ $(document).on('click', '#button-np-edit-ttn', function() {
 
     // Payment
     $('#np-edit-payer-type').val(payload.PayerType || 'Recipient');
-    $('#np-edit-payment-method').val(payload.PaymentMethod || 'Cash');
 
-    // COD
-    $('#np-edit-cod-enabled').prop('checked', cod !== null);
+    // Additional services (COD / Payment control)
+    // Both services use BackwardDeliveryData, but differ by PaymentMethod:
+    //   cod      → Cash
+    //   control  → NonCash
+    var additional = 'none';
+    if (cod !== null) {
+        additional = (String(payload.PaymentMethod || '') === 'NonCash') ? 'control' : 'cod';
+    }
+    $('#np-edit-additional-service').val(additional);
     $('#np-edit-cod-total').val(cod ? cod.RedeliveryString : '');
     $('#np-edit-cod-payer').val(cod ? cod.PayerType : 'Recipient');
+
+    // Derive PaymentMethod from the service dropdown (do not let it drift).
+    function syncNpAdditionalServiceUI() {
+        var mode = $('#np-edit-additional-service').val() || 'none';
+        var enabled = (mode !== 'none');
+        $('#np-edit-cod-total').prop('disabled', !enabled);
+        $('#np-edit-cod-payer').prop('disabled', !enabled);
+
+        if (!enabled) {
+            $('#np-edit-payment-method').val('Cash');
+            return;
+        }
+
+        $('#np-edit-payment-method').val(mode === 'control' ? 'NonCash' : 'Cash');
+    }
+
+    $('#np-edit-additional-service').off('change.npAdd').on('change.npAdd', syncNpAdditionalServiceUI);
+    syncNpAdditionalServiceUI();
 
     // Address — pre-fill from order_novaposhta meta so operator sees the
     // CURRENT address (otherwise they have no way to verify what's set).
@@ -1787,7 +1825,7 @@ $(document).on('click', '#button-np-edit-ttn-save', function() {
         PaymentMethod: $('#np-edit-payment-method').val(),
         RecipientsPhone: $('#np-edit-recipient-phone').val(),
         // High-level fields the model translates to NP-shape internally
-        cod_enabled: $('#np-edit-cod-enabled').is(':checked') ? '1' : '0',
+        cod_enabled: ($('#np-edit-additional-service').val() || 'none') === 'none' ? '0' : '1',
         cod_total: $('#np-edit-cod-total').val(),
         cod_payer: $('#np-edit-cod-payer').val(),
         volume_width: $('#np-edit-volume-width').val(),

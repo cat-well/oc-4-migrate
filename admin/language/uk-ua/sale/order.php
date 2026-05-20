@@ -55,6 +55,7 @@ $_['text_np_edit_intro']            = 'Оновлює існуючу накла�
 $_['text_np_section_cargo']         = 'Параметри відправлення';
 $_['text_np_section_dimensions']    = 'Габарити';
 $_['text_np_section_payment']       = 'Платник та оплата';
+$_['text_np_section_additional_services'] = 'Додаткові послуги';
 $_['text_np_section_cod']           = 'Післяплата';
 $_['text_np_section_address']       = 'Адреса отримувача';
 $_['text_np_section_sender']        = 'Адреса відправника';
@@ -71,6 +72,7 @@ $_['entry_np_cargo_type']           = 'Тип вантажу';
 $_['entry_np_description']          = 'Опис відправлення';
 $_['entry_np_payer_type']           = 'Платник за доставку';
 $_['entry_np_payment_method']       = 'Форма оплати';
+$_['entry_np_additional_service']   = 'Послуга';
 $_['entry_np_volume_width']         = 'Ширина (см)';
 $_['entry_np_volume_length']        = 'Довжина (см)';
 $_['entry_np_volume_height']        = 'Висота (см)';
@@ -92,6 +94,9 @@ $_['text_np_payer_third']           = 'Третя особа';
 $_['text_np_payer_hint']            = 'Оберіть «Відправник», щоб надати клієнту безкоштовну доставку — Нова Пошта спише вартість із нашого рахунку відправника, а не з клієнта при отриманні.';
 $_['text_np_payment_cash']          = 'Готівка';
 $_['text_np_payment_noncash']       = 'Безготівка';
+$_['text_np_additional_none']       = 'Жодної';
+$_['text_np_additional_cod']        = 'Післяплата';
+$_['text_np_additional_control']    = 'Контроль оплати';
 
 // ── Buttons ──
 $_['button_np_create_ttn']          = 'Створити TTN';
