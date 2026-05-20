@@ -1024,27 +1024,10 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 
 		$data = [];
 
-		// Optional allowlist: when NP returns many door/street addresses but
-		// the business process only uses a subset (e.g. a few sender
-		// warehouses/branches). Configure as comma/newline-separated list of
-		// SenderAddress Refs in shipping_novaposhta_sender_address_allowlist.
-		$allowlist_raw = (string)$this->config->get('shipping_novaposhta_sender_address_allowlist');
-		$allowlist = [];
-		if (trim($allowlist_raw) !== '') {
-			foreach (preg_split('/[\s,;]+/', $allowlist_raw) as $ref) {
-				$ref = trim((string)$ref);
-				if ($ref !== '') $allowlist[$ref] = true;
-			}
-		}
-
 		foreach ($all_rows as $row) {
 			$ref = trim((string) ($row['Ref'] ?? ''));
 
 			if ($ref === '') {
-				continue;
-			}
-
-			if ($allowlist && empty($allowlist[$ref])) {
 				continue;
 			}
 
