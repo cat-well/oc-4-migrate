@@ -1647,9 +1647,17 @@ $(document).on('click', '#button-np-create-ttn', function() {
     $('#np-create-delivery-type').val(currentDeliveryType);
 
     // Cargo defaults
+    var orderTotal = (function() {
+        var t = {{ order_info.total|default(0)|json_encode|raw }};
+        // Ensure we always return a sane positive number
+        if (t === null || t === '' || isNaN(parseFloat(t))) return 1;
+        t = parseFloat(t);
+        return t > 0 ? t : 1;
+    })();
+
     $('#np-create-weight').val('1');
     $('#np-create-seats').val('1');
-    $('#np-create-cost').val({{ total|json_encode|raw }} || '1');
+    $('#np-create-cost').val(orderTotal);
     $('#np-create-description').val('Одяг');
 
     // Payment defaults (auto from order payment method)
@@ -1666,10 +1674,9 @@ $(document).on('click', '#button-np-create-ttn', function() {
         $('#np-create-cod-payer').val('Recipient');
     } else {
         // Pay on delivery → "payment control" by default
-        var total = {{ total|json_encode|raw }} || '';
         $('#np-create-payer-type').val('Recipient');
         $('#np-create-additional-service').val('control');
-        $('#np-create-cod-total').val(total);
+        $('#np-create-cod-total').val(orderTotal);
         $('#np-create-cod-payer').val('Recipient');
     }
 
@@ -1725,7 +1732,7 @@ $(document).on('click', '#button-np-create-ttn-confirm', function() {
 
     // If control/cod selected but amount not set, default to order total.
     if ((data.additional_service === 'control' || data.additional_service === 'cod') && (!data.cod_total || parseFloat(data.cod_total) <= 0)) {
-        data.cod_total = {{ total|json_encode|raw }} || data.Cost;
+        data.cod_total = orderTotal || data.Cost;
     }
 
     npTtnAction('{{ novaposhta_create_ttn|replace({'&amp;':'&'})|escape('js') }}', this, data);
