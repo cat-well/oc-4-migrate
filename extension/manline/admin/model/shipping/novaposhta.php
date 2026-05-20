@@ -996,21 +996,35 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 
 		$sender_ref = trim((string) $counterparties_response['data'][0]['Ref']);
 
-		$addresses_response = $this->callApi(
-			$api_key,
-			$api_url,
-			'Counterparty',
-			'getCounterpartyAddresses',
-			['Ref' => $sender_ref, 'Page' => 1]
-		);
+		// NOTE: NP can paginate results. Pull all pages to avoid the operator
+		// seeing a seemingly "random" subset when the account has many sender
+		// addresses configured.
+		$all_rows = [];
+		for ($page = 1; $page <= 20; $page++) {
+			$addresses_response = $this->callApi(
+				$api_key,
+				$api_url,
+				'Counterparty',
+				'getCounterpartyAddresses',
+				['Ref' => $sender_ref, 'Page' => $page]
+			);
 
-		if (empty($addresses_response['success']) || empty($addresses_response['data'])) {
+			if (empty($addresses_response['success']) || empty($addresses_response['data'])) {
+				break;
+			}
+
+			foreach ($addresses_response['data'] as $row) {
+				$all_rows[] = $row;
+			}
+		}
+
+		if (!$all_rows) {
 			return [];
 		}
 
 		$data = [];
 
-		foreach ($addresses_response['data'] as $row) {
+		foreach ($all_rows as $row) {
 			$ref = trim((string) ($row['Ref'] ?? ''));
 
 			if ($ref === '') {
@@ -1046,6 +1060,16 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 				'label' => $label !== '' ? $label : $ref,
 			];
 		}
+
+		// Sort for stable UX (avoids "random" perceived order).
+		usort($data, function($a, $b) {
+			$ac = mb_strtolower((string)($a['city'] ?? ''), 'UTF-8');
+			$bc = mb_strtolower((string)($b['city'] ?? ''), 'UTF-8');
+			if ($ac !== $bc) return $ac <=> $bc;
+			$al = mb_strtolower((string)($a['label'] ?? ''), 'UTF-8');
+			$bl = mb_strtolower((string)($b['label'] ?? ''), 'UTF-8');
+			return $al <=> $bl;
+		});
 
 		return $data;
 	}
