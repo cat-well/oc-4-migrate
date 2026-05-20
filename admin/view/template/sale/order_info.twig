@@ -709,6 +709,43 @@
             <input type="text" id="np-create-description" class="form-control" maxlength="90"/>
           </div>
         </div>
+
+        <h6 class="text-uppercase text-muted mb-2 mt-3">{{ text_np_section_payment }}</h6>
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <label for="np-create-payer-type" class="form-label">{{ entry_np_payer_type }}</label>
+            <select id="np-create-payer-type" class="form-select">
+              <option value="Recipient">{{ text_np_payer_recipient }}</option>
+              <option value="Sender">{{ text_np_payer_sender }}</option>
+              <option value="ThirdPerson">{{ text_np_payer_third }}</option>
+            </select>
+            <div class="form-text">{{ text_np_payer_hint }}</div>
+          </div>
+        </div>
+
+        <h6 class="text-uppercase text-muted mb-2 mt-3">{{ text_np_section_additional_services }}</h6>
+        <div class="row">
+          <div class="col-md-4 mb-3">
+            <label for="np-create-additional-service" class="form-label">{{ entry_np_additional_service }}</label>
+            <select id="np-create-additional-service" class="form-select">
+              <option value="none">{{ text_np_additional_none }}</option>
+              <option value="cod">{{ text_np_additional_cod }}</option>
+              <option value="control">{{ text_np_additional_control }}</option>
+            </select>
+          </div>
+          <div class="col-md-4 mb-3">
+            <label for="np-create-cod-total" class="form-label">{{ entry_np_cod_total }}</label>
+            <input type="number" step="0.01" min="0" id="np-create-cod-total" class="form-control"/>
+          </div>
+          <div class="col-md-4 mb-3">
+            <label for="np-create-cod-payer" class="form-label">{{ entry_np_cod_payer }}</label>
+            <select id="np-create-cod-payer" class="form-select">
+              <option value="Recipient">{{ text_np_payer_recipient }}</option>
+              <option value="Sender">{{ text_np_payer_sender }}</option>
+              <option value="ThirdPerson">{{ text_np_payer_third }}</option>
+            </select>
+          </div>
+        </div>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ button_cancel }}</button>
@@ -1615,6 +1652,12 @@ $(document).on('click', '#button-np-create-ttn', function() {
     $('#np-create-cost').val({{ total|json_encode|raw }} || '1');
     $('#np-create-description').val('Одяг');
 
+    // Payment defaults
+    $('#np-create-payer-type').val('Recipient');
+    $('#np-create-additional-service').val('none');
+    $('#np-create-cod-total').val('');
+    $('#np-create-cod-payer').val('Recipient');
+
     // Sender defaults
     $('#np-create-sender-city').val('');
     $('#np-create-sender-city-ref').val('');
@@ -1624,6 +1667,20 @@ $(document).on('click', '#button-np-create-ttn', function() {
 
     bindNpCreateSenderPicker();
     bindNpCreateRecipientPicker();
+
+    function syncNpCreateAdditionalServiceUI() {
+        var mode = $('#np-create-additional-service').val() || 'none';
+        var enabled = (mode !== 'none');
+        $('#np-create-cod-total').prop('disabled', !enabled);
+        $('#np-create-cod-payer').prop('disabled', !enabled);
+
+        if (!enabled) {
+            $('#np-create-cod-total').val('');
+            $('#np-create-cod-payer').val('Recipient');
+        }
+    }
+    $('#np-create-additional-service').off('change.npCreateAdd').on('change.npCreateAdd', syncNpCreateAdditionalServiceUI);
+    syncNpCreateAdditionalServiceUI();
 
     new bootstrap.Modal(document.getElementById('modal-np-create-ttn')).show();
 });
@@ -1644,7 +1701,11 @@ $(document).on('click', '#button-np-create-ttn-confirm', function() {
         Weight: String($('#np-create-weight').val() || ''),
         SeatsAmount: String($('#np-create-seats').val() || ''),
         Cost: String($('#np-create-cost').val() || ''),
-        Description: String($('#np-create-description').val() || '')
+        Description: String($('#np-create-description').val() || ''),
+        PayerType: String($('#np-create-payer-type').val() || 'Recipient'),
+        additional_service: String($('#np-create-additional-service').val() || 'none'),
+        cod_total: String($('#np-create-cod-total').val() || ''),
+        cod_payer: String($('#np-create-cod-payer').val() || 'Recipient')
     };
 
     npTtnAction('{{ novaposhta_create_ttn|replace({'&amp;':'&'})|escape('js') }}', this, data);

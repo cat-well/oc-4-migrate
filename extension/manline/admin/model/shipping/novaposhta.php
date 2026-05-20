@@ -173,7 +173,17 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 			$payer_type = 'Recipient';
 			$payment_method = 'Cash';
 			if (!empty($changes['PayerType'])) $payer_type = (string)$changes['PayerType'];
-			if (!empty($changes['PaymentMethod'])) $payment_method = (string)$changes['PaymentMethod'];
+
+			// Additional services: COD vs payment control are mutually exclusive.
+			// Both use BackwardDeliveryData but differ by PaymentMethod.
+			$additional = trim((string)($changes['additional_service'] ?? ''));
+			if ($additional === 'control') {
+				$payment_method = 'NonCash';
+			} elseif ($additional === 'cod') {
+				$payment_method = 'Cash';
+			} elseif (!empty($changes['PaymentMethod'])) {
+				$payment_method = (string)$changes['PaymentMethod'];
+			}
 
 			$payload = [
 				'PayerType' => $payer_type,
@@ -202,6 +212,22 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 				'RecipientsPhone' => !empty($changes['recipient_phone']) ? (string)$changes['recipient_phone'] : $recipient['phone'],
 				'OptionsSeat' => $order_data['options_seat'],
 			];
+
+			// Additional services: COD / payment control.
+			if ($additional === 'cod' || $additional === 'control') {
+				$cod_total = trim((string)($changes['cod_total'] ?? ''));
+				if ($cod_total === '' || (float)$cod_total <= 0) {
+					$cod_total = (string)$order_data['cost'];
+				}
+				$cod_payer = trim((string)($changes['cod_payer'] ?? 'Recipient'));
+				if ($cod_payer === '') $cod_payer = 'Recipient';
+
+				$payload['BackwardDeliveryData'] = [[
+					'PayerType' => $cod_payer,
+					'CargoType' => 'Money',
+					'RedeliveryString' => $cod_total,
+				]];
+			}
 
 			$response = $this->callApi($api_key, $api_url, 'InternetDocument', 'save', $payload);
 

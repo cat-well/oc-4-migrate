@@ -2064,6 +2064,10 @@ class Order extends \Opencart\System\Engine\Controller {
 				'SeatsAmount' => (string)($this->request->post['SeatsAmount'] ?? ''),
 				'Cost' => (string)($this->request->post['Cost'] ?? ''),
 				'Description' => (string)($this->request->post['Description'] ?? ''),
+				'PayerType' => (string)($this->request->post['PayerType'] ?? ''),
+				'additional_service' => (string)($this->request->post['additional_service'] ?? ''),
+				'cod_total' => (string)($this->request->post['cod_total'] ?? ''),
+				'cod_payer' => (string)($this->request->post['cod_payer'] ?? ''),
 			];
 			$result = $this->model_extension_manline_shipping_novaposhta->createTtnForOrder($order_id, false, $sender_address_ref, $changes);
 
