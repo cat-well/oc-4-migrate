@@ -59,9 +59,10 @@ $_['text_np_section_additional_services'] = 'Додаткові послуги';
 $_['text_np_section_cod']           = 'Післяплата';
 $_['text_np_section_address']       = 'Адреса отримувача';
 $_['text_np_section_sender']        = 'Адреса відправника';
-$_['entry_np_sender_address']       = 'Звідки відправляємо';
-$_['text_np_sender_default']        = 'За замовчуванням (з кабінету НП)';
-$_['text_np_sender_hint']           = 'Якщо в кабінеті Нової Пошти більше однієї адреси, оберіть з якої саме відправити це замовлення. Якщо нічого не обрано — береться перша адреса типу "Warehouse" з вашого кабінету.';
+$_['entry_np_sender_city']          = 'Місто відправника';
+$_['entry_np_sender_delivery_type'] = 'Тип відправлення';
+$_['entry_np_sender_warehouse']     = 'Відділення/поштомат';
+$_['text_np_sender_hint']           = 'Оберіть місто та відділення/поштомат, з якого фактично відправляємо це замовлення.';
 $_['text_np_section_extra']         = 'Додатково';
 
 // ── Edit modal — field labels ──

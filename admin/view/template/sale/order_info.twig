@@ -624,6 +624,50 @@
   </div>
 </div>
 
+{# Nova Poshta TTN create modal — opened by #button-np-create-ttn, submits to novaposhta_create_ttn. #}
+<div id="modal-np-create-ttn" class="modal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="fa-solid fa-plus-circle"></i> {{ button_np_create_ttn }}</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div id="np-create-error" class="alert alert-danger d-none"></div>
+        <div class="alert alert-info">Оберіть місто та відділення/поштомат відправника перед створенням накладної.</div>
+
+        <h6 class="text-uppercase text-muted mb-2 mt-2">{{ text_np_section_sender }}</h6>
+        <div class="row">
+          <div class="col-md-6 mb-3 np-edit-autocomplete-wrap">
+            <label for="np-create-sender-city" class="form-label">{{ entry_np_sender_city }}</label>
+            <input type="text" id="np-create-sender-city" class="form-control" placeholder="Kyiv" autocomplete="off"/>
+            <input type="hidden" id="np-create-sender-city-ref"/>
+          </div>
+          <div class="col-md-6 mb-3">
+            <label for="np-create-sender-delivery-type" class="form-label">{{ entry_np_sender_delivery_type }}</label>
+            <select id="np-create-sender-delivery-type" class="form-select">
+              <option value="branch">{{ text_np_delivery_branch }}</option>
+              <option value="locker">{{ text_np_delivery_locker }}</option>
+            </select>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-12 mb-3 np-edit-autocomplete-wrap">
+            <label for="np-create-sender-warehouse" class="form-label">{{ entry_np_sender_warehouse }}</label>
+            <textarea id="np-create-sender-warehouse" class="form-control" rows="2" placeholder="Відділення №... / Поштомат №..." autocomplete="off"></textarea>
+            <input type="hidden" id="np-create-sender-warehouse-ref"/>
+            <div class="form-text">{{ text_np_sender_hint }}</div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ button_cancel }}</button>
+        <button type="button" id="button-np-create-ttn-confirm" class="btn btn-primary"><i class="fa-solid fa-check"></i> {{ button_np_create_ttn }}</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 {# Nova Poshta TTN edit modal — opened by #button-np-edit-ttn, submits to novaposhta_edit_ttn. #}
 <div id="modal-np-edit-ttn" class="modal" tabindex="-1">
   <div class="modal-dialog modal-lg">
@@ -748,11 +792,24 @@
 
         <h6 class="text-uppercase text-muted mb-2 mt-3">{{ text_np_section_sender }}</h6>
         <div class="row">
-          <div class="col-12 mb-3">
-            <label for="np-edit-sender-address" class="form-label">{{ entry_np_sender_address }}</label>
-            <select id="np-edit-sender-address" class="form-select">
-              <option value="">{{ text_np_sender_default }}</option>
+          <div class="col-md-6 mb-3 np-edit-autocomplete-wrap">
+            <label for="np-edit-sender-city" class="form-label">{{ entry_np_sender_city }}</label>
+            <input type="text" id="np-edit-sender-city" class="form-control" placeholder="Kyiv" autocomplete="off"/>
+            <input type="hidden" id="np-edit-sender-city-ref"/>
+          </div>
+          <div class="col-md-6 mb-3">
+            <label for="np-edit-sender-delivery-type" class="form-label">{{ entry_np_sender_delivery_type }}</label>
+            <select id="np-edit-sender-delivery-type" class="form-select">
+              <option value="branch">{{ text_np_delivery_branch }}</option>
+              <option value="locker">{{ text_np_delivery_locker }}</option>
             </select>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-12 mb-3 np-edit-autocomplete-wrap">
+            <label for="np-edit-sender-warehouse" class="form-label">{{ entry_np_sender_warehouse }}</label>
+            <textarea id="np-edit-sender-warehouse" class="form-control" rows="2" placeholder="Відділення №... / Поштомат №..." autocomplete="off"></textarea>
+            <input type="hidden" id="np-edit-sender-warehouse-ref"/>
             <div class="form-text">{{ text_np_sender_hint }}</div>
           </div>
         </div>
@@ -1437,14 +1494,21 @@ $(document).on('click', '#button-invoice', function() {
     });
 });
 
-function npTtnAction(url, element) {
+function npTtnAction(url, element, extraData) {
+    var data = {
+        order_id: $('#input-order-id').val()
+    };
+    if (extraData && typeof extraData === 'object') {
+        Object.keys(extraData).forEach(function(k) {
+            data[k] = extraData[k];
+        });
+    }
+
     $.ajax({
         url: url,
         type: 'post',
         dataType: 'json',
-        data: {
-            order_id: $('#input-order-id').val()
-        },
+        data: data,
         beforeSend: function() {
             $(element).prop('disabled', true);
         },
@@ -1479,7 +1543,25 @@ function npTtnAction(url, element) {
 }
 
 $(document).on('click', '#button-np-create-ttn', function() {
-    npTtnAction('{{ novaposhta_create_ttn|replace({'&amp;':'&'})|escape('js') }}', this);
+    $('#np-create-error').addClass('d-none').text('');
+    $('#np-create-sender-city').val('');
+    $('#np-create-sender-city-ref').val('');
+    $('#np-create-sender-warehouse').val('');
+    $('#np-create-sender-warehouse-ref').val('');
+    $('#np-create-sender-delivery-type').val('branch');
+
+    bindNpCreateSenderPicker();
+    new bootstrap.Modal(document.getElementById('modal-np-create-ttn')).show();
+});
+
+$(document).on('click', '#button-np-create-ttn-confirm', function() {
+    var ref = $.trim($('#np-create-sender-warehouse-ref').val());
+    if (!ref) {
+        $('#np-create-error').removeClass('d-none').text('Оберіть відділення/поштомат відправника.');
+        return;
+    }
+
+    npTtnAction('{{ novaposhta_create_ttn|replace({'&amp;':'&'})|escape('js') }}', this, {sender_address_ref: ref});
 });
 
 $(document).on('click', '#button-np-recreate-ttn', function() {
@@ -1567,13 +1649,28 @@ $(document).on('click', '#button-np-edit-ttn', function() {
     $('#np-edit-recipient-address-ref').val(currentAddressRef);
     $('#np-edit-recipient-phone').val(payload.RecipientsPhone || '');
 
-    // Sender — refresh dropdown options from NP and pre-select the saved
-    // SenderAddress ref from the stored payload so the operator can see
-    // (and change) where the TTN ships from. Empty selection == "use NP
-    // account default" (model falls back to first Warehouse-type address).
+    // Sender — resolve the saved SenderAddress ref into a human-readable
+    // warehouse line so the operator can see where we ship from.
+    // Operator can change via city+warehouse picker below.
     var currentSenderRef = String(payload.SenderAddress || '');
-    loadNpSenderAddresses(currentSenderRef);
-    $('#np-edit-sender-address').data('original', currentSenderRef);
+    $('#np-edit-sender-warehouse-ref').val(currentSenderRef);
+    $('#np-edit-sender-warehouse').data('original', currentSenderRef);
+
+    if (currentSenderRef) {
+        $.ajax({
+            url: '{{ novaposhta_lookup|replace({'&amp;':'&'})|escape('js') }}',
+            type: 'POST',
+            dataType: 'json',
+            data: {action: 'getWarehouseByRef', ref: currentSenderRef},
+            global: false
+        }).done(function(rows) {
+            if (!Array.isArray(rows) || !rows[0]) return;
+            var r = rows[0];
+            $('#np-edit-sender-city').val(String(r.city || '')).data('original', String(r.city || ''));
+            $('#np-edit-sender-city-ref').val(String(r.city_ref || ''));
+            $('#np-edit-sender-warehouse').val(String(r.value || r.description || '')).data('original', currentSenderRef);
+        });
+    }
 
     // Extra
     $('#np-edit-internal-number').val(payload.InfoRegClientBarcodes || '');
@@ -1749,7 +1846,7 @@ function loadNpSenderAddresses(preselectRef) {
     }
 
     window.bindNpEditAddressPicker = function() {
-        // City picker
+        // Recipient city picker
         attach(
             $('#np-edit-recipient-city'),
             function(search) {
@@ -1768,8 +1865,24 @@ function loadNpSenderAddresses(preselectRef) {
             }
         );
 
-        // Warehouse picker (branch / locker). Disabled for courier — there is
-        // no warehouse list to pick from when shipping to a door address.
+        // Sender city picker
+        attach(
+            $('#np-edit-sender-city'),
+            function(search) {
+                return {
+                    action: 'getCities',
+                    search: search
+                };
+            },
+            function(item) {
+                $('#np-edit-sender-city').val(String(item.value || ''));
+                $('#np-edit-sender-city-ref').val(String(item.ref || ''));
+                $('#np-edit-sender-warehouse').val('');
+                $('#np-edit-sender-warehouse-ref').val('');
+            }
+        );
+
+        // Recipient warehouse picker (branch / locker). Disabled for courier.
         attach(
             $('#np-edit-recipient-address'),
             function(search) {
@@ -1793,12 +1906,83 @@ function loadNpSenderAddresses(preselectRef) {
             }
         );
 
+        // Sender warehouse picker (branch / locker)
+        attach(
+            $('#np-edit-sender-warehouse'),
+            function(search) {
+                var cityRef = String($('#np-edit-sender-city-ref').val() || '');
+                var deliveryType = String($('#np-edit-sender-delivery-type').val() || 'branch');
+
+                if (cityRef === '') {
+                    return null;
+                }
+
+                return {
+                    action: 'getWarehouses',
+                    search: search,
+                    city_ref: cityRef,
+                    delivery_type: deliveryType
+                };
+            },
+            function(item) {
+                $('#np-edit-sender-warehouse').val(String(item.value || ''));
+                $('#np-edit-sender-warehouse-ref').val(String(item.ref || ''));
+            }
+        );
+
         // Changing delivery type means the previously selected warehouse may
         // no longer be valid (postomat vs branch lists are disjoint). Clear
         // address + ref so the operator picks a fresh one from the right list.
         $('#np-edit-delivery-type').off('change.npAc').on('change.npAc', function() {
             $('#np-edit-recipient-address').val('');
             $('#np-edit-recipient-address-ref').val('');
+        });
+
+        $('#np-edit-sender-delivery-type').off('change.npSender').on('change.npSender', function() {
+            $('#np-edit-sender-warehouse').val('');
+            $('#np-edit-sender-warehouse-ref').val('');
+        });
+    };
+
+    window.bindNpCreateSenderPicker = function() {
+        attach(
+            $('#np-create-sender-city'),
+            function(search) {
+                return {
+                    action: 'getCities',
+                    search: search
+                };
+            },
+            function(item) {
+                $('#np-create-sender-city').val(String(item.value || ''));
+                $('#np-create-sender-city-ref').val(String(item.ref || ''));
+                $('#np-create-sender-warehouse').val('');
+                $('#np-create-sender-warehouse-ref').val('');
+            }
+        );
+
+        attach(
+            $('#np-create-sender-warehouse'),
+            function(search) {
+                var cityRef = String($('#np-create-sender-city-ref').val() || '');
+                var deliveryType = String($('#np-create-sender-delivery-type').val() || 'branch');
+                if (cityRef === '') return null;
+                return {
+                    action: 'getWarehouses',
+                    search: search,
+                    city_ref: cityRef,
+                    delivery_type: deliveryType
+                };
+            },
+            function(item) {
+                $('#np-create-sender-warehouse').val(String(item.value || ''));
+                $('#np-create-sender-warehouse-ref').val(String(item.ref || ''));
+            }
+        );
+
+        $('#np-create-sender-delivery-type').off('change.npCreateSender').on('change.npCreateSender', function() {
+            $('#np-create-sender-warehouse').val('');
+            $('#np-create-sender-warehouse-ref').val('');
         });
     };
 })();
@@ -1867,13 +2051,10 @@ $(document).on('click', '#button-np-edit-ttn-save', function() {
         }
     }
 
-    // Sender address: send only when changed. Empty value also matters
-    // (operator can revert to "default" — backend will pick the first
-    // Warehouse-type address on next re-fetch). We always send the value
-    // when it differs from what was loaded, so both directions work.
-    var newSenderRef = $.trim($('#np-edit-sender-address').val());
-    var origSenderRef = $.trim($('#np-edit-sender-address').data('original') || '');
-    if (newSenderRef !== origSenderRef) {
+    // Sender warehouse: send only when changed.
+    var newSenderRef = $.trim($('#np-edit-sender-warehouse-ref').val());
+    var origSenderRef = $.trim($('#np-edit-sender-warehouse').data('original') || '');
+    if (newSenderRef !== '' && newSenderRef !== origSenderRef) {
         data.sender_address_ref = newSenderRef;
     }
 

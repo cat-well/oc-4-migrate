@@ -2324,7 +2324,7 @@ class Order extends \Opencart\System\Engine\Controller {
 	 * the same dropdown widget renders results identically on both sides.
 	 *
 	 * POST params:
-	 *   action        — 'getCities' | 'getWarehouses'
+	 *   action        — 'getCities' | 'getWarehouses' | 'getWarehouseByRef'
 	 *   search        — free-text query (optional; empty returns top-N list)
 	 *   city_ref      — required for getWarehouses
 	 *   delivery_type — 'branch' | 'locker' | 'courier' (filters warehouse list)
@@ -2350,6 +2350,8 @@ class Order extends \Opencart\System\Engine\Controller {
 			$json = $this->model_extension_manline_shipping_novaposhta->lookupCities($search);
 		} elseif ($action === 'getWarehouses') {
 			$json = $this->model_extension_manline_shipping_novaposhta->lookupWarehouses($city_ref, $search, $delivery_type);
+		} elseif ($action === 'getWarehouseByRef') {
+			$json = $this->model_extension_manline_shipping_novaposhta->lookupWarehouseByRef(trim((string)($this->request->post['ref'] ?? '')));
 		}
 
 		$this->response->addHeader('Content-Type: application/json');

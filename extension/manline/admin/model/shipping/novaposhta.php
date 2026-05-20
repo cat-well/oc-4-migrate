@@ -961,6 +961,53 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 	}
 
 	/**
+	 * Resolve a single warehouse by its Ref.
+	 *
+	 * @return array<int, array<string, string>>
+	 */
+	public function lookupWarehouseByRef(string $ref): array {
+		$ref = trim($ref);
+		if ($ref === '') {
+			return [];
+		}
+
+		$credentials = $this->getApiCredentials();
+
+		if (empty($credentials['success'])) {
+			return [];
+		}
+
+		$response = $this->callApi($credentials['api_key'], $credentials['api_url'], 'AddressGeneral', 'getWarehouses', ['Ref' => $ref]);
+
+		if (empty($response['success']) || empty($response['data'][0])) {
+			$response = $this->callApi($credentials['api_key'], $credentials['api_url'], 'Address', 'getWarehouses', ['Ref' => $ref]);
+		}
+
+		if (empty($response['success']) || empty($response['data'][0])) {
+			return [];
+		}
+
+		$row = $response['data'][0];
+		$description = trim((string)($row['Description'] ?? ''));
+		$city_description = trim((string)($row['CityDescription'] ?? ''));
+		$city_ref = trim((string)($row['CityRef'] ?? ''));
+
+		$label_parts = [];
+		if ($city_description !== '') $label_parts[] = $city_description;
+		if ($description !== '') $label_parts[] = $description;
+		$label = implode(': ', $label_parts);
+
+		return [[
+			'description' => $description !== '' ? $description : $ref,
+			'value' => $description !== '' ? $description : $ref,
+			'label' => $label !== '' ? $label : $ref,
+			'ref' => $ref,
+			'city_ref' => $city_ref,
+			'city' => $city_description,
+		]];
+	}
+
+	/**
 	 * Live-list of the configured sender's warehouse/door addresses pulled
 	 * straight from Nova Poshta. Drives the "Адреса відправника" picker in
 	 * the TTN modal — operator picks the actual ship-from warehouse instead
