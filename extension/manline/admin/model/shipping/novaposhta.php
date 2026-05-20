@@ -1900,6 +1900,14 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 		);
 	}
 
+	public function clearTtnError(int $order_id): void {
+		$this->db->query(
+			"UPDATE `" . DB_PREFIX . "order_novaposhta`
+			SET ttn_error = ''
+			WHERE order_id = '" . (int)$order_id . "'"
+		);
+	}
+
 	private function clearTtnData(int $order_id): void {
 		$this->db->query(
 			"UPDATE `" . DB_PREFIX . "order_novaposhta`

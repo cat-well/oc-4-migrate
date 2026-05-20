@@ -1055,7 +1055,18 @@ class Order extends \Opencart\System\Engine\Controller {
 					'country' => (string)($novaposhta_meta['country'] ?? $data['shipping_country']),
 					'ttn_number' => $ttn_number,
 					'ttn_ref' => trim((string)($novaposhta_meta['ttn_ref'] ?? '')),
-					'ttn_error' => trim((string)($novaposhta_meta['ttn_error'] ?? '')),
+					'ttn_error' => (function() use (&$novaposhta_meta, $order_id) {
+						$err = trim((string)($novaposhta_meta['ttn_error'] ?? ''));
+						$ttn_number_local = trim((string)($novaposhta_meta['ttn_number'] ?? ''));
+						// Hide stale legacy DateTime errors that were caused by the old
+						// timezone/day-rollover behaviour (no TTN created). The new logic
+						// always uses tomorrow.
+						if ($ttn_number_local === '' && $err === 'DateTime cannot be less then now') {
+							$this->model_extension_manline_shipping_novaposhta->clearTtnError((int)$order_id);
+							return '';
+						}
+						return $err;
+					})(),
 					'ttn_date_created' => (string)($novaposhta_meta['ttn_date_created'] ?? ''),
 					'ttn_status_code' => trim((string)($novaposhta_meta['ttn_status_code'] ?? '')),
 					'ttn_status_text' => trim((string)($novaposhta_meta['ttn_status_text'] ?? '')),
