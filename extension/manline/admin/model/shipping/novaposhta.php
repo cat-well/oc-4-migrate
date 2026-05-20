@@ -997,6 +997,7 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 		$to = date('d.m.Y');
 
 		$sender_address_refs = [];
+		$sender_address_service_types = [];
 		for ($page = 1; $page <= 20; $page++) {
 			$list_response = $this->callApi(
 				$api_key,
@@ -1024,6 +1025,7 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 				}
 
 				$sender_address_refs[$sender_address_ref] = true;
+				$sender_address_service_types[$sender_address_ref] = $service_type;
 			}
 		}
 
@@ -1031,9 +1033,41 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 			return [];
 		}
 
+		// Preload counterparty door/street addresses (used when ServiceType is
+		// Doors* and SenderAddress points to a counterparty address ref rather
+		// than a warehouse ref).
+		$counterparty_address_by_ref = [];
+		$counterparties_response = $this->callApi(
+			$api_key,
+			$api_url,
+			'Counterparty',
+			'getCounterparties',
+			['CounterpartyProperty' => 'Sender', 'Page' => 1]
+		);
+		if (!empty($counterparties_response['success']) && !empty($counterparties_response['data'][0]['Ref'])) {
+			$sender_ref = trim((string)$counterparties_response['data'][0]['Ref']);
+			for ($page = 1; $page <= 20; $page++) {
+				$addresses_response = $this->callApi(
+					$api_key,
+					$api_url,
+					'Counterparty',
+					'getCounterpartyAddresses',
+					['Ref' => $sender_ref, 'Page' => $page]
+				);
+				if (empty($addresses_response['success']) || empty($addresses_response['data'])) break;
+				foreach ($addresses_response['data'] as $row) {
+					$aref = trim((string)($row['Ref'] ?? ''));
+					if ($aref !== '') $counterparty_address_by_ref[$aref] = $row;
+				}
+			}
+		}
+
 		$data = [];
 
 		foreach (array_keys($sender_address_refs) as $ref) {
+			$service_type = (string)($sender_address_service_types[$ref] ?? '');
+
+			// 1) Try resolve as a warehouse ref.
 			$warehouse_response = $this->callApi(
 				$api_key,
 				$api_url,
@@ -1042,27 +1076,51 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 				['Ref' => $ref]
 			);
 
-			if (empty($warehouse_response['success']) || empty($warehouse_response['data'][0])) {
+			if (!empty($warehouse_response['success']) && !empty($warehouse_response['data'][0])) {
+				$row = $warehouse_response['data'][0];
+				$description = trim((string)($row['Description'] ?? ''));
+				$city_description = trim((string)($row['CityDescription'] ?? ''));
+
+				$label_parts = [];
+				if ($city_description !== '') $label_parts[] = $city_description;
+				if ($description !== '') $label_parts[] = $description;
+				$label = implode(': ', $label_parts);
+
+				$data[] = [
+					'ref' => $ref,
+					'value' => $ref,
+					'description' => $description,
+					'city' => $city_description,
+					'address_type' => 'Warehouse',
+					'label' => $label !== '' ? $label : $ref,
+				];
 				continue;
 			}
 
-			$row = $warehouse_response['data'][0];
-			$description = trim((string)($row['Description'] ?? ''));
-			$city_description = trim((string)($row['CityDescription'] ?? ''));
+			// 2) Fallback: resolve as a counterparty (door/street) address ref.
+			if (!empty($counterparty_address_by_ref[$ref])) {
+				$row = $counterparty_address_by_ref[$ref];
+				$description = trim((string)($row['Description'] ?? ''));
+				$city_description = trim((string)($row['CityDescription'] ?? ''));
 
-			$label_parts = [];
-			if ($city_description !== '') $label_parts[] = $city_description;
-			if ($description !== '') $label_parts[] = $description;
-			$label = implode(': ', $label_parts);
+				$label_parts = [];
+				if ($city_description !== '') $label_parts[] = $city_description;
+				if ($description !== '') $label_parts[] = $description;
+				$label = implode(': ', $label_parts);
 
-			$data[] = [
-				'ref' => $ref,
-				'value' => $ref,
-				'description' => $description,
-				'city' => $city_description,
-				'address_type' => 'Warehouse',
-				'label' => $label !== '' ? $label : $ref,
-			];
+				$data[] = [
+					'ref' => $ref,
+					'value' => $ref,
+					'description' => $description,
+					'city' => $city_description,
+					'address_type' => 'Doors',
+					'label' => $label !== '' ? $label : $ref,
+				];
+				continue;
+			}
+
+			// Unknown ref type.
+			continue;
 		}
 
 		// Sort for stable UX (avoids "random" perceived order).
