@@ -1648,7 +1648,7 @@ $(document).on('click', '#button-np-create-ttn', function() {
 
     // Cargo defaults
     var orderTotal = (function() {
-        var t = {{ order_info.total|default(0)|json_encode|raw }};
+        var t = {{ novaposhta.order_total_uah|default(order_info.total|default(0))|json_encode|raw }};
         // Ensure we always return a sane positive number
         if (t === null || t === '' || isNaN(parseFloat(t))) return 1;
         t = parseFloat(t);

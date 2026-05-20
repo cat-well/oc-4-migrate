@@ -1042,6 +1042,8 @@ class Order extends \Opencart\System\Engine\Controller {
 				$ttn_print_url = $this->model_extension_manline_shipping_novaposhta->getPrintUrlByOrderId($order_id);
 				$can_modify = $this->user->hasPermission('modify', 'sale/order');
 
+				$total_uah = $this->normalizeOrderCurrencyAmount((float)($order_info['total'] ?? 0.0), $order_info);
+
 				$data['novaposhta'] = [
 					'is_order' => true,
 					'delivery_type' => $delivery_type,
@@ -1051,6 +1053,7 @@ class Order extends \Opencart\System\Engine\Controller {
 					'city_ref' => (string)($novaposhta_meta['city_ref'] ?? ''),
 					'address' => (string)($novaposhta_meta['address'] ?? $data['shipping_address_1']),
 					'address_ref' => (string)($novaposhta_meta['address_ref'] ?? ''),
+					'order_total_uah' => $total_uah,
 					'zone' => (string)($novaposhta_meta['zone'] ?? $data['shipping_zone']),
 					'country' => (string)($novaposhta_meta['country'] ?? $data['shipping_country']),
 					'ttn_number' => $ttn_number,
