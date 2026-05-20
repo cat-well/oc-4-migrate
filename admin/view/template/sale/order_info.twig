@@ -1652,11 +1652,26 @@ $(document).on('click', '#button-np-create-ttn', function() {
     $('#np-create-cost').val({{ total|json_encode|raw }} || '1');
     $('#np-create-description').val('Одяг');
 
-    // Payment defaults
-    $('#np-create-payer-type').val('Recipient');
-    $('#np-create-additional-service').val('none');
-    $('#np-create-cod-total').val('');
-    $('#np-create-cod-payer').val('Recipient');
+    // Payment defaults (auto from order payment method)
+    var paymentCode = {{ payment_method_code|json_encode|raw }} || '';
+    paymentCode = String(paymentCode || '').toLowerCase();
+
+    var isOnlinePay = (paymentCode.indexOf('liqpay') !== -1) || (paymentCode.indexOf('paypal') !== -1);
+
+    if (isOnlinePay) {
+        // Paid online → no post-payment services
+        $('#np-create-payer-type').val('Recipient');
+        $('#np-create-additional-service').val('none');
+        $('#np-create-cod-total').val('');
+        $('#np-create-cod-payer').val('Recipient');
+    } else {
+        // Pay on delivery → "payment control" by default
+        var total = {{ total|json_encode|raw }} || '';
+        $('#np-create-payer-type').val('Recipient');
+        $('#np-create-additional-service').val('control');
+        $('#np-create-cod-total').val(total);
+        $('#np-create-cod-payer').val('Recipient');
+    }
 
     // Sender defaults
     $('#np-create-sender-city').val('');
@@ -1707,6 +1722,11 @@ $(document).on('click', '#button-np-create-ttn-confirm', function() {
         cod_total: String($('#np-create-cod-total').val() || ''),
         cod_payer: String($('#np-create-cod-payer').val() || 'Recipient')
     };
+
+    // If control/cod selected but amount not set, default to order total.
+    if ((data.additional_service === 'control' || data.additional_service === 'cod') && (!data.cod_total || parseFloat(data.cod_total) <= 0)) {
+        data.cod_total = {{ total|json_encode|raw }} || data.Cost;
+    }
 
     npTtnAction('{{ novaposhta_create_ttn|replace({'&amp;':'&'})|escape('js') }}', this, data);
 });

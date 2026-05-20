@@ -177,6 +177,13 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 			// Additional services: COD vs payment control are mutually exclusive.
 			// Both use BackwardDeliveryData but differ by PaymentMethod.
 			$additional = trim((string)($changes['additional_service'] ?? ''));
+			if ($additional === '') {
+				// Auto-derive additional service from order payment method when
+				// the UI did not provide an explicit choice.
+				$payment_code = strtolower((string)($order_info['payment_method']['code'] ?? $order_info['payment_code'] ?? ''));
+				$online = ($payment_code !== '') && (strpos($payment_code, 'liqpay') !== false || strpos($payment_code, 'paypal') !== false);
+				$additional = $online ? 'none' : 'control';
+			}
 			if ($additional === 'control') {
 				$payment_method = 'NonCash';
 			} elseif ($additional === 'cod') {
