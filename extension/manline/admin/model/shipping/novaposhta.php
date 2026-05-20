@@ -982,81 +982,85 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 		$api_key = (string) $credentials['api_key'];
 		$api_url = (string) $credentials['api_url'];
 
-		$counterparties_response = $this->callApi(
-			$api_key,
-			$api_url,
-			'Counterparty',
-			'getCounterparties',
-			['CounterpartyProperty' => 'Sender', 'Page' => 1]
-		);
+		// NP does not expose a separate API method that returns the
+		// "user-picked sender warehouses" list from the business cabinet.
+		// Counterparty*.getCounterpartyAddresses returns street/door addresses
+		// and can include multiple cities.
+		//
+		// What the operator actually needs here is the set of sender warehouse
+		// Refs that are used in real shipments (ServiceType Warehouse*). Those
+		// SenderAddress Refs are returned by InternetDocument.getDocumentList.
+		// We build a unique list from the recent documents window (NP limits
+		// the range to 3 months) and then resolve each Ref via
+		// AddressGeneral.getWarehouses({Ref}).
+		$from = date('d.m.Y', strtotime('-80 days'));
+		$to = date('d.m.Y');
 
-		if (empty($counterparties_response['success']) || empty($counterparties_response['data'][0]['Ref'])) {
-			return [];
-		}
-
-		$sender_ref = trim((string) $counterparties_response['data'][0]['Ref']);
-
-		// NOTE: NP can paginate results. Pull all pages to avoid the operator
-		// seeing a seemingly "random" subset when the account has many sender
-		// addresses configured.
-		$all_rows = [];
+		$sender_address_refs = [];
 		for ($page = 1; $page <= 20; $page++) {
-			$addresses_response = $this->callApi(
+			$list_response = $this->callApi(
 				$api_key,
 				$api_url,
-				'Counterparty',
-				'getCounterpartyAddresses',
-				['Ref' => $sender_ref, 'Page' => $page]
+				'InternetDocument',
+				'getDocumentList',
+				['DateTimeFrom' => $from, 'DateTimeTo' => $to, 'Page' => $page]
 			);
 
-			if (empty($addresses_response['success']) || empty($addresses_response['data'])) {
+			if (empty($list_response['success']) || empty($list_response['data'])) {
 				break;
 			}
 
-			foreach ($addresses_response['data'] as $row) {
-				$all_rows[] = $row;
+			foreach ($list_response['data'] as $row) {
+				$service_type = trim((string)($row['ServiceType'] ?? ''));
+				$sender_address_ref = trim((string)($row['SenderAddress'] ?? ''));
+
+				if ($sender_address_ref === '' || $service_type === '') {
+					continue;
+				}
+
+				// Only warehouse-based sender addresses are relevant.
+				if (strpos($service_type, 'Warehouse') === false) {
+					continue;
+				}
+
+				$sender_address_refs[$sender_address_ref] = true;
 			}
 		}
 
-		if (!$all_rows) {
+		if (!$sender_address_refs) {
 			return [];
 		}
 
 		$data = [];
 
-		foreach ($all_rows as $row) {
-			$ref = trim((string) ($row['Ref'] ?? ''));
+		foreach (array_keys($sender_address_refs) as $ref) {
+			$warehouse_response = $this->callApi(
+				$api_key,
+				$api_url,
+				'AddressGeneral',
+				'getWarehouses',
+				['Ref' => $ref]
+			);
 
-			if ($ref === '') {
+			if (empty($warehouse_response['success']) || empty($warehouse_response['data'][0])) {
 				continue;
 			}
 
-			$description = trim((string) ($row['Description'] ?? ''));
-			$city_description = trim((string) ($row['CityDescription'] ?? ''));
-			$address_type = trim((string) ($row['AddressType'] ?? ''));
+			$row = $warehouse_response['data'][0];
+			$description = trim((string)($row['Description'] ?? ''));
+			$city_description = trim((string)($row['CityDescription'] ?? ''));
 
-			// Build a single human-readable line for the dropdown:
-			// "Київ: вул. Хрещатик, 1 [Warehouse]" — city + address + type
-			// so the operator instantly distinguishes warehouse from doors
-			// pickup when both exist under the same counterparty.
 			$label_parts = [];
-			if ($city_description !== '') {
-				$label_parts[] = $city_description;
-			}
-			if ($description !== '') {
-				$label_parts[] = $description;
-			}
+			if ($city_description !== '') $label_parts[] = $city_description;
+			if ($description !== '') $label_parts[] = $description;
 			$label = implode(': ', $label_parts);
-			if ($address_type !== '') {
-				$label .= ' [' . $address_type . ']';
-			}
 
 			$data[] = [
 				'ref' => $ref,
 				'value' => $ref,
 				'description' => $description,
 				'city' => $city_description,
-				'address_type' => $address_type,
+				'address_type' => 'Warehouse',
 				'label' => $label !== '' ? $label : $ref,
 			];
 		}
