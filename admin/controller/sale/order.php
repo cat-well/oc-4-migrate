@@ -2055,7 +2055,17 @@ class Order extends \Opencart\System\Engine\Controller {
 			// auto-pick inside fetchSenderData.
 			$sender_address_ref = trim((string)($this->request->post['sender_address_ref'] ?? ''));
 
-			$result = $this->model_extension_manline_shipping_novaposhta->createTtnForOrder($order_id, false, $sender_address_ref);
+			$changes = [
+				'delivery_type' => (string)($this->request->post['delivery_type'] ?? ''),
+				'recipient_city_ref' => (string)($this->request->post['recipient_city_ref'] ?? ''),
+				'recipient_address_ref' => (string)($this->request->post['recipient_address_ref'] ?? ''),
+				'recipient_phone' => (string)($this->request->post['recipient_phone'] ?? ''),
+				'Weight' => (string)($this->request->post['Weight'] ?? ''),
+				'SeatsAmount' => (string)($this->request->post['SeatsAmount'] ?? ''),
+				'Cost' => (string)($this->request->post['Cost'] ?? ''),
+				'Description' => (string)($this->request->post['Description'] ?? ''),
+			];
+			$result = $this->model_extension_manline_shipping_novaposhta->createTtnForOrder($order_id, false, $sender_address_ref, $changes);
 
 			if (empty($result['success'])) {
 				$json['error'] = (string)($result['error'] ?? $this->language->get('error_np_ttn_failed'));

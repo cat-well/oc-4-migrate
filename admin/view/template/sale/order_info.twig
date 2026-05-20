@@ -634,7 +634,7 @@
       </div>
       <div class="modal-body">
         <div id="np-create-error" class="alert alert-danger d-none"></div>
-        <div class="alert alert-info">Оберіть місто та відділення/поштомат відправника перед створенням накладної.</div>
+        <div class="alert alert-info">Накладна буде створена з поточних даних замовлення. За потреби — відредагуй перед створенням.</div>
 
         <h6 class="text-uppercase text-muted mb-2 mt-2">{{ text_np_section_sender }}</h6>
         <div class="row">
@@ -657,6 +657,56 @@
             <textarea id="np-create-sender-warehouse" class="form-control" rows="2" placeholder="Відділення №... / Поштомат №..." autocomplete="off"></textarea>
             <input type="hidden" id="np-create-sender-warehouse-ref"/>
             <div class="form-text">{{ text_np_sender_hint }}</div>
+          </div>
+        </div>
+
+        <h6 class="text-uppercase text-muted mb-2 mt-3">{{ text_np_section_address }}</h6>
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <label for="np-create-delivery-type" class="form-label">{{ entry_np_delivery_type }}</label>
+            <select id="np-create-delivery-type" class="form-select">
+              <option value="branch">{{ text_np_delivery_branch }}</option>
+              <option value="locker">{{ text_np_delivery_locker }}</option>
+              <option value="courier">{{ text_np_delivery_courier }}</option>
+            </select>
+          </div>
+          <div class="col-md-6 mb-3 np-edit-autocomplete-wrap">
+            <label for="np-create-recipient-city" class="form-label">{{ entry_np_recipient_city }}</label>
+            <input type="text" id="np-create-recipient-city" class="form-control" autocomplete="off"/>
+            <input type="hidden" id="np-create-recipient-city-ref"/>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-12 mb-3 np-edit-autocomplete-wrap">
+            <label for="np-create-recipient-address" class="form-label">{{ entry_np_recipient_address }}</label>
+            <textarea id="np-create-recipient-address" class="form-control" rows="2" autocomplete="off"></textarea>
+            <input type="hidden" id="np-create-recipient-address-ref"/>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <label for="np-create-recipient-phone" class="form-label">{{ entry_np_recipient_phone }}</label>
+            <input type="text" id="np-create-recipient-phone" class="form-control" placeholder="+380XXXXXXXXX"/>
+          </div>
+        </div>
+
+        <h6 class="text-uppercase text-muted mb-2 mt-3">{{ text_np_section_cargo }}</h6>
+        <div class="row">
+          <div class="col-md-3 mb-3">
+            <label for="np-create-weight" class="form-label">{{ entry_np_weight }}</label>
+            <input type="number" step="0.01" min="0" id="np-create-weight" class="form-control"/>
+          </div>
+          <div class="col-md-3 mb-3">
+            <label for="np-create-seats" class="form-label">{{ entry_np_seats }}</label>
+            <input type="number" step="1" min="1" id="np-create-seats" class="form-control"/>
+          </div>
+          <div class="col-md-3 mb-3">
+            <label for="np-create-cost" class="form-label">{{ entry_np_cost }}</label>
+            <input type="number" step="0.01" min="0" id="np-create-cost" class="form-control"/>
+          </div>
+          <div class="col-md-3 mb-3">
+            <label for="np-create-description" class="form-label">{{ entry_np_description }}</label>
+            <input type="text" id="np-create-description" class="form-control" maxlength="90"/>
           </div>
         </div>
       </div>
@@ -1544,6 +1594,28 @@ function npTtnAction(url, element, extraData) {
 
 $(document).on('click', '#button-np-create-ttn', function() {
     $('#np-create-error').addClass('d-none').text('');
+
+    // Pre-fill the create modal with the same defaults as the edit modal.
+    // Recipient data comes from order_novaposhta meta (novaposhta.* vars).
+    var currentCity = {{ novaposhta.city|json_encode|raw }} || '';
+    var currentCityRef = {{ novaposhta.city_ref|json_encode|raw }} || '';
+    var currentAddress = {{ novaposhta.address|json_encode|raw }} || '';
+    var currentAddressRef = {{ novaposhta.address_ref|json_encode|raw }} || '';
+    var currentDeliveryType = {{ novaposhta.delivery_type|json_encode|raw }} || 'branch';
+
+    $('#np-create-recipient-city').val(currentCity);
+    $('#np-create-recipient-city-ref').val(currentCityRef);
+    $('#np-create-recipient-address').val(currentAddress);
+    $('#np-create-recipient-address-ref').val(currentAddressRef);
+    $('#np-create-delivery-type').val(currentDeliveryType);
+
+    // Cargo defaults
+    $('#np-create-weight').val('1');
+    $('#np-create-seats').val('1');
+    $('#np-create-cost').val({{ total|json_encode|raw }} || '1');
+    $('#np-create-description').val('Одяг');
+
+    // Sender defaults
     $('#np-create-sender-city').val('');
     $('#np-create-sender-city-ref').val('');
     $('#np-create-sender-warehouse').val('');
@@ -1551,6 +1623,8 @@ $(document).on('click', '#button-np-create-ttn', function() {
     $('#np-create-sender-delivery-type').val('branch');
 
     bindNpCreateSenderPicker();
+    bindNpCreateRecipientPicker();
+
     new bootstrap.Modal(document.getElementById('modal-np-create-ttn')).show();
 });
 
@@ -1561,7 +1635,19 @@ $(document).on('click', '#button-np-create-ttn-confirm', function() {
         return;
     }
 
-    npTtnAction('{{ novaposhta_create_ttn|replace({'&amp;':'&'})|escape('js') }}', this, {sender_address_ref: ref});
+    var data = {
+        sender_address_ref: ref,
+        delivery_type: String($('#np-create-delivery-type').val() || 'branch'),
+        recipient_city_ref: String($('#np-create-recipient-city-ref').val() || ''),
+        recipient_address_ref: String($('#np-create-recipient-address-ref').val() || ''),
+        recipient_phone: String($('#np-create-recipient-phone').val() || ''),
+        Weight: String($('#np-create-weight').val() || ''),
+        SeatsAmount: String($('#np-create-seats').val() || ''),
+        Cost: String($('#np-create-cost').val() || ''),
+        Description: String($('#np-create-description').val() || '')
+    };
+
+    npTtnAction('{{ novaposhta_create_ttn|replace({'&amp;':'&'})|escape('js') }}', this, data);
 });
 
 $(document).on('click', '#button-np-recreate-ttn', function() {
@@ -1983,6 +2069,40 @@ function loadNpSenderAddresses(preselectRef) {
         $('#np-create-sender-delivery-type').off('change.npCreateSender').on('change.npCreateSender', function() {
             $('#np-create-sender-warehouse').val('');
             $('#np-create-sender-warehouse-ref').val('');
+        });
+    };
+
+    window.bindNpCreateRecipientPicker = function() {
+        attach(
+            $('#np-create-recipient-city'),
+            function(search) {
+                return { action: 'getCities', search: search };
+            },
+            function(item) {
+                $('#np-create-recipient-city').val(String(item.value || ''));
+                $('#np-create-recipient-city-ref').val(String(item.ref || ''));
+                $('#np-create-recipient-address').val('');
+                $('#np-create-recipient-address-ref').val('');
+            }
+        );
+
+        attach(
+            $('#np-create-recipient-address'),
+            function(search) {
+                var cityRef = String($('#np-create-recipient-city-ref').val() || '');
+                var deliveryType = String($('#np-create-delivery-type').val() || '');
+                if (cityRef === '' || deliveryType === 'courier') return null;
+                return { action: 'getWarehouses', search: search, city_ref: cityRef, delivery_type: deliveryType };
+            },
+            function(item) {
+                $('#np-create-recipient-address').val(String(item.value || ''));
+                $('#np-create-recipient-address-ref').val(String(item.ref || ''));
+            }
+        );
+
+        $('#np-create-delivery-type').off('change.npCreateRecipient').on('change.npCreateRecipient', function() {
+            $('#np-create-recipient-address').val('');
+            $('#np-create-recipient-address-ref').val('');
         });
     };
 })();

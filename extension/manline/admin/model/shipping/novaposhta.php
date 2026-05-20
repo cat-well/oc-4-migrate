@@ -45,7 +45,7 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 		return $row;
 	}
 
-	public function createTtnForOrder(int $order_id, bool $force = false, string $sender_address_ref = ''): array {
+	public function createTtnForOrder(int $order_id, bool $force = false, string $sender_address_ref = '', array $changes = []): array {
 		if ($order_id <= 0) {
 			return ['success' => false, 'error' => 'Order ID is missing.'];
 		}
@@ -112,8 +112,20 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 
 		try {
 			$delivery_type = (string)($meta['delivery_type'] ?? $this->extractDeliveryType($shipping_code));
-			$city_ref = $this->resolveCityRef($meta, $order_info, $api_key, $api_url);
-			$address_ref = $this->resolveAddressRef($meta, $delivery_type, $city_ref, $api_key, $api_url);
+			if (!empty($changes['delivery_type'])) {
+				$delivery_type = (string)$changes['delivery_type'];
+			}
+
+			$city_ref = '';
+			$address_ref = '';
+
+			if (!empty($changes['recipient_city_ref']) && !empty($changes['recipient_address_ref'])) {
+				$city_ref = trim((string)$changes['recipient_city_ref']);
+				$address_ref = trim((string)$changes['recipient_address_ref']);
+			} else {
+				$city_ref = $this->resolveCityRef($meta, $order_info, $api_key, $api_url);
+				$address_ref = $this->resolveAddressRef($meta, $delivery_type, $city_ref, $api_key, $api_url);
+			}
 
 			if ($city_ref === '' || $address_ref === '') {
 				throw new \RuntimeException('City or destination address ref is missing for TTN creation.');
@@ -126,6 +138,10 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 			$sender = $this->fetchSenderData($api_key, $api_url, $sender_address_ref);
 			$recipient = $this->fetchOrCreateRecipientData($order_info, $city_ref, $api_key, $api_url);
 			$order_data = $this->getOrderData($order_id, $order_info, $delivery_type);
+			if (!empty($changes['Weight'])) $order_data['weight'] = (float)$changes['Weight'];
+			if (!empty($changes['SeatsAmount'])) $order_data['seats'] = (int)$changes['SeatsAmount'];
+			if (!empty($changes['Cost'])) $order_data['cost'] = (float)$changes['Cost'];
+			if (!empty($changes['Description'])) $order_data['description'] = (string)$changes['Description'];
 
 			// Locker delivery has its own validator at NP API and the
 			// payload shape differs from branch/courier. Specifically:
@@ -154,9 +170,14 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 			// drop-offs next morning anyway.
 			$ship_date = date('d.m.Y', time() + 86400);
 
+			$payer_type = 'Recipient';
+			$payment_method = 'Cash';
+			if (!empty($changes['PayerType'])) $payer_type = (string)$changes['PayerType'];
+			if (!empty($changes['PaymentMethod'])) $payment_method = (string)$changes['PaymentMethod'];
+
 			$payload = [
-				'PayerType' => 'Recipient',
-				'PaymentMethod' => 'Cash',
+				'PayerType' => $payer_type,
+				'PaymentMethod' => $payment_method,
 				'DateTime' => $ship_date,
 				'CargoType' => $is_locker ? 'Parcel' : 'Cargo',
 				// Explicit RecipientType silences the "RecipientType is set to
@@ -178,7 +199,7 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 				'Recipient' => $recipient['ref'],
 				'RecipientAddress' => $address_ref,
 				'ContactRecipient' => $recipient['contact_ref'],
-				'RecipientsPhone' => $recipient['phone'],
+				'RecipientsPhone' => !empty($changes['recipient_phone']) ? (string)$changes['recipient_phone'] : $recipient['phone'],
 				'OptionsSeat' => $order_data['options_seat'],
 			];
 
