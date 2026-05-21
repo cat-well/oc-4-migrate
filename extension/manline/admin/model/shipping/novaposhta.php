@@ -131,6 +131,18 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 				throw new \RuntimeException('City or destination address ref is missing for TTN creation.');
 			}
 
+			// If operator overrode recipient address in the create modal, persist
+			// it back into the order so admin/order shows the factual shipping
+			// address that was used for the TTN.
+			if (!empty($changes['recipient_city_ref']) && !empty($changes['recipient_address_ref'])) {
+				$wh = $this->lookupWarehouseByRef($address_ref);
+				if (!empty($wh[0])) {
+					$city_name = trim((string)($wh[0]['city'] ?? ''));
+					$addr_name = trim((string)($wh[0]['description'] ?? $wh[0]['value'] ?? ''));
+					$this->persistRecipientOverrideToOrder($order_id, $delivery_type, $city_name, $city_ref, $addr_name, $address_ref);
+				}
+			}
+
 			// Operator-chosen sender warehouse (from the modal dropdown) is
 			// preferred over the auto-picked "first Warehouse, else first"
 			// fallback inside fetchSenderData. Empty string keeps the
@@ -1928,6 +1940,33 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 				ttn_status_payload = NULL,
 				ttn_date_created = NULL,
 				ttn_date_modified = NOW(),
+				date_modified = NOW()
+			WHERE order_id = '" . (int)$order_id . "'"
+		);
+	}
+
+	private function persistRecipientOverrideToOrder(int $order_id, string $delivery_type, string $city, string $city_ref, string $address, string $address_ref): void {
+		$city = trim($city);
+		$address = trim($address);
+		$delivery_type = trim($delivery_type);
+
+		// 1) Update order_novaposhta meta (used to pre-fill modals)
+		$this->db->query(
+			"UPDATE `" . DB_PREFIX . "order_novaposhta`
+			SET delivery_type = '" . $this->db->escape($delivery_type) . "',
+				city = '" . $this->db->escape($city) . "',
+				city_ref = '" . $this->db->escape($city_ref) . "',
+				address = '" . $this->db->escape($address) . "',
+				address_ref = '" . $this->db->escape($address_ref) . "',
+				date_modified = NOW()
+			WHERE order_id = '" . (int)$order_id . "'"
+		);
+
+		// 2) Update the order shipping address (what the admin UI shows)
+		$this->db->query(
+			"UPDATE `" . DB_PREFIX . "order`
+			SET shipping_city = '" . $this->db->escape($city) . "',
+				shipping_address_1 = '" . $this->db->escape($address) . "',
 				date_modified = NOW()
 			WHERE order_id = '" . (int)$order_id . "'"
 		);
