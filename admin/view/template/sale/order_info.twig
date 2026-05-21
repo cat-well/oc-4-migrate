@@ -1646,6 +1646,9 @@ $(document).on('click', '#button-np-create-ttn', function() {
     $('#np-create-recipient-address-ref').val(currentAddressRef);
     $('#np-create-delivery-type').val(currentDeliveryType);
 
+    // Recipient phone: prefill from order telephone (operator can override)
+    $('#np-create-recipient-phone').val({{ telephone|json_encode|raw }} || '');
+
     // Cargo defaults
     var orderTotal = (function() {
         var t = {{ novaposhta.order_total_uah|default(order_info.total|default(0))|json_encode|raw }};
