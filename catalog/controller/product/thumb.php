@@ -38,6 +38,15 @@ class Thumb extends \Opencart\System\Engine\Controller {
 
 		$data['review_status'] = (int)$this->config->get('config_review_status');
 
+		// Manline thumb.twig uses `{{ is_ua ? 'UA' : 'RU' }}` ternaries
+		// for the "Купити", "Є в наявності", "Код товару", "Ціна",
+		// "Розміри в наявності" labels. thumb is rendered as an
+		// independently-loaded sub-controller from category / search /
+		// special / manufacturer / home / related — none of those
+		// pass through their own `is_ua`. Setting it here once means
+		// every product card across the site flips correctly on UA.
+		$data['is_ua'] = ($this->config->get('config_language') === 'uk-ua');
+
 		return $this->load->view('product/thumb', $data);
 	}
 }
