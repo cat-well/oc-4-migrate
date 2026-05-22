@@ -122,6 +122,15 @@ class Related extends \Opencart\System\Engine\Controller {
 			$data['products'][] = $product_data;
 		}
 
+		// Manline twig (product/related.twig) uses {% if lang == 'uk-ua' %}
+		// for inline UA/RU strings ("Схожі товари" / "Похожие товары" and
+		// 4 others). Independently-loaded views (this one is invoked via
+		// $this->load->controller('product/related') from product.twig)
+		// do NOT inherit $data['lang'] from the parent header controller,
+		// so without this assignment the ternary always falls to the
+		// Russian branch on UA pages.
+		$data['lang'] = $this->language->get('code');
+
 		return $this->load->view('product/related', $data);
 
 	}

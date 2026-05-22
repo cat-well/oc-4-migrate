@@ -231,9 +231,22 @@ class Footer extends \Opencart\System\Engine\Controller {
 		}
 
 		// SEOShield footer block (ТОП категории / города / теги / товары / предложения)
+		//
+		// Legacy parity: the block was never displayed on Ukrainian-
+		// prefixed URLs. Legacy
+		// seoshield-client/core/modules/footers_block.php::is_valid_url()
+		// explicitly returned false whenever REQUEST_URI matched '/ua/'.
+		// The cached content is Russian-only (cities have only Russian
+		// declensions; no UA blocks ever existed in the resync dataset),
+		// so showing it on UA pages was — and is — wrong. We leave
+		// seoshield_footer_html empty for UA URLs and the Twig fallback
+		// renders the `<!--footers_block-->` comment instead.
 		$data['seoshield_footer_html'] = '';
+		$req_uri = (string)($this->request->server['REQUEST_URI'] ?? '/');
+		$lookup_seoshield = (strpos($req_uri, '/ua/') === false);
+
 		try {
-			$req_uri = (string)($this->request->server['REQUEST_URI'] ?? '/');
+			if ($lookup_seoshield) {
 			$info = parse_url($req_uri);
 			$path = (string)($info['path'] ?? '/');
 			if ($path === '') $path = '/';
@@ -290,6 +303,7 @@ class Footer extends \Opencart\System\Engine\Controller {
 					}
 				}
 			}
+			} // end if ($lookup_seoshield)
 		} catch (\Throwable $e) {
 			// ignore
 		}
