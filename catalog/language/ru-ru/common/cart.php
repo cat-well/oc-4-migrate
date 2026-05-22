@@ -17,5 +17,8 @@ $_['text_cart']                  = 'Корзина';
 $_['text_checkout']              = 'Оформить заказ';
 $_['text_continue_shopping']     = 'Продолжить покупки';
 
+// Buttons
+$_['button_remove']              = 'Удалить';
+
 // Error
 $_['error_product']              = 'Товар не найден!';
