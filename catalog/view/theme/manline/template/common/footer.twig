@@ -100,7 +100,7 @@
     {% endif %}
 
     <div class="copy_left">
-      <span>2010-2026 © Магазин Manline</span> — Все права защищены
+      <span>2010-2026 © Магазин Manline</span> {{ text_copyright_rights|default('— Все права защищены') }}
     </div>
     <div class="copy_right"><img src="catalog/view/theme/manline/image/cards.png" alt=""/></div>
   </div>
@@ -129,8 +129,39 @@
 <a href="#" class="scrollup"></a>
 
 <!-- BEGIN JIVOSITE CODE -->
+{# JivoSite widget UI language. Three signals attempted (we lay them all
+   down because Jivo's frontside is poorly documented and the underlying
+   widget code has changed several times):
+
+   1. window.jivo_config.language — picked up by older widget builds.
+   2. ?lang=… query string on the widget script URL — picked up by some
+      builds.
+   3. <html lang="…"> — set elsewhere by header.twig; recent widgets
+      sniff it on load.
+
+   If none of the three flips the UI, the JivoSite admin panel locale
+   setting is overriding everything — go to Settings → Display & Widget
+   → Language and set it to Auto (or add a separate Ukrainian widget
+   channel with its own widget_id). #}
 <script type="text/javascript">
-  (function(){ var widget_id = '1ipB7TUTsI';var d=document;var w=window;function l(){ var s = document.createElement('script'); s.type = 'text/javascript'; s.async = true; s.src = '//code.jivosite.com/script/widget/'+widget_id; var ss = document.getElementsByTagName('script')[0]; ss.parentNode.insertBefore(s, ss);}if(d.readyState=='complete'){l();}else{if(w.attachEvent){w.attachEvent('onload',l);}else{w.addEventListener('load',l,false);}}})();
+  window.jivo_config = window.jivo_config || {};
+  window.jivo_config.language = '{% if lang == 'uk-ua' %}uk{% else %}ru{% endif %}';
+  (function(){
+    var widget_id = '1ipB7TUTsI';
+    var widget_lang = '{% if lang == 'uk-ua' %}uk{% else %}ru{% endif %}';
+    var d=document; var w=window;
+    function l(){
+      var s = document.createElement('script');
+      s.type = 'text/javascript';
+      s.async = true;
+      s.src = '//code.jivosite.com/script/widget/' + widget_id + '?lang=' + widget_lang;
+      var ss = document.getElementsByTagName('script')[0];
+      ss.parentNode.insertBefore(s, ss);
+    }
+    if (d.readyState === 'complete') { l(); }
+    else if (w.attachEvent) { w.attachEvent('onload', l); }
+    else { w.addEventListener('load', l, false); }
+  })();
 </script>
 <script>
   jQuery(document).ready(function($){

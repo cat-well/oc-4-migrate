@@ -38,6 +38,10 @@ $_['text_menu_11']           = 'Ищем моделей';
 $_['text_menu_12']           = 'Производители';
 
 $_['text_ask_manager']       = 'Задайте вопрос менеджеру';
+$_['text_popup_1']           = 'Введите свое имя и номер телефона. Наш менеджер<br>свяжется с Вами в ближайшее время!';
 $_['text_your_name']         = 'Ваше имя';
 $_['text_message']           = 'Сообщение';
 $_['text_submit_form']       = 'Отправить';
+
+// Bottom copyright line (everything after the brand year/name span)
+$_['text_copyright_rights']  = '— Все права защищены';

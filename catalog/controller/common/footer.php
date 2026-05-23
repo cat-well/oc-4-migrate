@@ -139,7 +139,6 @@ class Footer extends \Opencart\System\Engine\Controller {
 			];
 		}
 
-		// Fallback (legacy route) if returns info page is not configured
 		if (!$returns_id) {
 			$legal[] = [
 				'key' => 'returns',
@@ -171,6 +170,12 @@ class Footer extends \Opencart\System\Engine\Controller {
 			$data['text_contact_info'] = 'Контактная информация';
 			$data['text_contact_address'] = "ФОП Науменко П. П.<br>ул. Владимирская, 18";
 		}
+
+		// footer.twig needs the active locale for inline UA/RU branches —
+		// copyright line, JivoSite widget language hint, etc. This is the
+		// same shape product/product.php and home.php pass to their own
+		// templates, so {% if lang == 'uk-ua' %} works consistently.
+		$data['lang'] = $lang;
 
 		// Manline theme: simple UA/RU switch.
 		// Requirement: use short prefixes /ua and /ru (no ?language=...)
@@ -231,9 +236,24 @@ class Footer extends \Opencart\System\Engine\Controller {
 		}
 
 		// SEOShield footer block (ТОП категории / города / теги / товары / предложения)
+		//
+		// Legacy parity: never displayed on Ukrainian pages — see
+		// legacy seoshield-client/core/modules/footers_block.php
+		// ::is_valid_url() returning false for any REQUEST_URI matching
+		// '/ua/'. We can't use the URI shape here because the OC4 home
+		// page on UA can be served from any of `/ua/`, `/ua` (no
+		// trailing slash), or even `/` (when the language is resolved
+		// from cookie/session). The URI-only check missed every shape
+		// except the explicit subfolder, so the block kept rendering on
+		// the homepage. Gating on the active config_language is the
+		// canonical way the rest of this codebase makes language
+		// decisions (product.php:314, home.php:27, …).
 		$data['seoshield_footer_html'] = '';
+		$req_uri = (string)($this->request->server['REQUEST_URI'] ?? '/');
+		$lookup_seoshield = ((string)$this->config->get('config_language') !== 'uk-ua');
+
 		try {
-			$req_uri = (string)($this->request->server['REQUEST_URI'] ?? '/');
+			if ($lookup_seoshield) {
 			$info = parse_url($req_uri);
 			$path = (string)($info['path'] ?? '/');
 			if ($path === '') $path = '/';
@@ -290,6 +310,7 @@ class Footer extends \Opencart\System\Engine\Controller {
 					}
 				}
 			}
+			} // end if ($lookup_seoshield)
 		} catch (\Throwable $e) {
 			// ignore
 		}

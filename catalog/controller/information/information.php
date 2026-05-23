@@ -145,6 +145,17 @@ class Information extends \Opencart\System\Engine\Controller {
 			$data['footer'] = $this->load->controller('common/footer');
 			$data['header'] = $this->load->controller('common/header');
 
+			// Manline theme: information.twig {% include %}'s a handful of
+			// page-specific child templates (o_nas / otsledit /
+			// sotrudnichestvo / ishem_modelej) that each use
+			// `{{ is_ua ? 'UA' : 'RU' }}` ternaries for inline copy.
+			// `is_ua` is not a global in OC4 (per legacy convention it was
+			// only set by filterpro_like.php on its own template's data),
+			// so without this assignment every UA page silently rendered
+			// the Russian branch. Setting it here makes all four pages
+			// flip correctly in one go.
+			$data['is_ua'] = ($this->config->get('config_language') === 'uk-ua');
+
 			$this->response->setOutput($this->load->view('information/information', $data));
 		} else {
 			return new \Opencart\System\Engine\Action('error/not_found');
