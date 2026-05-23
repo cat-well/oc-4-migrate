@@ -188,41 +188,27 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 
 			// Additional services: COD vs payment control are mutually exclusive.
 			// Both use BackwardDeliveryData but differ by PaymentMethod.
+			//
+			// Auto-derive default is intentionally 'none' so the model
+			// matches the original 6e524a1 behaviour — a minimal NP payload
+			// with no BackwardDelivery attached. Two earlier commits drifted
+			// from that:
+			//   - b5ab4e2 set the default to 'control' for any non-Liq/
+			//     non-PayPal payment, which silently attached "Послуга
+			//     післяплати" (NonCash) to every COD order and got
+			//     "Передана послуга Післяплата недоступна" back from NP
+			//     because the merchant's account does not have it active.
+			//   - The follow-up cf2743c tried to route COD payments through
+			//     the 'cod' branch (Cash + BackwardDelivery), but the same
+			//     account-side service-availability rule applies.
+			// The right behaviour is operator-explicit: only attach a
+			// BackwardDelivery service when the modal dropdown explicitly
+			// asks for 'cod' or 'control'. Bare "Оплата при доставці" still
+			// works as before — recipient pays cash at the warehouse, sender
+			// handles the cash return out-of-band.
 			$additional = trim((string)($changes['additional_service'] ?? ''));
 			if ($additional === '') {
-				// Auto-derive additional service from order payment method when
-				// the UI did not provide an explicit choice.
-				//   - Online prepaid (LiqPay / PayPal / card / wire / bank /
-				//     transfer / online): nothing extra — sender paid up front.
-				//   - Cash-on-delivery (наложений платіж): recipient pays the
-				//     order total at the warehouse, with BackwardDelivery
-				//     carrying the money back to us (CargoType=Money).
-				//   - Everything else falls into the safest bucket "none" so
-				//     we never default to a service that the order's payment
-				//     situation does not actually need.
-				$payment_code = strtolower((string)($order_info['payment_method']['code'] ?? $order_info['payment_code'] ?? ''));
-				$is_online_prepaid = $payment_code !== '' && (
-					strpos($payment_code, 'liqpay') !== false
-					|| strpos($payment_code, 'paypal') !== false
-					|| strpos($payment_code, 'card') !== false
-					|| strpos($payment_code, 'wire') !== false
-					|| strpos($payment_code, 'bank') !== false
-					|| strpos($payment_code, 'online') !== false
-				);
-				$is_cod = $payment_code !== '' && (
-					strpos($payment_code, 'cod') !== false
-					|| strpos($payment_code, 'cash') !== false
-					|| strpos($payment_code, 'nalog') !== false       // "налож" (наложений платіж)
-					|| strpos($payment_code, 'oplata_pri') !== false  // OC2 manline "оплата при доставці"
-					|| strpos($payment_code, 'pickup') !== false      // some shops use "pickup" for pay-on-pickup
-				);
-				if ($is_online_prepaid) {
-					$additional = 'none';
-				} elseif ($is_cod) {
-					$additional = 'cod';
-				} else {
-					$additional = 'none';
-				}
+				$additional = 'none';
 			}
 			if ($additional === 'control') {
 				$payment_method = 'NonCash';
@@ -301,14 +287,7 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 				]];
 			}
 
-			// TEMP: capture exact request + response for diagnosing
-			// "Передана послуга Післяплата недоступна". Remove once the
-			// COD flow is verified end-to-end on prod.
-			$_dbg_request = $payload;
-
 			$response = $this->callApi($api_key, $api_url, 'InternetDocument', 'save', $payload);
-
-			error_log('[NP TTN save] order_id=' . $order_id . ' payload=' . json_encode($_dbg_request, JSON_UNESCAPED_UNICODE) . ' response=' . json_encode($response, JSON_UNESCAPED_UNICODE));
 
 			if (empty($response['success'])) {
 				$error = $this->getApiError($response, 'Nova Poshta API did not create TTN.');

@@ -1663,54 +1663,29 @@ $(document).on('click', '#button-np-create-ttn', function() {
     $('#np-create-cost').val(orderTotal);
     $('#np-create-description').val('Одяг');
 
-    // Payment defaults (auto from order payment method) — mirror the
-    // server-side bucketing in extension/manline/admin/model/shipping/
-    // novaposhta.php so the UI auto-fill and the model's auto-derive
-    // agree on the default 'additional_service' value:
-    //   • online-prepaid → 'none' (sender already has the money)
-    //   • COD (наложений платіж) → 'cod' (recipient pays cash at the
-    //     warehouse; BackwardDelivery carries the order amount back)
-    //   • everything else → 'none' (safest — never default to 'control'
-    //     because NP's "Контроль платежу" service is account-gated and
-    //     fails with "Передана послуга Післяплата недоступна" when not
-    //     enabled on the merchant's NP cabinet).
-    var paymentCode = {{ payment_method_code|json_encode|raw }} || '';
-    paymentCode = String(paymentCode || '').toLowerCase();
-
-    var isOnlinePay = paymentCode !== '' && (
-        paymentCode.indexOf('liqpay')  !== -1 ||
-        paymentCode.indexOf('paypal')  !== -1 ||
-        paymentCode.indexOf('card')    !== -1 ||
-        paymentCode.indexOf('wire')    !== -1 ||
-        paymentCode.indexOf('bank')    !== -1 ||
-        paymentCode.indexOf('online')  !== -1
-    );
-    var isCod = paymentCode !== '' && (
-        paymentCode.indexOf('cod')        !== -1 ||
-        paymentCode.indexOf('cash')       !== -1 ||
-        paymentCode.indexOf('nalog')      !== -1 ||
-        paymentCode.indexOf('oplata_pri') !== -1 ||
-        paymentCode.indexOf('pickup')     !== -1
-    );
-
+    // Payment defaults — restored to the pre-modal behavior. The
+    // original createTtnForOrder() in commit 6e524a1 sent a minimal
+    // payload (PayerType=Recipient + PaymentMethod=Cash, no
+    // BackwardDeliveryData). NP accepted it; TTN was created; the
+    // edit modal could load and update it cleanly.
+    //
+    // Commit b5ab4e2 added an "auto derive COD/control defaults from
+    // payment method" rule that pre-selected 'control' for every
+    // non-LiqPay/non-PayPal payment code. That attaches a Backward-
+    // Delivery service to the payload at NP's account level — which
+    // requires "Послуга післяплати" to be activated on the merchant
+    // side. Manline's account does not have it, so every COD order
+    // started failing at create, and the saved-payload shape changed
+    // enough to break the in-place edit flow too.
+    //
+    // We revert to operator-explicit: default 'none', let the operator
+    // tick 'cod' or 'control' from the dropdown only when they actually
+    // need NP to handle cash return. This matches the "ВСЕ РАБОТАЛО"
+    // baseline.
     $('#np-create-payer-type').val('Recipient');
-    if (isOnlinePay) {
-        // Paid online → no post-payment services
-        $('#np-create-additional-service').val('none');
-        $('#np-create-cod-total').val('');
-        $('#np-create-cod-payer').val('Recipient');
-    } else if (isCod) {
-        // Cash on delivery → recipient pays the order at the warehouse
-        $('#np-create-additional-service').val('cod');
-        $('#np-create-cod-total').val(orderTotal);
-        $('#np-create-cod-payer').val('Recipient');
-    } else {
-        // Unknown payment code → safe default, operator can switch the
-        // dropdown manually if "Контроль платежу" is actually needed.
-        $('#np-create-additional-service').val('none');
-        $('#np-create-cod-total').val('');
-        $('#np-create-cod-payer').val('Recipient');
-    }
+    $('#np-create-additional-service').val('none');
+    $('#np-create-cod-total').val('');
+    $('#np-create-cod-payer').val('Recipient');
 
     // Sender defaults
     $('#np-create-sender-city').val('');
