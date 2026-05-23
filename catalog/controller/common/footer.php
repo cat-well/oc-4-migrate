@@ -139,7 +139,6 @@ class Footer extends \Opencart\System\Engine\Controller {
 			];
 		}
 
-		// Fallback (legacy route) if returns info page is not configured
 		if (!$returns_id) {
 			$legal[] = [
 				'key' => 'returns',
@@ -232,18 +231,20 @@ class Footer extends \Opencart\System\Engine\Controller {
 
 		// SEOShield footer block (ТОП категории / города / теги / товары / предложения)
 		//
-		// Legacy parity: the block was never displayed on Ukrainian-
-		// prefixed URLs. Legacy
-		// seoshield-client/core/modules/footers_block.php::is_valid_url()
-		// explicitly returned false whenever REQUEST_URI matched '/ua/'.
-		// The cached content is Russian-only (cities have only Russian
-		// declensions; no UA blocks ever existed in the resync dataset),
-		// so showing it on UA pages was — and is — wrong. We leave
-		// seoshield_footer_html empty for UA URLs and the Twig fallback
-		// renders the `<!--footers_block-->` comment instead.
+		// Legacy parity: never displayed on Ukrainian pages — see
+		// legacy seoshield-client/core/modules/footers_block.php
+		// ::is_valid_url() returning false for any REQUEST_URI matching
+		// '/ua/'. We can't use the URI shape here because the OC4 home
+		// page on UA can be served from any of `/ua/`, `/ua` (no
+		// trailing slash), or even `/` (when the language is resolved
+		// from cookie/session). The URI-only check missed every shape
+		// except the explicit subfolder, so the block kept rendering on
+		// the homepage. Gating on the active config_language is the
+		// canonical way the rest of this codebase makes language
+		// decisions (product.php:314, home.php:27, …).
 		$data['seoshield_footer_html'] = '';
 		$req_uri = (string)($this->request->server['REQUEST_URI'] ?? '/');
-		$lookup_seoshield = (strpos($req_uri, '/ua/') === false);
+		$lookup_seoshield = ((string)$this->config->get('config_language') !== 'uk-ua');
 
 		try {
 			if ($lookup_seoshield) {
