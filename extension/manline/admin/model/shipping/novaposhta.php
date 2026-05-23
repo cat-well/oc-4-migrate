@@ -243,11 +243,25 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 				}
 			}
 
+			// CargoType selection:
+			//   - Lockers (поштомати) are Parcel-only.
+			//   - When COD or "payment control" is enabled, NP only allows
+			//     BackwardDelivery on Parcel-class shipments. With CargoType
+			//     =Cargo NP returns warning "CargoType is changed to Parcel"
+			//     AND a hard error "Передана послуга Післяплата недоступна"
+			//     — silently coercing the cargo type to Parcel but refusing
+			//     to attach BackwardDelivery to the auto-coerced document.
+			//     Sending Parcel from the start avoids the rejection.
+			//   - Otherwise default to Cargo (legacy WarehouseWarehouse
+			//     freight flow for non-COD large items).
+			$has_backward_service = ($additional === 'cod' || $additional === 'control');
+			$cargo_type = ($is_locker || $has_backward_service) ? 'Parcel' : 'Cargo';
+
 			$payload = [
 				'PayerType' => $payer_type,
 				'PaymentMethod' => $payment_method,
 				'DateTime' => $ship_date,
-				'CargoType' => $is_locker ? 'Parcel' : 'Cargo',
+				'CargoType' => $cargo_type,
 				// Explicit RecipientType silences the "RecipientType is set to
 				// PrivatePerson" advisory that NP returns when we omit it and
 				// it has to infer from the recipient counterparty.
