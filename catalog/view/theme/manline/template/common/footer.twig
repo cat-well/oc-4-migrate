@@ -100,7 +100,7 @@
     {% endif %}
 
     <div class="copy_left">
-      <span>2010-2026 © Магазин Manline</span> — Все права защищены
+      <span>2010-2026 © Магазин Manline</span> {{ text_copyright_rights|default('— Все права защищены') }}
     </div>
     <div class="copy_right"><img src="catalog/view/theme/manline/image/cards.png" alt=""/></div>
   </div>
@@ -130,6 +130,12 @@
 
 <!-- BEGIN JIVOSITE CODE -->
 <script type="text/javascript">
+  // Pre-load locale hint for the JivoSite widget — picked up by their
+  // bundle before the iframe is created. Without this the widget shows
+  // Russian UI to UA visitors because the underlying account default
+  // is Russian.
+  window.jivo_config = window.jivo_config || {};
+  window.jivo_config.language = '{% if lang == 'uk-ua' %}uk{% else %}ru{% endif %}';
   (function(){ var widget_id = '1ipB7TUTsI';var d=document;var w=window;function l(){ var s = document.createElement('script'); s.type = 'text/javascript'; s.async = true; s.src = '//code.jivosite.com/script/widget/'+widget_id; var ss = document.getElementsByTagName('script')[0]; ss.parentNode.insertBefore(s, ss);}if(d.readyState=='complete'){l();}else{if(w.attachEvent){w.attachEvent('onload',l);}else{w.addEventListener('load',l,false);}}})();
 </script>
 <script>

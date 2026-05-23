@@ -42,3 +42,6 @@ $_['text_popup_1']           = 'Введите свое имя и номер т�
 $_['text_your_name']         = 'Ваше имя';
 $_['text_message']           = 'Сообщение';
 $_['text_submit_form']       = 'Отправить';
+
+// Bottom copyright line (everything after the brand year/name span)
+$_['text_copyright_rights']  = '— Все права защищены';

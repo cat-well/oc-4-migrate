@@ -171,6 +171,12 @@ class Footer extends \Opencart\System\Engine\Controller {
 			$data['text_contact_address'] = "ФОП Науменко П. П.<br>ул. Владимирская, 18";
 		}
 
+		// footer.twig needs the active locale for inline UA/RU branches —
+		// copyright line, JivoSite widget language hint, etc. This is the
+		// same shape product/product.php and home.php pass to their own
+		// templates, so {% if lang == 'uk-ua' %} works consistently.
+		$data['lang'] = $lang;
+
 		// Manline theme: simple UA/RU switch.
 		// Requirement: use short prefixes /ua and /ru (no ?language=...)
 		$build_lang_switch = function (string $lang_code): string {

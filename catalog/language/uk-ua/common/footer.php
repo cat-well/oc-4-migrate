@@ -45,3 +45,6 @@ $_['text_popup_1']           = "Введіть ім'я та номер теле�
 $_['text_your_name']         = "Ваше ім'я";
 $_['text_message']           = 'Повідомлення';
 $_['text_submit_form']       = 'Відправити';
+
+// Bottom copyright line (everything after the brand year/name span)
+$_['text_copyright_rights']  = '— Всі права захищені';
