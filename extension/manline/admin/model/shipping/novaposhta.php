@@ -192,16 +192,55 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 			if ($additional === '') {
 				// Auto-derive additional service from order payment method when
 				// the UI did not provide an explicit choice.
+				//   - Online prepaid (LiqPay / PayPal / card / wire / bank /
+				//     transfer / online): nothing extra — sender paid up front.
+				//   - Cash-on-delivery (наложений платіж): recipient pays the
+				//     order total at the warehouse, with BackwardDelivery
+				//     carrying the money back to us (CargoType=Money).
+				//   - Everything else falls into the safest bucket "none" so
+				//     we never default to a service that the order's payment
+				//     situation does not actually need.
 				$payment_code = strtolower((string)($order_info['payment_method']['code'] ?? $order_info['payment_code'] ?? ''));
-				$online = ($payment_code !== '') && (strpos($payment_code, 'liqpay') !== false || strpos($payment_code, 'paypal') !== false);
-				$additional = $online ? 'none' : 'control';
+				$is_online_prepaid = $payment_code !== '' && (
+					strpos($payment_code, 'liqpay') !== false
+					|| strpos($payment_code, 'paypal') !== false
+					|| strpos($payment_code, 'card') !== false
+					|| strpos($payment_code, 'wire') !== false
+					|| strpos($payment_code, 'bank') !== false
+					|| strpos($payment_code, 'online') !== false
+				);
+				$is_cod = $payment_code !== '' && (
+					strpos($payment_code, 'cod') !== false
+					|| strpos($payment_code, 'cash') !== false
+					|| strpos($payment_code, 'nalog') !== false       // "налож" (наложений платіж)
+					|| strpos($payment_code, 'oplata_pri') !== false  // OC2 manline "оплата при доставці"
+					|| strpos($payment_code, 'pickup') !== false      // some shops use "pickup" for pay-on-pickup
+				);
+				if ($is_online_prepaid) {
+					$additional = 'none';
+				} elseif ($is_cod) {
+					$additional = 'cod';
+				} else {
+					$additional = 'none';
+				}
 			}
 			if ($additional === 'control') {
 				$payment_method = 'NonCash';
+				// NP API constraint: PaymentMethod=NonCash is only valid when
+				// PayerType is Sender or ThirdPerson — "payment control" is
+				// paid by the sender (merchant), not the recipient. Forcing
+				// Recipient here returns "Payment NonCash is unavailable for
+				// payer Recipient" and the whole TTN save fails.
+				if ($payer_type === 'Recipient') {
+					$payer_type = 'Sender';
+				}
 			} elseif ($additional === 'cod') {
 				$payment_method = 'Cash';
 			} elseif (!empty($changes['PaymentMethod'])) {
 				$payment_method = (string)$changes['PaymentMethod'];
+				if ($payment_method === 'NonCash' && $payer_type === 'Recipient') {
+					$payer_type = 'Sender';
+				}
 			}
 
 			$payload = [
