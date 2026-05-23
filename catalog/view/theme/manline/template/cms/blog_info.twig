@@ -31,7 +31,7 @@
             <span class="blog-article-meta__item">{{ date_added }}</span>
             {% if reading_time %}
               <span class="blog-article-meta__sep">•</span>
-              <span class="blog-article-meta__item">{{ reading_time }} мин чтения</span>
+              <span class="blog-article-meta__item">{{ reading_time }} {{ text_reading_time_min|default('мин чтения') }}</span>
             {% endif %}
             <span class="blog-article-meta__sep">•</span>
             <span class="blog-article-meta__item">{{ comment_total }} {{ text_comment }}</span>
@@ -72,7 +72,7 @@
             <aside class="blog-article-aside">
               <div class="card blog-toc-card">
                 <div class="card-body">
-                  <div class="blog-aside-title">Оглавление</div>
+                  <div class="blog-aside-title">{{ text_toc|default('Оглавление') }}</div>
                   <nav id="blog-toc" class="blog-toc" aria-label="Table of contents"></nav>
                 </div>
               </div>
@@ -80,7 +80,7 @@
               <div class="card blog-related-card">
                 <div class="card-body">
                   {% if related_articles %}
-                    <div class="blog-aside-title">Читайте также</div>
+                    <div class="blog-aside-title">{{ text_read_also|default('Читайте также') }}</div>
                     <ul class="blog-related-list">
                       {% for a in related_articles %}
                         <li class="blog-related-item">
@@ -89,9 +89,9 @@
                         </li>
                       {% endfor %}
                     </ul>
-                    <a class="btn btn-outline-secondary btn-sm mt-2" href="{{ continue }}">Все статьи</a>
+                    <a class="btn btn-outline-secondary btn-sm mt-2" href="{{ continue }}">{{ text_all_articles|default('Все статьи') }}</a>
                   {% else %}
-                    <a class="btn btn-outline-secondary btn-sm" href="{{ continue }}">Все статьи</a>
+                    <a class="btn btn-outline-secondary btn-sm" href="{{ continue }}">{{ text_all_articles|default('Все статьи') }}</a>
                   {% endif %}
                 </div>
               </div>
