@@ -43,9 +43,15 @@ class Thumb extends \Opencart\System\Engine\Controller {
 		// "Розміри в наявності" labels. thumb is rendered as an
 		// independently-loaded sub-controller from category / search /
 		// special / manufacturer / home / related — none of those
-		// pass through their own `is_ua`. Setting it here once means
-		// every product card across the site flips correctly on UA.
-		$data['is_ua'] = ($this->config->get('config_language') === 'uk-ua');
+		// pass through their own language flag.
+		//
+		// CAVEAT: thumb.twig line 2 RE-COMPUTES is_ua from a `lang_code`
+		// variable: `{% set is_ua = (lang_code is defined) and (lang_code
+		// in ['uk-ua','ua']) %}`. That line OVERWRITES whatever is_ua we
+		// might pass, so setting is_ua directly silently has no effect.
+		// We have to pass `lang_code` (the full config_language value)
+		// for the template's own set-statement to flip is_ua correctly.
+		$data['lang_code'] = (string)$this->config->get('config_language');
 
 		return $this->load->view('product/thumb', $data);
 	}

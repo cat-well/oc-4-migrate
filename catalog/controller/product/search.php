@@ -539,7 +539,12 @@ class Search extends \Opencart\System\Engine\Controller {
 		// always falls to the Russian branch on UA pages (same root
 		// cause as product/related — header's $data['lang'] is not
 		// inherited by independently-loaded child views).
-		$data['lang'] = $this->language->get('code');
+		//
+		// IMPORTANT: must be the full config_language code ('uk-ua' /
+		// 'ru-ru'). $this->language->get('code') resolves to the SHORT
+		// form ('uk' / 'ru') from the language file's $_['code'] key,
+		// which never equals 'uk-ua' and silently breaks the ternary.
+		$data['lang'] = (string)$this->config->get('config_language');
 
 		// AJAX partial endpoint for FilterPro-like UX on search
 		if (!empty($this->request->get['fp_partial']) && ($this->request->server['HTTP_X_REQUESTED_WITH'] ?? '') === 'XMLHttpRequest') {

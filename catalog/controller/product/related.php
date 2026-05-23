@@ -95,7 +95,8 @@ class Related extends \Opencart\System\Engine\Controller {
 				"WHERE pov.product_id='" . (int)$result['product_id'] . "' AND pov.option_id='14' AND pov.quantity > 0 " .
 				"ORDER BY ovd.name"
 			);
-			if (!empty($size_q->rows)) {
+			$has_in_stock_size = !empty($size_q->rows);
+			if ($has_in_stock_size) {
 				$names = [];
 				foreach ($size_q->rows as $r) {
 					if (!empty($r['name'])) $names[] = (string)$r['name'];
@@ -103,6 +104,20 @@ class Related extends \Opencart\System\Engine\Controller {
 				$names = array_values(array_unique($names));
 				$product_polt_options = implode(', ', $names);
 			}
+
+			// Stock badge for the carousel card. A product is "in stock" when:
+			//   - at least one size (option_id=14) has quantity > 0, OR
+			//   - the product does not track stock at all (subtract=0), OR
+			//   - the bare product row has quantity > 0 (non-size products).
+			// Without this, related.twig used to render "Є в наявності" on
+			// every card regardless of real stock — clicking through landed
+			// on a product detail page that correctly said "Немає в наявності",
+			// which is exactly the mismatch a user reported.
+			$product_quantity = (int)($result['quantity'] ?? 0);
+			$product_subtract = (int)($result['subtract'] ?? 1);
+			$in_stock = $has_in_stock_size
+				|| ($product_subtract === 0)
+				|| ($product_subtract === 1 && $product_quantity > 0);
 
 			$product_data = [
 				'thumb'       => $this->model_tool_image->resize($image, $this->config->get('config_image_related_width'), $this->config->get('config_image_related_height')),
@@ -115,7 +130,8 @@ class Related extends \Opencart\System\Engine\Controller {
 				'model'       => $result['model'] ?? '',
 				'date_added_num' => $date_added_num,
 				'is_new'      => $is_new,
-				'product_polt_options' => $product_polt_options
+				'product_polt_options' => $product_polt_options,
+				'in_stock'    => $in_stock
 			] + $result;
 
 			// For Manline theme related carousel we pass raw product data into twig
@@ -129,7 +145,13 @@ class Related extends \Opencart\System\Engine\Controller {
 		// do NOT inherit $data['lang'] from the parent header controller,
 		// so without this assignment the ternary always falls to the
 		// Russian branch on UA pages.
-		$data['lang'] = $this->language->get('code');
+		//
+		// IMPORTANT: must be the full config_language code ('uk-ua' /
+		// 'ru-ru'), not $this->language->get('code') which resolves to
+		// the SHORT form ('uk' / 'ru') from the language file's $_['code']
+		// key. The Twig conditionals compare against the full form, so
+		// language->get('code') silently fails every condition.
+		$data['lang'] = (string)$this->config->get('config_language');
 
 		return $this->load->view('product/related', $data);
 

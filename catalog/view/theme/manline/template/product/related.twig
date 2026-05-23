@@ -20,7 +20,11 @@
                 <a class="prod_name" href="{{ product.href }}">{{ product.name }}</a>
               </div>
 
-              <div class="prod_stock">{% if lang == 'uk-ua' %}Є в наявності{% else %}Есть в наличии{% endif %}</div>
+              {% if product.in_stock %}
+                <div class="prod_stock">{% if lang == 'uk-ua' %}Є в наявності{% else %}Есть в наличии{% endif %}</div>
+              {% else %}
+                <div style="color: #ff0000">{% if lang == 'uk-ua' %}Немає в наявності{% else %}Нет в наличии{% endif %}</div>
+              {% endif %}
 
               {% if product.price %}
                 <div class="prod_price">
