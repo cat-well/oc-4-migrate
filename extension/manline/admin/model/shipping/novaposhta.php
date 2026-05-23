@@ -287,7 +287,14 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 				]];
 			}
 
+			// TEMP: capture exact request + response for diagnosing
+			// "Передана послуга Післяплата недоступна". Remove once the
+			// COD flow is verified end-to-end on prod.
+			$_dbg_request = $payload;
+
 			$response = $this->callApi($api_key, $api_url, 'InternetDocument', 'save', $payload);
+
+			error_log('[NP TTN save] order_id=' . $order_id . ' payload=' . json_encode($_dbg_request, JSON_UNESCAPED_UNICODE) . ' response=' . json_encode($response, JSON_UNESCAPED_UNICODE));
 
 			if (empty($response['success'])) {
 				$error = $this->getApiError($response, 'Nova Poshta API did not create TTN.');
