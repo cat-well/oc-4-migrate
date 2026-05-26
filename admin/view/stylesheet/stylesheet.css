@@ -875,7 +875,11 @@ div.required .col-form-label:not(span):before, div.required .form-label:before, 
 }
 
 .table-responsive {
-    overflow: visible;
+    /* Default Bootstrap behavior is overflow-x:auto for responsive tables.
+       OC admin needs horizontal scrolling on mobile; overflow:visible breaks it. */
+    overflow-x: auto;
+    overflow-y: visible;
+    -webkit-overflow-scrolling: touch;
 }
 
 td {
