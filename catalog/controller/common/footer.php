@@ -15,6 +15,11 @@ class Footer extends \Opencart\System\Engine\Controller {
 	 */
 	public function index(): string {
 		$this->load->language('common/footer');
+
+		// Mobile footer search block uses the same label as the header search.
+		$this->load->language('common/search');
+		$data['text_search'] = $this->language->get('text_search');
+
 		// Manline theme additions (subscribe/footer texts)
 		// Note: there is no separate language file for manline footer in this repo; texts are set below.
 

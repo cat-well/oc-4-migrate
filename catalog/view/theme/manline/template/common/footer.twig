@@ -2,11 +2,11 @@
 
 {# OC2 legacy mobile search (shown at the bottom on mobile) #}
 <div class="container only_mob mt-40 mb-20" id="content">
-  <div class="title mb-30"><span>{{ text_search|default('Поиск') }}</span></div>
+  <div class="title mb-30"><span>{{ text_search }}</span></div>
   <div class="searchpage">
-    <input class="otsledit_inp" type="text" name="search" size="50" value="" id="mobile-search-input" autocomplete="off"/>
+    <input class="otsledit_inp" type="text" name="search" size="50" value="" id="mobile-search-input" placeholder="{{ text_search }}" autocomplete="off"/>
     <input type="hidden" name="description" value="1" id="mobile-search-description"/>
-    <input type="button" value="{{ text_search|default('Поиск') }}" id="mobile-button-search" class="button btn"/>
+    <input type="button" value="{{ text_search }}" id="mobile-button-search" class="button btn"/>
   </div>
 </div>
 
