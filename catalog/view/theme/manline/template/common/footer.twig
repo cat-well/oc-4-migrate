@@ -1,5 +1,40 @@
 </main>
 
+{# OC2 legacy mobile search (shown at the bottom on mobile) #}
+<div class="container only_mob mt-40 mb-20" id="content">
+  <div class="title mb-30"><span>{{ text_search|default('Поиск') }}</span></div>
+  <div class="searchpage">
+    <input class="otsledit_inp" type="text" name="search" size="50" value="" id="mobile-search-input" autocomplete="off"/>
+    <input type="hidden" name="description" value="1" id="mobile-search-description"/>
+    <input type="button" value="{{ text_search|default('Поиск') }}" id="mobile-button-search" class="button btn"/>
+  </div>
+</div>
+
+<script>
+  (function () {
+    var btn = document.getElementById('mobile-button-search');
+    var input = document.getElementById('mobile-search-input');
+    if (!btn || !input) return;
+
+    function go() {
+      var q = (input.value || '').trim();
+      var url = '{{ product_search_url|default('index.php?route=product/search') }}';
+      if (q) url += (url.indexOf('?') === -1 ? '?' : '&') + 'search=' + encodeURIComponent(q);
+      // Legacy footer block always sent description=1
+      url += (url.indexOf('?') === -1 ? '?' : '&') + 'description=1';
+      window.location.href = url;
+    }
+
+    btn.addEventListener('click', go);
+    input.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        go();
+      }
+    });
+  })();
+</script>
+
 {# OC2-like footer (subscribe + footer columns + popup + jivosite) #}
 
 <div class="subscribe mt-70">
