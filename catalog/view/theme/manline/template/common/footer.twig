@@ -18,10 +18,18 @@
 
     function go() {
       var q = (input.value || '').trim();
-      var url = '{{ product_search_url|default('index.php?route=product/search') }}';
-      if (q) url += (url.indexOf('?') === -1 ? '?' : '&') + 'search=' + encodeURIComponent(q);
+
+      // Keep consistent with existing theme search logic (common.js):
+      // when current URL is /ua/... we use ua/ prefix before index.php
+      var lang_pref = window.location.href.indexOf('/ua/') === -1 ? '' : 'ua/';
+      var base = (document.getElementsByTagName('base')[0] && document.getElementsByTagName('base')[0].href) ? document.getElementsByTagName('base')[0].href : '';
+
+      var url = base + lang_pref + 'index.php?route=product/search';
+
+      if (q) url += '&search=' + encodeURIComponent(q);
       // Legacy footer block always sent description=1
-      url += (url.indexOf('?') === -1 ? '?' : '&') + 'description=1';
+      url += '&description=1';
+
       window.location.href = url;
     }
 
