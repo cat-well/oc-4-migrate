@@ -17,12 +17,19 @@
 
       <div class="simplecheckout-table-form-left"><span class="simplecheckout-required">*</span> {{ entry_zone }}</div>
       <div class="simplecheckout-table-form-right">
-        <select name="shipping_zone_id" data-onchange="reloadAll">
+        <select name="shipping_area_ref" id="shipping_address_area_ref" data-onchange="reloadAll">
           <option value="">{{ text_select }}</option>
-          {% for zone in zones %}
-            <option value="{{ zone.zone_id }}" {% if zone.zone_id == shipping_address.zone_id %}selected="selected"{% endif %}>{{ zone.name }}</option>
+          {% for area in np_areas %}
+            <option
+              value="{{ area.ref }}"
+              data-zone-id="{{ area.zone_id }}"
+              data-area="{{ area.description }}"
+              {% if area.ref == shipping_area_ref|default(shipping_address.area_ref|default('')) %}selected="selected"{% endif %}
+            >{{ area.description }}</option>
           {% endfor %}
         </select>
+        <input type="hidden" name="shipping_area" id="shipping_address_area" value="{{ shipping_area|default(shipping_address.area|default('')) }}" />
+        <input type="hidden" name="shipping_zone_id" id="shipping_address_zone_id" value="{{ shipping_address.zone_id }}" />
         {% if errors.shipping_zone %}
           <div class="simplecheckout-error-text">{{ errors.shipping_zone }}</div>
         {% endif %}

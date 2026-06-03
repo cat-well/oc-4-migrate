@@ -125,6 +125,7 @@ class Simplecheckout extends \Opencart\System\Engine\Controller {
 		$search = trim((string)($this->request->post['search'] ?? ''));
 		$method = trim((string)($this->request->post['shipping_method'] ?? ''));
 		$zone_id = (int)($this->request->post['zone_id'] ?? 0);
+		$area_ref = trim((string)($this->request->post['area_ref'] ?? ''));
 		$city_ref = trim((string)($this->request->post['city_ref'] ?? ''));
 		$city = trim((string)($this->request->post['city'] ?? ''));
 
@@ -137,17 +138,19 @@ class Simplecheckout extends \Opencart\System\Engine\Controller {
 			return;
 		}
 
-		if ($action === 'getCities') {
-			$json = $this->getNovaPoshtaCities($search, $zone_id);
+		if ($action === 'getAreas') {
+			$json = $this->getNovaPoshtaAreas();
+		} elseif ($action === 'getCities') {
+			$json = $this->getNovaPoshtaCities($search, $area_ref, $zone_id);
 		} elseif ($action === 'getWarehouses') {
 			if ($city_ref === '' && $city !== '') {
-				$city_ref = $this->resolveNovaPoshtaCityRef($city, $zone_id);
+				$city_ref = $this->resolveNovaPoshtaCityRef($city, $area_ref, $zone_id);
 			}
 
 			$json = $this->getNovaPoshtaWarehouses($city_ref, $search, $method);
 		} elseif ($action === 'getPrice') {
 			if ($city_ref === '' && $city !== '') {
-				$city_ref = $this->resolveNovaPoshtaCityRef($city, $zone_id);
+				$city_ref = $this->resolveNovaPoshtaCityRef($city, $area_ref, $zone_id);
 			}
 
 			$json = $this->getNovaPoshtaPrice($city_ref, $method);
@@ -204,6 +207,8 @@ class Simplecheckout extends \Opencart\System\Engine\Controller {
 			'city_ref' => trim((string)($shipping_address['city_ref'] ?? '')),
 			'address' => trim((string)($shipping_address['address_1'] ?? '')),
 			'address_ref' => trim((string)($shipping_address['address_ref'] ?? '')),
+			'area_ref' => trim((string)($shipping_address['area_ref'] ?? '')),
+			'area' => trim((string)($shipping_address['area'] ?? '')),
 			'zone_id' => (int)($shipping_address['zone_id'] ?? 0),
 			'zone' => trim((string)($shipping_address['zone'] ?? '')),
 			'country_id' => (int)($shipping_address['country_id'] ?? 0),
@@ -528,6 +533,9 @@ class Simplecheckout extends \Opencart\System\Engine\Controller {
 		$data['entry_city'] = $this->language->get('entry_city');
 		$data['entry_address_1'] = $this->language->get('entry_address_1');
 		$data['entry_postcode'] = $this->language->get('entry_postcode');
+		$data['np_areas'] = $this->getNovaPoshtaAreas();
+		$data['shipping_area_ref'] = (string)($state['shipping_address']['area_ref'] ?? '');
+		$data['shipping_area'] = (string)($state['shipping_address']['area'] ?? '');
 		$data['shipping_city_ref'] = (string)($state['shipping_address']['city_ref'] ?? '');
 		$data['shipping_address_ref'] = (string)($state['shipping_address']['address_ref'] ?? '');
 		$data['display_model'] = false;
@@ -763,11 +771,38 @@ class Simplecheckout extends \Opencart\System\Engine\Controller {
 			}
 		}
 
+		if (array_key_exists('shipping_area_ref', $post)) {
+			$area_ref = trim((string)$post['shipping_area_ref']);
+			$area_info = $area_ref !== '' ? $this->getNovaPoshtaAreaByRef($area_ref) : [];
+			$area_name = trim((string)($area_info['description'] ?? ($post['shipping_area'] ?? '')));
+			$zone_info = $area_ref !== '' ? $this->getZoneByNovaPoshtaArea($area_ref, $area_name) : [];
+
+			$simple['shipping_address']['area_ref'] = $area_ref;
+			$simple['shipping_address']['area'] = $area_name;
+			$simple['payment_address']['area_ref'] = $area_ref;
+			$simple['payment_address']['area'] = $area_name;
+
+			if ($zone_info) {
+				$simple['shipping_address']['zone_id'] = (int)$zone_info['zone_id'];
+				$simple['shipping_address']['zone'] = trim((string)($zone_info['name'] ?? ''));
+				$simple['payment_address']['zone_id'] = (int)$zone_info['zone_id'];
+				$simple['payment_address']['zone'] = trim((string)($zone_info['name'] ?? ''));
+			}
+		}
+
 		$country_changed = array_key_exists('shipping_country_id', $post) && (int)$simple['shipping_address']['country_id'] !== $previous_country_id;
 		$zone_changed = array_key_exists('shipping_zone_id', $post) && (int)$simple['shipping_address']['zone_id'] !== $previous_zone_id;
-		$should_reset_dependent_address = $changed_field === 'shipping_country_id' || $changed_field === 'shipping_zone_id';
+		$area_changed = array_key_exists('shipping_area_ref', $post) && (int)$simple['shipping_address']['zone_id'] !== $previous_zone_id;
+		$should_reset_dependent_address = $changed_field === 'shipping_country_id' || $changed_field === 'shipping_zone_id' || $changed_field === 'shipping_area_ref';
 
-		if (($country_changed || $zone_changed) && $should_reset_dependent_address) {
+		if (($country_changed || $zone_changed || $area_changed) && $should_reset_dependent_address) {
+			if ($country_changed) {
+				$simple['shipping_address']['area_ref'] = '';
+				$simple['shipping_address']['area'] = '';
+				$simple['payment_address']['area_ref'] = '';
+				$simple['payment_address']['area'] = '';
+			}
+
 			$simple['shipping_address']['city_ref'] = '';
 			$simple['shipping_address']['address_ref'] = '';
 
@@ -922,6 +957,8 @@ class Simplecheckout extends \Opencart\System\Engine\Controller {
 			'city'            => '',
 			'city_ref'        => '',
 			'address_ref'     => '',
+			'area_ref'        => $zone_id ? $this->getNovaPoshtaAreaRefByZoneId($zone_id) : '',
+			'area'            => '',
 			'postcode'        => '',
 			'country_id'      => $country_id,
 			'country'         => $country_info['name'] ?? '',
@@ -971,6 +1008,8 @@ class Simplecheckout extends \Opencart\System\Engine\Controller {
 		$result['city'] = trim((string)($result['city'] ?? ''));
 		$result['city_ref'] = trim((string)($result['city_ref'] ?? ''));
 		$result['address_ref'] = trim((string)($result['address_ref'] ?? ''));
+		$result['area_ref'] = trim((string)($result['area_ref'] ?? ''));
+		$result['area'] = trim((string)($result['area'] ?? ''));
 		$result['postcode'] = trim((string)($result['postcode'] ?? ''));
 
 		$this->load->model('localisation/country');
@@ -989,6 +1028,27 @@ class Simplecheckout extends \Opencart\System\Engine\Controller {
 			} else {
 				$result['zone_id'] = 0;
 				$result['zone'] = '';
+			}
+		}
+
+		if ($result['area_ref'] === '' && $result['zone_id']) {
+			$result['area_ref'] = $this->getNovaPoshtaAreaRefByZoneId((int)$result['zone_id']);
+		}
+
+		if ($result['area_ref'] !== '') {
+			$area_info = $this->getNovaPoshtaAreaByRef($result['area_ref']);
+
+			if ($area_info) {
+				$result['area'] = trim((string)($area_info['description'] ?? $result['area']));
+
+				if (!$result['zone_id']) {
+					$zone_info = $this->getZoneByNovaPoshtaArea($result['area_ref'], $result['area']);
+
+					if ($zone_info && (int)($zone_info['country_id'] ?? 0) === (int)$result['country_id']) {
+						$result['zone_id'] = (int)$zone_info['zone_id'];
+						$result['zone'] = trim((string)($zone_info['name'] ?? ''));
+					}
+				}
 			}
 		}
 
@@ -1214,7 +1274,9 @@ class Simplecheckout extends \Opencart\System\Engine\Controller {
 			$this->load->model('localisation/zone');
 			$zone_total = $this->model_localisation_zone->getTotalZonesByCountryId((int)$state['shipping_address']['country_id']);
 
-			if ($zone_total && !(int)$state['shipping_address']['zone_id']) {
+			if ($is_novaposhta && trim((string)($state['shipping_address']['area_ref'] ?? '')) === '') {
+				$errors['shipping_zone'] = $this->language->get('error_zone');
+			} elseif (!$is_novaposhta && $zone_total && !(int)$state['shipping_address']['zone_id']) {
 				$errors['shipping_zone'] = $this->language->get('error_zone');
 			}
 
@@ -1256,9 +1318,13 @@ class Simplecheckout extends \Opencart\System\Engine\Controller {
 	/**
 	 * @return array<int, array<string, string>>
 	 */
-	private function getNovaPoshtaCities(string $search, int $zone_id = 0): array {
+	private function getNovaPoshtaCities(string $search, string $area_ref = '', int $zone_id = 0): array {
 		$search = trim($search);
-		$area_ref = $this->getNovaPoshtaAreaRefByZoneId($zone_id);
+		$area_ref = trim($area_ref);
+
+		if ($area_ref === '') {
+			$area_ref = $this->getNovaPoshtaAreaRefByZoneId($zone_id);
+		}
 
 		if ($area_ref === '') {
 			return [];
@@ -1296,6 +1362,45 @@ class Simplecheckout extends \Opencart\System\Engine\Controller {
 		}
 
 		return $filtered;
+	}
+
+	/**
+	 * @return array<int, array<string, string>>
+	 */
+	private function getNovaPoshtaAreas(): array {
+		if (!empty($this->session->data['simplecheckout_np_areas']) && is_array($this->session->data['simplecheckout_np_areas'])) {
+			return $this->session->data['simplecheckout_np_areas'];
+		}
+
+		$language = (string)$this->config->get('config_language');
+		$is_ru = strpos($language, 'ru') === 0;
+		$rows = $this->requestNovaPoshta('Address', 'getAreas', []);
+		$areas = [];
+
+		foreach ($rows as $area) {
+			$ref = trim((string)($area['Ref'] ?? ''));
+			$name = trim((string)($is_ru ? ($area['DescriptionRu'] ?? $area['Description'] ?? '') : ($area['Description'] ?? $area['DescriptionRu'] ?? '')));
+
+			if ($ref === '' || $name === '') {
+				continue;
+			}
+
+			$zone = $this->getZoneByNovaPoshtaArea($ref, $name);
+
+			$areas[] = [
+				'description' => $name,
+				'value'       => $name,
+				'label'       => $name,
+				'ref'         => $ref,
+				'zone_id'     => (string)(int)($zone['zone_id'] ?? 0),
+				'zone'        => trim((string)($zone['name'] ?? ''))
+			];
+		}
+
+		$this->sortAutocompleteItems($areas);
+		$this->session->data['simplecheckout_np_areas'] = $areas;
+
+		return $areas;
 	}
 
 	/**
@@ -1489,14 +1594,17 @@ class Simplecheckout extends \Opencart\System\Engine\Controller {
 		return $city_ref;
 	}
 
-	private function resolveNovaPoshtaCityRef(string $city, int $zone_id = 0): string {
+	private function resolveNovaPoshtaCityRef(string $city, string $area_ref = '', int $zone_id = 0): string {
 		$city = trim($city);
+		$area_ref = trim($area_ref);
 
 		if ($city === '') {
 			return '';
 		}
 
-		$area_ref = $this->getNovaPoshtaAreaRefByZoneId($zone_id);
+		if ($area_ref === '') {
+			$area_ref = $this->getNovaPoshtaAreaRefByZoneId($zone_id);
+		}
 
 		if ($area_ref !== '') {
 			$cities = $this->getNovaPoshtaCitiesCatalogByArea($area_ref);
@@ -1544,7 +1652,7 @@ class Simplecheckout extends \Opencart\System\Engine\Controller {
 		}
 
 		$addresses = $rows[0]['Addresses'];
-		$candidates = $this->getAreaCandidatesByZoneId($zone_id);
+		$candidates = $area_ref !== '' ? $this->getAreaCandidatesByAreaRef($area_ref) : $this->getAreaCandidatesByZoneId($zone_id);
 
 		foreach ($addresses as $address) {
 			$ref = trim((string)($address['DeliveryCity'] ?? $address['Ref'] ?? ''));
@@ -1693,6 +1801,123 @@ class Simplecheckout extends \Opencart\System\Engine\Controller {
 		return '';
 	}
 
+	/**
+	 * @return array<string, string>
+	 */
+	private function getNovaPoshtaAreaByRef(string $area_ref): array {
+		$area_ref = trim($area_ref);
+
+		if ($area_ref === '') {
+			return [];
+		}
+
+		foreach ($this->getNovaPoshtaAreas() as $area) {
+			if (strcasecmp(trim((string)($area['ref'] ?? '')), $area_ref) === 0) {
+				return $area;
+			}
+		}
+
+		return [];
+	}
+
+	/**
+	 * @return array<string, mixed>
+	 */
+	private function getZoneByNovaPoshtaArea(string $area_ref, string $area_name = ''): array {
+		$area_ref = trim($area_ref);
+		$area_name = trim($area_name);
+
+		if ($area_ref === '') {
+			return [];
+		}
+
+		$zone_code = $this->getZoneCodeByAreaRef($area_ref);
+
+		if ($zone_code !== '') {
+			$zone = $this->getZoneByCountryAndCode(220, $zone_code);
+
+			if ($zone) {
+				return $zone;
+			}
+		}
+
+		$candidates = $zone_code !== '' ? $this->getAreaCandidatesByAreaRef($area_ref) : [];
+
+		if ($area_name !== '') {
+			$candidates[] = $area_name;
+		}
+
+		$candidates = array_values(array_unique(array_filter(array_map('trim', $candidates))));
+
+		foreach ($this->getAllZonesByCountryId(220) as $zone) {
+			$zone_name = trim((string)($zone['name'] ?? ''));
+			$zone_code = trim((string)($zone['code'] ?? ''));
+			$zone_candidates = $zone_code !== '' ? $this->getAreaCandidatesByZoneCode($zone_code) : [];
+
+			if ($zone_name !== '') {
+				$zone_candidates[] = $zone_name;
+			}
+
+			foreach ($candidates as $candidate) {
+				if ($this->areaMatchesCandidates($candidate, $zone_candidates)) {
+					return $zone;
+				}
+			}
+		}
+
+		return [];
+	}
+
+	private function getZoneCodeByAreaRef(string $area_ref): string {
+		$area_ref = strtolower(trim($area_ref));
+
+		if ($area_ref === '') {
+			return '';
+		}
+
+		foreach ($this->getNovaPoshtaZoneCodeMap() as $code => $ref) {
+			if (strcasecmp($ref, $area_ref) === 0) {
+				return $code;
+			}
+		}
+
+		return '';
+	}
+
+	/**
+	 * @return array<string, string>
+	 */
+	private function getNovaPoshtaZoneCodeMap(): array {
+		return [
+			'02' => '71508129-9b87-11de-822f-000c2965ae0e',
+			'03' => '7150812a-9b87-11de-822f-000c2965ae0e',
+			'04' => '7150812b-9b87-11de-822f-000c2965ae0e',
+			'05' => '7150812c-9b87-11de-822f-000c2965ae0e',
+			'06' => '7150812d-9b87-11de-822f-000c2965ae0e',
+			'07' => '7150812e-9b87-11de-822f-000c2965ae0e',
+			'08' => '7150812f-9b87-11de-822f-000c2965ae0e',
+			'09' => '71508130-9b87-11de-822f-000c2965ae0e',
+			'10' => '71508131-9b87-11de-822f-000c2965ae0e',
+			'12' => '71508133-9b87-11de-822f-000c2965ae0e',
+			'13' => '71508134-9b87-11de-822f-000c2965ae0e',
+			'14' => '71508135-9b87-11de-822f-000c2965ae0e',
+			'15' => '71508136-9b87-11de-822f-000c2965ae0e',
+			'16' => '71508137-9b87-11de-822f-000c2965ae0e',
+			'17' => '71508138-9b87-11de-822f-000c2965ae0e',
+			'18' => '71508139-9b87-11de-822f-000c2965ae0e',
+			'19' => '7150813a-9b87-11de-822f-000c2965ae0e',
+			'21' => '7150813c-9b87-11de-822f-000c2965ae0e',
+			'22' => '7150813d-9b87-11de-822f-000c2965ae0e',
+			'23' => '7150813e-9b87-11de-822f-000c2965ae0e',
+			'24' => '7150813f-9b87-11de-822f-000c2965ae0e',
+			'25' => '71508140-9b87-11de-822f-000c2965ae0e',
+			'26' => '71508131-9b87-11de-822f-000c2965ae0e',
+			'27' => '71508128-9b87-11de-822f-000c2965ae0e',
+			'35' => '71508132-9b87-11de-822f-000c2965ae0e',
+			'63' => '7150813b-9b87-11de-822f-000c2965ae0e'
+		];
+	}
+
 	private function getAreaRefByZoneCode(string $zone_code): string {
 		$zone_code = trim($zone_code);
 
@@ -1702,34 +1927,7 @@ class Simplecheckout extends \Opencart\System\Engine\Controller {
 
 		$zone_code = strtoupper($zone_code);
 
-		$map = [
-			'02' => '71508129-9b87-11de-822f-000c2965ae0e', // Vinnytska
-			'03' => '7150812a-9b87-11de-822f-000c2965ae0e', // Volynska
-			'04' => '7150812b-9b87-11de-822f-000c2965ae0e', // Dnipropetrovska
-			'05' => '7150812c-9b87-11de-822f-000c2965ae0e', // Donetska
-			'06' => '7150812d-9b87-11de-822f-000c2965ae0e', // Zhytomyrska
-			'07' => '7150812e-9b87-11de-822f-000c2965ae0e', // Zakarpatska
-			'08' => '7150812f-9b87-11de-822f-000c2965ae0e', // Zaporizka
-			'09' => '71508130-9b87-11de-822f-000c2965ae0e', // Ivano-Frankivska
-			'10' => '71508131-9b87-11de-822f-000c2965ae0e', // Kyivska
-			'12' => '71508133-9b87-11de-822f-000c2965ae0e', // Luhanska
-			'13' => '71508134-9b87-11de-822f-000c2965ae0e', // Lvivska
-			'14' => '71508135-9b87-11de-822f-000c2965ae0e', // Mykolaivska
-			'15' => '71508136-9b87-11de-822f-000c2965ae0e', // Odeska
-			'16' => '71508137-9b87-11de-822f-000c2965ae0e', // Poltavska
-			'17' => '71508138-9b87-11de-822f-000c2965ae0e', // Rivnenska
-			'18' => '71508139-9b87-11de-822f-000c2965ae0e', // Sumska
-			'19' => '7150813a-9b87-11de-822f-000c2965ae0e', // Ternopilska
-			'21' => '7150813c-9b87-11de-822f-000c2965ae0e', // Khersonska
-			'22' => '7150813d-9b87-11de-822f-000c2965ae0e', // Khmelnytska
-			'23' => '7150813e-9b87-11de-822f-000c2965ae0e', // Cherkaska
-			'24' => '7150813f-9b87-11de-822f-000c2965ae0e', // Chernivetska
-			'25' => '71508140-9b87-11de-822f-000c2965ae0e', // Chernihivska
-			'26' => '71508131-9b87-11de-822f-000c2965ae0e', // Kyiv city -> Kyivska area
-			'27' => '71508128-9b87-11de-822f-000c2965ae0e', // ARK
-			'35' => '71508132-9b87-11de-822f-000c2965ae0e', // Kirovohradska
-			'63' => '7150813b-9b87-11de-822f-000c2965ae0e'  // Kharkivska
-		];
+		$map = $this->getNovaPoshtaZoneCodeMap();
 
 		if (isset($map[$zone_code])) {
 			return $map[$zone_code];
@@ -1780,6 +1978,22 @@ class Simplecheckout extends \Opencart\System\Engine\Controller {
 		];
 
 		return $map[$zone_code] ?? [];
+	}
+
+	/**
+	 * @return array<int, string>
+	 */
+	private function getAreaCandidatesByAreaRef(string $area_ref): array {
+		$zone_code = $this->getZoneCodeByAreaRef($area_ref);
+
+		if ($zone_code === '') {
+			$area = $this->getNovaPoshtaAreaByRef($area_ref);
+			$name = trim((string)($area['description'] ?? ''));
+
+			return $name !== '' ? [$name] : [];
+		}
+
+		return $this->getAreaCandidatesByZoneCode($zone_code);
 	}
 
 	/**
@@ -1845,6 +2059,67 @@ class Simplecheckout extends \Opencart\System\Engine\Controller {
 		}
 
 		return $this->getAreaCandidatesByZoneCode($zone_code);
+	}
+
+	/**
+	 * @return array<string, mixed>
+	 */
+	private function getZoneByCountryAndCode(int $country_id, string $zone_code): array {
+		$zone_code = trim($zone_code);
+
+		if ($country_id <= 0 || $zone_code === '') {
+			return [];
+		}
+
+		$language_id = $this->getFallbackDescriptionLanguageId('zone_description');
+		$escaped_code = $this->db->escape($zone_code);
+		$escaped_normalized = $this->db->escape(str_pad((string)(int)$zone_code, 2, '0', STR_PAD_LEFT));
+
+		$sql = "SELECT z.zone_id, z.country_id, z.code, z.status, zd.name
+			FROM `" . DB_PREFIX . "zone` z
+			LEFT JOIN `" . DB_PREFIX . "zone_description` zd
+				ON (zd.zone_id = z.zone_id AND zd.language_id = '" . (int)$language_id . "')
+			WHERE z.country_id = '" . (int)$country_id . "'
+				AND (z.code = '" . $escaped_code . "' OR z.code = '" . $escaped_normalized . "')
+			ORDER BY z.status DESC, z.zone_id ASC
+			LIMIT 1";
+
+		$row = $this->db->query($sql)->row;
+
+		if (!is_array($row)) {
+			return [];
+		}
+
+		$this->localizeUkraineZoneName($row);
+
+		return $row;
+	}
+
+	/**
+	 * @return array<int, array<string, mixed>>
+	 */
+	private function getAllZonesByCountryId(int $country_id): array {
+		if ($country_id <= 0) {
+			return [];
+		}
+
+		$language_id = $this->getFallbackDescriptionLanguageId('zone_description');
+
+		$sql = "SELECT z.zone_id, z.country_id, z.code, z.status, zd.name
+			FROM `" . DB_PREFIX . "zone` z
+			LEFT JOIN `" . DB_PREFIX . "zone_description` zd
+				ON (zd.zone_id = z.zone_id AND zd.language_id = '" . (int)$language_id . "')
+			WHERE z.country_id = '" . (int)$country_id . "'
+			ORDER BY z.status DESC, zd.name";
+
+		$zones = $this->db->query($sql)->rows;
+
+		foreach ($zones as &$zone) {
+			$this->localizeUkraineZoneName($zone);
+		}
+		unset($zone);
+
+		return $zones;
 	}
 
 	/**

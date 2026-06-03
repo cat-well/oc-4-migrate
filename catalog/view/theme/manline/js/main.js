@@ -797,6 +797,13 @@ function clearNovaPoshtaRefsSimplecheckout(clearCity) {
     $('#shipping_address_address_ref').val('');
 }
 
+function updateNovaPoshtaAreaFieldsSimplecheckout() {
+    var $selected = $('#shipping_address_area_ref option:selected');
+
+    $('#shipping_address_area').val(String($selected.attr('data-area') || $selected.text() || ''));
+    $('#shipping_address_zone_id').val(String($selected.attr('data-zone-id') || '0'));
+}
+
 function initNovaPoshtaAutocomplete() {
     var $form = $('#simplecheckout_form_0');
 
@@ -818,7 +825,9 @@ function initNovaPoshtaAutocomplete() {
 
     simpleNpAutocompleteBound = true;
 
-    $(document).on('change.simpleNp', '#simplecheckout_form_0 [name="shipping_method"], #simplecheckout_form_0 [name="shipping_country_id"], #simplecheckout_form_0 [name="shipping_zone_id"]', function (event) {
+    updateNovaPoshtaAreaFieldsSimplecheckout();
+
+    $(document).on('change.simpleNp', '#simplecheckout_form_0 [name="shipping_method"], #simplecheckout_form_0 [name="shipping_country_id"], #simplecheckout_form_0 [name="shipping_area_ref"]', function (event) {
         var method = selectedShippingMethodSimplecheckout();
 
         if (!isNovaPoshtaMethodSimplecheckout(method)) {
@@ -827,7 +836,11 @@ function initNovaPoshtaAutocomplete() {
             return;
         }
 
-        if (event.target.name === 'shipping_country_id' || event.target.name === 'shipping_zone_id') {
+        if (event.target.name === 'shipping_area_ref') {
+            updateNovaPoshtaAreaFieldsSimplecheckout();
+        }
+
+        if (event.target.name === 'shipping_country_id' || event.target.name === 'shipping_area_ref') {
             $('input[name="shipping_city"]').val('');
             $('input[name="shipping_address_1"]').val('');
             clearNovaPoshtaRefsSimplecheckout(true);
@@ -865,7 +878,7 @@ function initNovaPoshtaAutocomplete() {
 
         var cityRef = String($('#shipping_address_city_ref').val() || '');
         var cityName = String($('input[name="shipping_city"]').val() || '');
-        var zoneId = String($('select[name="shipping_zone_id"]').val() || '');
+        var areaRef = String($('select[name="shipping_area_ref"]').val() || '');
 
         if (!cityRef && !cityName) {
             return;
@@ -878,7 +891,7 @@ function initNovaPoshtaAutocomplete() {
             data: {
                 action: 'getPrice',
                 shipping_method: method,
-                zone_id: zoneId,
+                area_ref: areaRef,
                 city_ref: cityRef,
                 city: cityName
             },
@@ -930,7 +943,7 @@ function initNovaPoshtaAutocomplete() {
         var $input = $(this);
         var cityRef = String($('#shipping_address_city_ref').val() || '');
         var cityName = String($('input[name="shipping_city"]').val() || '');
-        var zoneId = String($('select[name="shipping_zone_id"]').val() || '');
+        var areaRef = String($('select[name="shipping_area_ref"]').val() || '');
         var action = isCityInput ? 'getCities' : 'getWarehouses';
 
         $input.npAutocompleteAddress({
@@ -939,7 +952,7 @@ function initNovaPoshtaAutocomplete() {
                     action: action,
                     search: String(request || ''),
                     shipping_method: method,
-                    zone_id: zoneId,
+                    area_ref: areaRef,
                     city_ref: cityRef,
                     city: cityName
                 };
