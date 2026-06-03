@@ -708,9 +708,10 @@ function bindSimplecheckoutFallback() {
                     $input.on('keydown.npAutocompleteAddress', function (event) {
                         if (event.keyCode === 27) {
                             hide();
-                            return;
                         }
+                    });
 
+                    $input.on('input.npAutocompleteAddress', function () {
                         request($input.val());
                     });
 
@@ -776,7 +777,13 @@ function selectedShippingMethodSimplecheckout() {
 
     var selected = $('#simplecheckout_shipping select[name="shipping_method"]').val();
 
-    return selected ? String(selected) : '';
+    if (selected) {
+        return String(selected);
+    }
+
+    var firstNp = $('#simplecheckout_shipping input[name="shipping_method"][value^="novaposhta."]').first().val();
+
+    return firstNp ? String(firstNp) : '';
 }
 
 function isNovaPoshtaMethodSimplecheckout(method) {
@@ -844,6 +851,7 @@ function initNovaPoshtaAutocomplete() {
             $('input[name="shipping_city"]').val('');
             $('input[name="shipping_address_1"]').val('');
             clearNovaPoshtaRefsSimplecheckout(true);
+            $('input[name="shipping_city"], input[name="shipping_address_1"]').npAutocompleteAddress('destroy');
             return;
         }
 
@@ -934,8 +942,9 @@ function initNovaPoshtaAutocomplete() {
         var method = selectedShippingMethodSimplecheckout();
         var isCityInput = this.name === 'shipping_city';
         var needsWarehouse = isNovaPoshtaWarehouseMethodSimplecheckout(method);
+        var areaRef = String($('select[name="shipping_area_ref"]').val() || '');
 
-        if (!isNovaPoshtaMethodSimplecheckout(method) || (!isCityInput && !needsWarehouse)) {
+        if ((!isCityInput && !needsWarehouse) || (!isNovaPoshtaMethodSimplecheckout(method) && (!isCityInput || !areaRef))) {
             $(this).npAutocompleteAddress('destroy');
             return;
         }
@@ -943,7 +952,6 @@ function initNovaPoshtaAutocomplete() {
         var $input = $(this);
         var cityRef = String($('#shipping_address_city_ref').val() || '');
         var cityName = String($('input[name="shipping_city"]').val() || '');
-        var areaRef = String($('select[name="shipping_area_ref"]').val() || '');
         var action = isCityInput ? 'getCities' : 'getWarehouses';
 
         $input.npAutocompleteAddress({
