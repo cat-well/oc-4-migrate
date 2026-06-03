@@ -626,7 +626,7 @@ function bindSimplecheckoutFallback() {
                     var $input = $(this);
 
                     if ($input.data('npAutocompleteAddress')) {
-                        return;
+                        methods.destroy.call($input);
                     }
 
                     var settings = $.extend({}, options || {});
@@ -639,7 +639,7 @@ function bindSimplecheckoutFallback() {
                     }
 
                     function show() {
-                        var offset = $input.position();
+                        var offset = $input.offset();
 
                         $list.css({
                             top: offset.top + $input.outerHeight(),
@@ -733,8 +733,13 @@ function bindSimplecheckoutFallback() {
                         hide();
                     });
 
-                    $input.after($list);
+                    $('body').append($list);
                     $input.data('npAutocompleteAddress', true);
+                    $input.data('npAutocompleteAddressList', $list);
+
+                    if ($input.is(':focus')) {
+                        request($input.val());
+                    }
                 });
             },
             destroy: function () {
@@ -747,7 +752,8 @@ function bindSimplecheckoutFallback() {
 
                     $input.removeData('npAutocompleteAddress');
                     $input.off('.npAutocompleteAddress');
-                    $input.siblings('ul.dropdown-address').remove();
+                    $input.data('npAutocompleteAddressList').remove();
+                    $input.removeData('npAutocompleteAddressList');
                 });
             }
         };
