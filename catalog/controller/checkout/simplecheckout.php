@@ -1397,8 +1397,68 @@ class Simplecheckout extends \Opencart\System\Engine\Controller {
 			];
 		}
 
+		if (!$areas) {
+			$areas = $this->getFallbackNovaPoshtaAreas($is_ru);
+		}
+
 		$this->sortAutocompleteItems($areas);
 		$this->session->data['simplecheckout_np_areas'] = $areas;
+
+		return $areas;
+	}
+
+	/**
+	 * @return array<int, array<string, string>>
+	 */
+	private function getFallbackNovaPoshtaAreas(bool $is_ru): array {
+		$names = [
+			'27' => ['uk' => 'Автономна Республіка Крим', 'ru' => 'Автономная Республика Крым'],
+			'02' => ['uk' => 'Вінницька', 'ru' => 'Винницкая'],
+			'03' => ['uk' => 'Волинська', 'ru' => 'Волынская'],
+			'04' => ['uk' => 'Дніпропетровська', 'ru' => 'Днепропетровская'],
+			'05' => ['uk' => 'Донецька', 'ru' => 'Донецкая'],
+			'06' => ['uk' => 'Житомирська', 'ru' => 'Житомирская'],
+			'07' => ['uk' => 'Закарпатська', 'ru' => 'Закарпатская'],
+			'08' => ['uk' => 'Запорізька', 'ru' => 'Запорожская'],
+			'09' => ['uk' => 'Івано-Франківська', 'ru' => 'Ивано-Франковская'],
+			'10' => ['uk' => 'Київська', 'ru' => 'Киевская'],
+			'35' => ['uk' => 'Кіровоградська', 'ru' => 'Кировоградская'],
+			'12' => ['uk' => 'Луганська', 'ru' => 'Луганская'],
+			'13' => ['uk' => 'Львівська', 'ru' => 'Львовская'],
+			'14' => ['uk' => 'Миколаївська', 'ru' => 'Николаевская'],
+			'15' => ['uk' => 'Одеська', 'ru' => 'Одесская'],
+			'16' => ['uk' => 'Полтавська', 'ru' => 'Полтавская'],
+			'17' => ['uk' => 'Рівненська', 'ru' => 'Ровенская'],
+			'18' => ['uk' => 'Сумська', 'ru' => 'Сумская'],
+			'19' => ['uk' => 'Тернопільська', 'ru' => 'Тернопольская'],
+			'63' => ['uk' => 'Харківська', 'ru' => 'Харьковская'],
+			'21' => ['uk' => 'Херсонська', 'ru' => 'Херсонская'],
+			'22' => ['uk' => 'Хмельницька', 'ru' => 'Хмельницкая'],
+			'23' => ['uk' => 'Черкаська', 'ru' => 'Черкасская'],
+			'24' => ['uk' => 'Чернівецька', 'ru' => 'Черновицкая'],
+			'25' => ['uk' => 'Чернігівська', 'ru' => 'Черниговская']
+		];
+		$areas = [];
+
+		foreach ($names as $code => $name) {
+			$ref = $this->getAreaRefByZoneCode($code);
+
+			if ($ref === '') {
+				continue;
+			}
+
+			$description = $is_ru ? $name['ru'] : $name['uk'];
+			$zone = $this->getZoneByNovaPoshtaArea($ref, $description);
+
+			$areas[] = [
+				'description' => $description,
+				'value'       => $description,
+				'label'       => $description,
+				'ref'         => $ref,
+				'zone_id'     => (string)(int)($zone['zone_id'] ?? 0),
+				'zone'        => trim((string)($zone['name'] ?? ''))
+			];
+		}
 
 		return $areas;
 	}
