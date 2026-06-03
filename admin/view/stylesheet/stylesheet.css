@@ -882,6 +882,26 @@ div.required .col-form-label:not(span):before, div.required .form-label:before, 
     -webkit-overflow-scrolling: touch;
 }
 
+.admin-order-table-responsive {
+    overflow-x: auto !important;
+    overflow-y: visible;
+    max-width: 100%;
+}
+
+.admin-order-table {
+    min-width: 720px;
+}
+
+.admin-order-table th,
+.admin-order-table td {
+    white-space: nowrap;
+}
+
+.admin-order-table th:last-child,
+.admin-order-table td:last-child {
+    width: 1%;
+}
+
 td {
     position: relative;
 	vertical-align: middle;
