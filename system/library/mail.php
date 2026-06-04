@@ -150,8 +150,45 @@ class Mail {
 			throw new \Exception('Error: E-Mail message required!');
 		}
 
+		$this->normalizeSender();
+
 		$mail = new $this->class($this->option);
 
 		return $mail->send();
+	}
+
+	private function normalizeSender(): void {
+		$from = trim((string)$this->option['from']);
+		$safe_from = $this->getSafeSenderEmail($from);
+
+		if ($safe_from === '' || $safe_from === $from) {
+			return;
+		}
+
+		$this->option['from'] = $safe_from;
+
+		if (empty($this->option['reply_to']) && filter_var($from, FILTER_VALIDATE_EMAIL)) {
+			$this->option['reply_to'] = $from;
+		}
+
+		if (strcasecmp($this->class, 'Opencart\\System\\Library\\Mail\\Mail') === 0 && empty($this->option['parameter'])) {
+			$this->option['parameter'] = '-f' . $safe_from;
+		}
+	}
+
+	private function getSafeSenderEmail(string $from): string {
+		$smtp_username = trim((string)($this->option['smtp_username'] ?? ''));
+		if (filter_var($smtp_username, FILTER_VALIDATE_EMAIL)) {
+			return $smtp_username;
+		}
+
+		$domain = strtolower((string)substr(strrchr($from, '@') ?: '', 1));
+		$external_domains = ['gmail.com', 'googlemail.com', 'yahoo.com', 'outlook.com', 'hotmail.com', 'icloud.com'];
+
+		if ($domain !== '' && in_array($domain, $external_domains, true)) {
+			return 'manline@business-9.default-host.net';
+		}
+
+		return $from;
 	}
 }
