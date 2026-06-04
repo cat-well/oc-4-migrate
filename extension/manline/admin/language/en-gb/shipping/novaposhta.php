@@ -14,6 +14,9 @@ $_['entry_free_total']    = 'Free Delivery Threshold';
 $_['entry_branch_cost']   = 'Branch Cost';
 $_['entry_courier_cost']  = 'Courier Cost';
 $_['entry_locker_cost']   = 'Locker Cost';
+$_['entry_default_sender_city'] = 'Default Sender City';
+$_['entry_default_sender_delivery_type'] = 'Default Sender Delivery Type';
+$_['entry_default_sender_warehouse'] = 'Default Sender Branch/Locker';
 $_['entry_replace_flat']  = 'Replace Flat Shipping';
 $_['entry_tax_class']     = 'Tax Class';
 $_['entry_geo_zone']      = 'Geo Zone';
@@ -22,7 +25,11 @@ $_['entry_sort_order']    = 'Sort Order';
 
 // Help
 $_['help_free_total']   = 'If cart subtotal is greater or equal to this amount, Nova Poshta shipping is free.';
+$_['help_default_sender'] = 'This address is pre-filled in the TTN create modal. The operator can still change it before creation.';
 $_['help_replace_flat'] = 'Hide flat shipping method from checkout when Nova Poshta is enabled.';
+
+$_['text_delivery_branch'] = 'Branch';
+$_['text_delivery_locker'] = 'Locker';
 
 // Error
 $_['error_permission'] = 'Warning: You do not have permission to modify Nova Poshta shipping!';

@@ -75,6 +75,30 @@
             </div>
           </div>
           <div class="row mb-3">
+            <label for="input-default-sender-city" class="col-sm-2 col-form-label">{{ entry_default_sender_city }}</label>
+            <div class="col-sm-10 np-sender-autocomplete-wrap">
+              <input type="text" name="shipping_novaposhta_default_sender_city" value="{{ shipping_novaposhta_default_sender_city }}" placeholder="{{ entry_default_sender_city }}" id="input-default-sender-city" class="form-control" autocomplete="off"/>
+              <input type="hidden" name="shipping_novaposhta_default_sender_city_ref" value="{{ shipping_novaposhta_default_sender_city_ref }}" id="input-default-sender-city-ref"/>
+            </div>
+          </div>
+          <div class="row mb-3">
+            <label for="input-default-sender-delivery-type" class="col-sm-2 col-form-label">{{ entry_default_sender_delivery_type }}</label>
+            <div class="col-sm-10">
+              <select name="shipping_novaposhta_default_sender_delivery_type" id="input-default-sender-delivery-type" class="form-select">
+                <option value="branch"{% if shipping_novaposhta_default_sender_delivery_type != 'locker' %} selected{% endif %}>{{ text_delivery_branch }}</option>
+                <option value="locker"{% if shipping_novaposhta_default_sender_delivery_type == 'locker' %} selected{% endif %}>{{ text_delivery_locker }}</option>
+              </select>
+            </div>
+          </div>
+          <div class="row mb-3">
+            <label for="input-default-sender-warehouse" class="col-sm-2 col-form-label">{{ entry_default_sender_warehouse }}</label>
+            <div class="col-sm-10 np-sender-autocomplete-wrap">
+              <textarea name="shipping_novaposhta_default_sender_warehouse" placeholder="{{ entry_default_sender_warehouse }}" id="input-default-sender-warehouse" class="form-control" rows="2" autocomplete="off">{{ shipping_novaposhta_default_sender_warehouse }}</textarea>
+              <input type="hidden" name="shipping_novaposhta_default_sender_warehouse_ref" value="{{ shipping_novaposhta_default_sender_warehouse_ref }}" id="input-default-sender-warehouse-ref"/>
+              <div class="form-text">{{ help_default_sender }}</div>
+            </div>
+          </div>
+          <div class="row mb-3">
             <label class="col-sm-2 col-form-label">{{ entry_replace_flat }}</label>
             <div class="col-sm-10">
               <div class="form-check form-switch form-switch-lg">
@@ -126,4 +150,141 @@
     </div>
   </div>
 </div>
+<script>
+(function() {
+    var endpoint = '{{ novaposhta_lookup|replace({'&amp;':'&'})|escape('js') }}';
+
+    function attach($input, getPayload, onPick) {
+        var $wrap = $input.closest('.np-sender-autocomplete-wrap');
+        $wrap.css('position', 'relative');
+
+        var $list = $('<ul class="dropdown-menu w-100 shadow-sm" style="position:absolute; left:0; max-height:240px; overflow:auto; z-index:1060;"></ul>').hide();
+        $input.after($list);
+
+        var items = {};
+        var timer = null;
+
+        function hide() {
+            $list.hide();
+        }
+
+        function show() {
+            var pos = $input.position();
+            $list.css({
+                top: pos.top + $input.outerHeight(),
+                left: pos.left,
+                width: $input.outerWidth()
+            }).show();
+        }
+
+        function render(data) {
+            items = {};
+            var html = '';
+
+            if (!Array.isArray(data) || !data.length) {
+                $list.html('');
+                hide();
+                return;
+            }
+
+            data.forEach(function(item, idx) {
+                var value = String(item.value || item.description || '');
+                if (!value) return;
+                items[String(idx)] = item;
+                html += '<li><a class="dropdown-item" href="#" data-key="' + idx + '" style="white-space:normal;">' +
+                    $('<div/>').text(String(item.label || value)).html() +
+                    '</a></li>';
+            });
+
+            $list.html(html);
+            if (html && $input.is(':focus')) show();
+        }
+
+        function request() {
+            var payload = getPayload(String($input.val() || ''));
+            if (!payload) {
+                render([]);
+                return;
+            }
+
+            clearTimeout(timer);
+            timer = setTimeout(function() {
+                $.ajax({
+                    url: endpoint,
+                    type: 'POST',
+                    dataType: 'json',
+                    data: payload,
+                    global: false
+                }).done(function(json) {
+                    render(Array.isArray(json) ? json : []);
+                }).fail(function() {
+                    render([]);
+                });
+            }, 180);
+        }
+
+        $input.on('focus.npDefaultSender input.npDefaultSender keyup.npDefaultSender', request);
+        $input.on('blur.npDefaultSender', function() {
+            setTimeout(hide, 200);
+        });
+
+        $list.on('mousedown.npDefaultSender touchstart.npDefaultSender', 'a', function(e) {
+            e.preventDefault();
+
+            var item = items[String($(this).data('key'))];
+            if (!item) return;
+
+            onPick(item);
+            hide();
+        });
+    }
+
+    attach(
+        $('#input-default-sender-city'),
+        function(search) {
+            return {action: 'getCities', search: search};
+        },
+        function(item) {
+            $('#input-default-sender-city').val(String(item.value || ''));
+            $('#input-default-sender-city-ref').val(String(item.ref || ''));
+            $('#input-default-sender-warehouse').val('');
+            $('#input-default-sender-warehouse-ref').val('');
+        }
+    );
+
+    attach(
+        $('#input-default-sender-warehouse'),
+        function(search) {
+            var cityRef = String($('#input-default-sender-city-ref').val() || '');
+            if (!cityRef) return null;
+
+            return {
+                action: 'getWarehouses',
+                search: search,
+                city_ref: cityRef,
+                delivery_type: String($('#input-default-sender-delivery-type').val() || 'branch')
+            };
+        },
+        function(item) {
+            $('#input-default-sender-warehouse').val(String(item.value || ''));
+            $('#input-default-sender-warehouse-ref').val(String(item.ref || ''));
+        }
+    );
+
+    $('#input-default-sender-delivery-type').on('change.npDefaultSender', function() {
+        $('#input-default-sender-warehouse').val('');
+        $('#input-default-sender-warehouse-ref').val('');
+    });
+
+    $('#input-default-sender-city').on('input.npDefaultSenderClear', function() {
+        $('#input-default-sender-city-ref').val('');
+        $('#input-default-sender-warehouse').val('');
+        $('#input-default-sender-warehouse-ref').val('');
+    });
+
+    $('#input-default-sender-warehouse').on('input.npDefaultSenderClear', function() {
+        $('#input-default-sender-warehouse-ref').val('');
+    });
+})();
+</script>
 {{ footer }}

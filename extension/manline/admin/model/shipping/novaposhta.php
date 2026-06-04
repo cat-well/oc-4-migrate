@@ -89,6 +89,10 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 
 		$api_key = (string)$credentials['api_key'];
 		$api_url = (string)$credentials['api_url'];
+		$sender_address_ref = trim($sender_address_ref);
+		if ($sender_address_ref === '') {
+			$sender_address_ref = trim((string)$this->config->get('shipping_novaposhta_default_sender_warehouse_ref'));
+		}
 
 		$existing_ttn_number = trim((string)($meta['ttn_number'] ?? ''));
 		$existing_ttn_ref = trim((string)($meta['ttn_ref'] ?? ''));
@@ -1109,6 +1113,29 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 			'city_ref' => $city_ref,
 			'city' => $city_description,
 		]];
+	}
+
+	/**
+	 * @return array<string, string>
+	 */
+	public function getDefaultSenderAddress(): array {
+		$ref = trim((string)$this->config->get('shipping_novaposhta_default_sender_warehouse_ref'));
+		$city_ref = trim((string)$this->config->get('shipping_novaposhta_default_sender_city_ref'));
+		$city = trim((string)$this->config->get('shipping_novaposhta_default_sender_city'));
+		$warehouse = trim((string)$this->config->get('shipping_novaposhta_default_sender_warehouse'));
+		$delivery_type = trim((string)$this->config->get('shipping_novaposhta_default_sender_delivery_type'));
+
+		if (!in_array($delivery_type, ['branch', 'locker'], true)) {
+			$delivery_type = 'branch';
+		}
+
+		return [
+			'city' => $city,
+			'city_ref' => $city_ref,
+			'warehouse' => $warehouse,
+			'warehouse_ref' => $ref,
+			'delivery_type' => $delivery_type,
+		];
 	}
 
 	private function resolveWarehouseAddressByRef(string $api_key, string $api_url, string $ref): array {

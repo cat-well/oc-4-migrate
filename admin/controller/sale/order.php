@@ -665,6 +665,11 @@ class Order extends \Opencart\System\Engine\Controller {
 			'can_delete_ttn' => false,
 			'can_print_ttn' => false,
 			'can_refresh_status' => false,
+			'default_sender_city' => '',
+			'default_sender_city_ref' => '',
+			'default_sender_warehouse' => '',
+			'default_sender_warehouse_ref' => '',
+			'default_sender_delivery_type' => 'branch',
 			'ttn_payload_json' => '{}'
 		];
 
@@ -1043,6 +1048,7 @@ class Order extends \Opencart\System\Engine\Controller {
 				$can_modify = $this->user->hasPermission('modify', 'sale/order');
 
 				$total_uah = $this->normalizeOrderCurrencyAmount((float)($order_info['total'] ?? 0.0), $order_info);
+				$default_sender = $this->model_extension_manline_shipping_novaposhta->getDefaultSenderAddress();
 
 				$data['novaposhta'] = [
 					'is_order' => true,
@@ -1081,6 +1087,11 @@ class Order extends \Opencart\System\Engine\Controller {
 					'can_delete_ttn' => $can_modify && $ttn_number !== '',
 					'can_print_ttn' => $ttn_number !== '' && $ttn_print_url !== '',
 					'can_refresh_status' => $can_modify && $ttn_number !== '',
+					'default_sender_city' => (string)($default_sender['city'] ?? ''),
+					'default_sender_city_ref' => (string)($default_sender['city_ref'] ?? ''),
+					'default_sender_warehouse' => (string)($default_sender['warehouse'] ?? ''),
+					'default_sender_warehouse_ref' => (string)($default_sender['warehouse_ref'] ?? ''),
+					'default_sender_delivery_type' => (string)($default_sender['delivery_type'] ?? 'branch'),
 					'ttn_payload_json' => json_encode(
 						is_array($novaposhta_meta['ttn_payload'] ?? null) ? $novaposhta_meta['ttn_payload'] : [],
 						JSON_UNESCAPED_UNICODE

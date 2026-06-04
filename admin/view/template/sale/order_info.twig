@@ -1687,12 +1687,13 @@ $(document).on('click', '#button-np-create-ttn', function() {
     $('#np-create-cod-total').val('');
     $('#np-create-cod-payer').val('Recipient');
 
-    // Sender defaults
-    $('#np-create-sender-city').val('');
-    $('#np-create-sender-city-ref').val('');
-    $('#np-create-sender-warehouse').val('');
-    $('#np-create-sender-warehouse-ref').val('');
-    $('#np-create-sender-delivery-type').val('branch');
+    // Sender defaults from Nova Poshta shipping settings. The operator can
+    // still override them in this modal before creating the TTN.
+    $('#np-create-sender-city').val({{ novaposhta.default_sender_city|default('')|json_encode|raw }} || '');
+    $('#np-create-sender-city-ref').val({{ novaposhta.default_sender_city_ref|default('')|json_encode|raw }} || '');
+    $('#np-create-sender-warehouse').val({{ novaposhta.default_sender_warehouse|default('')|json_encode|raw }} || '');
+    $('#np-create-sender-warehouse-ref').val({{ novaposhta.default_sender_warehouse_ref|default('')|json_encode|raw }} || '');
+    $('#np-create-sender-delivery-type').val({{ novaposhta.default_sender_delivery_type|default('branch')|json_encode|raw }} || 'branch');
 
     bindNpCreateSenderPicker();
     bindNpCreateRecipientPicker();
@@ -2164,6 +2165,16 @@ function loadNpSenderAddresses(preselectRef) {
 
         $('#np-create-sender-delivery-type').off('change.npCreateSender').on('change.npCreateSender', function() {
             $('#np-create-sender-warehouse').val('');
+            $('#np-create-sender-warehouse-ref').val('');
+        });
+
+        $('#np-create-sender-city').off('input.npCreateSenderClear').on('input.npCreateSenderClear', function() {
+            $('#np-create-sender-city-ref').val('');
+            $('#np-create-sender-warehouse').val('');
+            $('#np-create-sender-warehouse-ref').val('');
+        });
+
+        $('#np-create-sender-warehouse').off('input.npCreateSenderClear').on('input.npCreateSenderClear', function() {
             $('#np-create-sender-warehouse-ref').val('');
         });
     };

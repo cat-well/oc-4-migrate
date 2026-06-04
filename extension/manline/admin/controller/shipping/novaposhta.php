@@ -16,6 +16,11 @@ class Novaposhta extends \Opencart\System\Engine\Controller {
 			'shipping_novaposhta_branch_cost' => 50,
 			'shipping_novaposhta_courier_cost' => 50,
 			'shipping_novaposhta_locker_cost' => 50,
+			'shipping_novaposhta_default_sender_city' => '',
+			'shipping_novaposhta_default_sender_city_ref' => '',
+			'shipping_novaposhta_default_sender_warehouse' => '',
+			'shipping_novaposhta_default_sender_warehouse_ref' => '',
+			'shipping_novaposhta_default_sender_delivery_type' => 'branch',
 			'shipping_novaposhta_replace_flat' => 1,
 			'shipping_novaposhta_tax_class_id' => 0,
 			'shipping_novaposhta_geo_zone_id' => 0,
@@ -61,6 +66,11 @@ class Novaposhta extends \Opencart\System\Engine\Controller {
 		$data['shipping_novaposhta_branch_cost'] = (float)$this->configValue('shipping_novaposhta_branch_cost', 50);
 		$data['shipping_novaposhta_courier_cost'] = (float)$this->configValue('shipping_novaposhta_courier_cost', 50);
 		$data['shipping_novaposhta_locker_cost'] = (float)$this->configValue('shipping_novaposhta_locker_cost', 50);
+		$data['shipping_novaposhta_default_sender_city'] = (string)$this->configValue('shipping_novaposhta_default_sender_city', '');
+		$data['shipping_novaposhta_default_sender_city_ref'] = (string)$this->configValue('shipping_novaposhta_default_sender_city_ref', '');
+		$data['shipping_novaposhta_default_sender_warehouse'] = (string)$this->configValue('shipping_novaposhta_default_sender_warehouse', '');
+		$data['shipping_novaposhta_default_sender_warehouse_ref'] = (string)$this->configValue('shipping_novaposhta_default_sender_warehouse_ref', '');
+		$data['shipping_novaposhta_default_sender_delivery_type'] = (string)$this->configValue('shipping_novaposhta_default_sender_delivery_type', 'branch');
 		$data['shipping_novaposhta_replace_flat'] = (int)$this->configValue('shipping_novaposhta_replace_flat', 1);
 		$data['shipping_novaposhta_branch_status'] = (int)$this->configValue('shipping_novaposhta_branch_status', 1);
 		$data['shipping_novaposhta_courier_status'] = (int)$this->configValue('shipping_novaposhta_courier_status', 1);
@@ -80,6 +90,7 @@ class Novaposhta extends \Opencart\System\Engine\Controller {
 
 		$data['shipping_novaposhta_status'] = (int)$this->configValue('shipping_novaposhta_status', 1);
 		$data['shipping_novaposhta_sort_order'] = (int)$this->configValue('shipping_novaposhta_sort_order', 10);
+		$data['novaposhta_lookup'] = $this->url->link('extension/manline/shipping/novaposhta.novaposhtaLookup', 'user_token=' . $this->session->data['user_token']);
 
 		$data['header'] = $this->load->controller('common/header');
 		$data['column_left'] = $this->load->controller('common/column_left');
@@ -106,6 +117,14 @@ class Novaposhta extends \Opencart\System\Engine\Controller {
 			$post['shipping_novaposhta_branch_cost'] = (float)($post['shipping_novaposhta_branch_cost'] ?? 50);
 			$post['shipping_novaposhta_courier_cost'] = (float)($post['shipping_novaposhta_courier_cost'] ?? 50);
 			$post['shipping_novaposhta_locker_cost'] = (float)($post['shipping_novaposhta_locker_cost'] ?? 50);
+			$post['shipping_novaposhta_default_sender_city'] = trim((string)($post['shipping_novaposhta_default_sender_city'] ?? ''));
+			$post['shipping_novaposhta_default_sender_city_ref'] = trim((string)($post['shipping_novaposhta_default_sender_city_ref'] ?? ''));
+			$post['shipping_novaposhta_default_sender_warehouse'] = trim((string)($post['shipping_novaposhta_default_sender_warehouse'] ?? ''));
+			$post['shipping_novaposhta_default_sender_warehouse_ref'] = trim((string)($post['shipping_novaposhta_default_sender_warehouse_ref'] ?? ''));
+			$post['shipping_novaposhta_default_sender_delivery_type'] = trim((string)($post['shipping_novaposhta_default_sender_delivery_type'] ?? 'branch'));
+			if (!in_array($post['shipping_novaposhta_default_sender_delivery_type'], ['branch', 'locker'], true)) {
+				$post['shipping_novaposhta_default_sender_delivery_type'] = 'branch';
+			}
 			$post['shipping_novaposhta_tax_class_id'] = (int)($post['shipping_novaposhta_tax_class_id'] ?? 0);
 			$post['shipping_novaposhta_geo_zone_id'] = (int)($post['shipping_novaposhta_geo_zone_id'] ?? 0);
 			$post['shipping_novaposhta_status'] = !empty($post['shipping_novaposhta_status']) ? 1 : 0;
@@ -120,6 +139,28 @@ class Novaposhta extends \Opencart\System\Engine\Controller {
 			$this->model_setting_setting->editSetting('shipping_novaposhta', $post);
 
 			$json['success'] = $this->language->get('text_success');
+		}
+
+		$this->response->addHeader('Content-Type: application/json');
+		$this->response->setOutput(json_encode($json));
+	}
+
+	public function novaposhtaLookup(): void {
+		$json = [];
+
+		if ($this->user->hasPermission('modify', 'extension/manline/shipping/novaposhta')) {
+			$this->load->model('extension/manline/shipping/novaposhta');
+
+			$action = trim((string)($this->request->post['action'] ?? ''));
+			$search = trim((string)($this->request->post['search'] ?? ''));
+			$city_ref = trim((string)($this->request->post['city_ref'] ?? ''));
+			$delivery_type = trim((string)($this->request->post['delivery_type'] ?? ''));
+
+			if ($action === 'getCities') {
+				$json = $this->model_extension_manline_shipping_novaposhta->lookupCities($search);
+			} elseif ($action === 'getWarehouses') {
+				$json = $this->model_extension_manline_shipping_novaposhta->lookupWarehouses($city_ref, $search, $delivery_type);
+			}
 		}
 
 		$this->response->addHeader('Content-Type: application/json');
