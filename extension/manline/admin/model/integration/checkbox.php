@@ -186,30 +186,56 @@ class Checkbox extends \Opencart\System\Engine\Model {
 		return ['code' => $code, 'body' => is_string($response) ? $response : '', 'error' => $err];
 	}
 
-	public function cashierSignIn(array $config): array {
-		$api_url = rtrim((string)($config['api_url'] ?? ''), '/');
-		$login = (string)($config['cashier_login'] ?? '');
-		$password = (string)($config['cashier_password'] ?? '');
-
-		if ($api_url === '' || $login === '' || $password === '') {
-			return ['success' => false, 'error' => 'Checkbox credentials are not configured.'];
-		}
-
-		$url = $api_url . '/api/v1/cashier/signin';
-		$payload = json_encode(['login' => $login, 'password' => $password], JSON_UNESCAPED_UNICODE);
-		if (!is_string($payload)) {
-			$payload = '{}';
-		}
-
-		$headers = [
-			'Content-Type: application/json'
-		];
-
+	private function addClientHeaders(array $headers, array $config, bool $include_license = false): array {
 		if (!empty($config['client_name'])) {
 			$headers[] = 'X-Client-Name: ' . (string)$config['client_name'];
 		}
 		if (!empty($config['client_version'])) {
 			$headers[] = 'X-Client-Version: ' . (string)$config['client_version'];
+		}
+		if ($include_license && !empty($config['license_key'])) {
+			$headers[] = 'X-License-Key: ' . (string)$config['license_key'];
+		}
+
+		return $headers;
+	}
+
+	public function cashierSignIn(array $config): array {
+		$api_url = rtrim((string)($config['api_url'] ?? ''), '/');
+		$auth_method = (string)($config['auth_method'] ?? 'pin');
+		$license_key = (string)($config['license_key'] ?? '');
+		$pin = (string)($config['cashier_pin'] ?? '');
+		$login = (string)($config['cashier_login'] ?? '');
+		$password = (string)($config['cashier_password'] ?? '');
+
+		if ($api_url === '') {
+			return ['success' => false, 'error' => 'Checkbox credentials are not configured.'];
+		}
+
+		if ($auth_method !== 'password') {
+			if ($license_key === '' || $pin === '') {
+				return ['success' => false, 'error' => 'Checkbox license key or cashier PIN is not configured.'];
+			}
+
+			$url = $api_url . '/api/v1/cashier/signinPinCode';
+			$payload = json_encode(['pin_code' => $pin], JSON_UNESCAPED_UNICODE);
+			$headers = $this->addClientHeaders([
+				'Content-Type: application/json'
+			], $config, true);
+		} else {
+			if ($login === '' || $password === '') {
+				return ['success' => false, 'error' => 'Checkbox cashier login or password is not configured.'];
+			}
+
+			$url = $api_url . '/api/v1/cashier/signin';
+			$payload = json_encode(['login' => $login, 'password' => $password], JSON_UNESCAPED_UNICODE);
+			$headers = $this->addClientHeaders([
+				'Content-Type: application/json'
+			], $config, !empty($license_key));
+		}
+
+		if (!is_string($payload)) {
+			$payload = '{}';
 		}
 
 		$res = $this->request('POST', $url, $headers, $payload);
@@ -249,13 +275,7 @@ class Checkbox extends \Opencart\System\Engine\Model {
 			'Content-Type: application/json',
 			'Authorization: Bearer ' . $token
 		];
-
-		if (!empty($config['client_name'])) {
-			$headers[] = 'X-Client-Name: ' . (string)$config['client_name'];
-		}
-		if (!empty($config['client_version'])) {
-			$headers[] = 'X-Client-Version: ' . (string)$config['client_version'];
-		}
+		$headers = $this->addClientHeaders($headers, $config, !empty($config['license_key']));
 
 		$res = $this->request('POST', $url, $headers, $payload);
 
@@ -295,13 +315,7 @@ class Checkbox extends \Opencart\System\Engine\Model {
 		$headers = [
 			'Authorization: Bearer ' . $token
 		];
-
-		if (!empty($config['client_name'])) {
-			$headers[] = 'X-Client-Name: ' . (string)$config['client_name'];
-		}
-		if (!empty($config['client_version'])) {
-			$headers[] = 'X-Client-Version: ' . (string)$config['client_version'];
-		}
+		$headers = $this->addClientHeaders($headers, $config, !empty($config['license_key']));
 
 		$res = $this->request('GET', $url, $headers);
 
@@ -335,13 +349,7 @@ class Checkbox extends \Opencart\System\Engine\Model {
 			'Content-Type: application/json',
 			'Authorization: Bearer ' . $token
 		];
-
-		if (!empty($config['client_name'])) {
-			$headers[] = 'X-Client-Name: ' . (string)$config['client_name'];
-		}
-		if (!empty($config['client_version'])) {
-			$headers[] = 'X-Client-Version: ' . (string)$config['client_version'];
-		}
+		$headers = $this->addClientHeaders($headers, $config, !empty($config['license_key']));
 
 		$res = $this->request('POST', $url, $headers, $payload);
 

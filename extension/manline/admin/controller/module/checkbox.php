@@ -41,7 +41,10 @@ class Checkbox extends \Opencart\System\Engine\Controller {
 
 		$data['name'] = $module_info['name'] ?? 'Checkbox';
 		$data['status'] = $module_info['status'] ?? 0;
-		$data['api_url'] = $module_info['api_url'] ?? 'https://api.checkbox.in.ua';
+		$data['api_url'] = $module_info['api_url'] ?? 'https://api.checkbox.ua';
+		$data['auth_method'] = $module_info['auth_method'] ?? 'pin';
+		$data['license_key'] = $module_info['license_key'] ?? '';
+		$data['cashier_pin'] = $module_info['cashier_pin'] ?? '';
 		$data['cashier_login'] = $module_info['cashier_login'] ?? '';
 		$data['cashier_password'] = $module_info['cashier_password'] ?? '';
 		$data['client_name'] = $module_info['client_name'] ?? 'Manline OpenCart';
@@ -70,6 +73,9 @@ class Checkbox extends \Opencart\System\Engine\Controller {
 			'name' => '',
 			'status' => 0,
 			'api_url' => '',
+			'auth_method' => 'pin',
+			'license_key' => '',
+			'cashier_pin' => '',
 			'cashier_login' => '',
 			'cashier_password' => '',
 			'client_name' => '',
@@ -84,6 +90,10 @@ class Checkbox extends \Opencart\System\Engine\Controller {
 
 		if (!filter_var($post_info['api_url'], FILTER_VALIDATE_URL)) {
 			$json['error']['api_url'] = $this->language->get('error_api_url');
+		}
+
+		if (!in_array((string)$post_info['auth_method'], ['pin', 'password'], true)) {
+			$post_info['auth_method'] = 'pin';
 		}
 
 		if (!$json) {

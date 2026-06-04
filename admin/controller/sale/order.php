@@ -1139,14 +1139,14 @@ class Order extends \Opencart\System\Engine\Controller {
 				$receipt_id = trim((string)($meta['receipt_id'] ?? ''));
 				$receipt_pdf_url = '';
 				if ($receipt_id !== '') {
-					$api = rtrim((string)($checkbox_module['api_url'] ?? 'https://api.checkbox.in.ua'), '/');
+					$api = rtrim((string)($checkbox_module['api_url'] ?? 'https://api.checkbox.ua'), '/');
 					$receipt_pdf_url = $api . '/api/v1/receipts/' . $receipt_id . '/pdf';
 				}
 
 				$return_receipt_id = trim((string)($meta['return_receipt_id'] ?? ''));
 				$return_receipt_pdf_url = '';
 				if ($return_receipt_id !== '') {
-					$api = rtrim((string)($checkbox_module['api_url'] ?? 'https://api.checkbox.in.ua'), '/');
+					$api = rtrim((string)($checkbox_module['api_url'] ?? 'https://api.checkbox.ua'), '/');
 					$return_receipt_pdf_url = $api . '/api/v1/receipts/' . $return_receipt_id . '/pdf';
 				}
 

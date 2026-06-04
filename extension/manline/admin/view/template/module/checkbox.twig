@@ -54,9 +54,36 @@
             </div>
 
             <div class="row mb-3">
+              <label for="input-auth-method" class="col-sm-2 col-form-label">{{ entry_auth_method }}</label>
+              <div class="col-sm-10">
+                <select name="auth_method" id="input-auth-method" class="form-select">
+                  <option value="pin"{% if auth_method == 'pin' %} selected{% endif %}>{{ text_auth_pin }}</option>
+                  <option value="password"{% if auth_method == 'password' %} selected{% endif %}>{{ text_auth_password }}</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="row mb-3">
+              <label for="input-license-key" class="col-sm-2 col-form-label">{{ entry_license_key }}</label>
+              <div class="col-sm-10">
+                <input type="password" name="license_key" value="{{ license_key }}" id="input-license-key" class="form-control" autocomplete="new-password"/>
+                <div class="form-text">{{ help_license_key }}</div>
+              </div>
+            </div>
+
+            <div class="row mb-3">
+              <label for="input-cashier-pin" class="col-sm-2 col-form-label">{{ entry_cashier_pin }}</label>
+              <div class="col-sm-10">
+                <input type="password" name="cashier_pin" value="{{ cashier_pin }}" id="input-cashier-pin" class="form-control" autocomplete="new-password"/>
+                <div class="form-text">{{ help_cashier_pin }}</div>
+              </div>
+            </div>
+
+            <div class="row mb-3">
               <label for="input-cashier-login" class="col-sm-2 col-form-label">{{ entry_cashier_login }}</label>
               <div class="col-sm-10">
                 <input type="text" name="cashier_login" value="{{ cashier_login }}" id="input-cashier-login" class="form-control" autocomplete="off"/>
+                <div class="form-text">{{ help_cashier_login }}</div>
               </div>
             </div>
 
@@ -64,6 +91,7 @@
               <label for="input-cashier-password" class="col-sm-2 col-form-label">{{ entry_cashier_password }}</label>
               <div class="col-sm-10">
                 <input type="password" name="cashier_password" value="{{ cashier_password }}" id="input-cashier-password" class="form-control" autocomplete="new-password"/>
+                <div class="form-text">{{ help_cashier_password }}</div>
               </div>
             </div>
 

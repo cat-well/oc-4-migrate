@@ -5,11 +5,16 @@ $_['heading_title'] = 'Checkbox (фіскальні чеки)';
 // Text
 $_['text_success'] = 'Налаштування Checkbox збережено!';
 $_['text_edit'] = 'Редагування модуля Checkbox';
+$_['text_auth_pin'] = 'Ключ ліцензії каси + PIN касира';
+$_['text_auth_password'] = 'Логін + пароль касира';
 
 // Entry
 $_['entry_name'] = 'Назва модуля';
 $_['entry_status'] = 'Статус';
 $_['entry_api_url'] = 'API URL';
+$_['entry_auth_method'] = 'Авторизація';
+$_['entry_license_key'] = 'Ключ ліцензії каси';
+$_['entry_cashier_pin'] = 'PIN касира';
 $_['entry_cashier_login'] = 'Логін касира';
 $_['entry_cashier_password'] = 'Пароль касира';
 $_['entry_client_name'] = 'X-Client-Name';
@@ -18,6 +23,10 @@ $_['entry_auto_enabled'] = 'Автоматичний режим';
 $_['entry_auto_status_id'] = 'Статус для авт. режиму';
 
 // Help
+$_['help_license_key'] = 'Використовується для рекомендованої авторизації через signinPinCode.';
+$_['help_cashier_pin'] = 'PIN касира з кабінету Checkbox.';
+$_['help_cashier_login'] = 'Потрібен тільки для режиму "Логін + пароль".';
+$_['help_cashier_password'] = 'Потрібен тільки для режиму "Логін + пароль".';
 $_['help_auto_status_id'] = 'Якщо увімкнено, у замовленнях з цим статусом буде підказка "готово до створення чеку" (зручно для післяплати).';
 
 // Error
