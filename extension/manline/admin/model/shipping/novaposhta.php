@@ -1095,17 +1095,16 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 			return [];
 		}
 
-		$response = $this->callApi($credentials['api_key'], $credentials['api_url'], 'AddressGeneral', 'getWarehouses', ['Ref' => $ref]);
+		$row = $this->resolveWarehouseAddressByRef((string)$credentials['api_key'], (string)$credentials['api_url'], $ref);
 
-		if (empty($response['success']) || empty($response['data'][0])) {
-			$response = $this->callApi($credentials['api_key'], $credentials['api_url'], 'Address', 'getWarehouses', ['Ref' => $ref]);
+		if (!$row) {
+			$row = $this->resolveCounterpartySenderAddressByRef((string)$credentials['api_key'], (string)$credentials['api_url'], $ref);
 		}
 
-		if (empty($response['success']) || empty($response['data'][0])) {
+		if (!$row) {
 			return [];
 		}
 
-		$row = $response['data'][0];
 		$description = trim((string)($row['Description'] ?? ''));
 		$city_description = trim((string)($row['CityDescription'] ?? ''));
 		$city_ref = trim((string)($row['CityRef'] ?? ''));
@@ -1123,6 +1122,70 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 			'city_ref' => $city_ref,
 			'city' => $city_description,
 		]];
+	}
+
+	private function resolveWarehouseAddressByRef(string $api_key, string $api_url, string $ref): array {
+		$ref = trim($ref);
+
+		if ($ref === '') {
+			return [];
+		}
+
+		$response = $this->callApi($api_key, $api_url, 'AddressGeneral', 'getWarehouses', ['Ref' => $ref]);
+
+		if (empty($response['success']) || empty($response['data'][0])) {
+			$response = $this->callApi($api_key, $api_url, 'Address', 'getWarehouses', ['Ref' => $ref]);
+		}
+
+		if (empty($response['success']) || empty($response['data'][0])) {
+			return [];
+		}
+
+		return (array)$response['data'][0];
+	}
+
+	private function resolveCounterpartySenderAddressByRef(string $api_key, string $api_url, string $ref): array {
+		$ref = trim($ref);
+
+		if ($ref === '') {
+			return [];
+		}
+
+		$counterparties_response = $this->callApi(
+			$api_key,
+			$api_url,
+			'Counterparty',
+			'getCounterparties',
+			['CounterpartyProperty' => 'Sender', 'Page' => 1]
+		);
+
+		if (empty($counterparties_response['success']) || empty($counterparties_response['data'][0]['Ref'])) {
+			return [];
+		}
+
+		$sender_ref = trim((string)$counterparties_response['data'][0]['Ref']);
+
+		for ($page = 1; $page <= 20; $page++) {
+			$addresses_response = $this->callApi(
+				$api_key,
+				$api_url,
+				'Counterparty',
+				'getCounterpartyAddresses',
+				['Ref' => $sender_ref, 'Page' => $page]
+			);
+
+			if (empty($addresses_response['success']) || empty($addresses_response['data'])) {
+				break;
+			}
+
+			foreach ($addresses_response['data'] as $address) {
+				if (trim((string)($address['Ref'] ?? '')) === $ref) {
+					return (array)$address;
+				}
+			}
+		}
+
+		return [];
 	}
 
 	/**
@@ -1495,15 +1558,26 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 		$sender_address = [];
 		$override_address_ref = trim($override_address_ref);
 
-		// 1) If the operator picked an explicit address from the UI dropdown,
-		//    honour that — but only if it actually belongs to this sender's
-		//    address list (defence-in-depth against a stale/forged ref).
+		// 1) If the operator picked an explicit sender warehouse/address from
+		//    the UI, honour that ref exactly. The create/edit picker returns
+		//    AddressGeneral warehouse refs; Counterparty.getCounterpartyAddresses
+		//    returns the shipper's door/street refs. Both are valid SenderAddress
+		//    shapes in InternetDocument.save/update, but only the latter appears
+		//    in the counterparty address list.
 		if ($override_address_ref !== '') {
-			foreach ($addresses_response['data'] as $address) {
-				if (trim((string)($address['Ref'] ?? '')) === $override_address_ref) {
-					$sender_address = $address;
-					break;
+			$sender_address = $this->resolveWarehouseAddressByRef($api_key, $api_url, $override_address_ref);
+
+			if (!$sender_address) {
+				foreach ($addresses_response['data'] as $address) {
+					if (trim((string)($address['Ref'] ?? '')) === $override_address_ref) {
+						$sender_address = $address;
+						break;
+					}
 				}
+			}
+
+			if (!$sender_address) {
+				throw new \RuntimeException('Selected sender address is no longer available in Nova Poshta.');
 			}
 		}
 
