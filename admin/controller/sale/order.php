@@ -2183,12 +2183,12 @@ class Order extends \Opencart\System\Engine\Controller {
 			}
 
 			// High-level form fields — translated to NP-shape inside the model.
-			//   cod_*            → BackwardDeliveryData
+			//   additional/cod_* → BackwardDeliveryData or AfterpaymentOnGoodsCost
 			//   volume_*         → OptionsSeat[].volumetric*
 			//   internal_number  → InfoRegClientBarcodes
 			//   recipient_*      → CityRecipient / RecipientAddress / ServiceType
 			$high_level = [
-				'cod_enabled', 'cod_total', 'cod_payer',
+				'additional_service', 'cod_enabled', 'cod_total', 'cod_payer',
 				'volume_width', 'volume_length', 'volume_height',
 				'internal_number',
 				'recipient_city_name', 'recipient_address_name', 'delivery_type',

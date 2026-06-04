@@ -1780,19 +1780,20 @@ $(document).on('click', '#button-np-edit-ttn', function() {
     // Payment
     $('#np-edit-payer-type').val(payload.PayerType || 'Recipient');
 
-    // Additional services (COD / Payment control)
-    // Both services use BackwardDeliveryData, but differ by PaymentMethod:
-    //   cod      → Cash
-    //   control  → NonCash
+    // Additional services:
+    //   cod      → BackwardDeliveryData
+    //   control  → AfterpaymentOnGoodsCost
     var additional = 'none';
-    if (cod !== null) {
-        additional = (String(payload.PaymentMethod || '') === 'NonCash') ? 'control' : 'cod';
+    if (parseFloat(payload.AfterpaymentOnGoodsCost || 0) > 0) {
+        additional = 'control';
+    } else if (cod !== null) {
+        additional = 'cod';
     }
     $('#np-edit-additional-service').val(additional);
-    $('#np-edit-cod-total').val(cod ? cod.RedeliveryString : '');
+    $('#np-edit-cod-total').val(additional === 'control' ? (payload.AfterpaymentOnGoodsCost || '') : (cod ? cod.RedeliveryString : ''));
     $('#np-edit-cod-payer').val(cod ? cod.PayerType : 'Recipient');
 
-    // Derive PaymentMethod from the service dropdown (do not let it drift).
+    // Payment control uses AfterpaymentOnGoodsCost and keeps PaymentMethod=Cash.
     function syncNpAdditionalServiceUI() {
         var mode = $('#np-edit-additional-service').val() || 'none';
         var enabled = (mode !== 'none');
@@ -1804,7 +1805,7 @@ $(document).on('click', '#button-np-edit-ttn', function() {
             return;
         }
 
-        $('#np-edit-payment-method').val(mode === 'control' ? 'NonCash' : 'Cash');
+        $('#np-edit-payment-method').val('Cash');
     }
 
     $('#np-edit-additional-service').off('change.npAdd').on('change.npAdd', syncNpAdditionalServiceUI);
@@ -2224,6 +2225,7 @@ $(document).on('click', '#button-np-edit-ttn-save', function() {
         PaymentMethod: $('#np-edit-payment-method').val(),
         RecipientsPhone: $('#np-edit-recipient-phone').val(),
         // High-level fields the model translates to NP-shape internally
+        additional_service: $('#np-edit-additional-service').val(),
         cod_enabled: ($('#np-edit-additional-service').val() || 'none') === 'none' ? '0' : '1',
         cod_total: $('#np-edit-cod-total').val(),
         cod_payer: $('#np-edit-cod-payer').val(),

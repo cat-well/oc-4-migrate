@@ -187,7 +187,6 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 			if (!empty($changes['PayerType'])) $payer_type = (string)$changes['PayerType'];
 
 			// Additional services: COD vs payment control are mutually exclusive.
-			// Both use BackwardDeliveryData but differ by PaymentMethod.
 			//
 			// Auto-derive default is intentionally 'none' so the model
 			// matches the original 6e524a1 behaviour — a minimal NP payload
@@ -211,15 +210,11 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 				$additional = 'none';
 			}
 			if ($additional === 'control') {
-				$payment_method = 'NonCash';
-				// NP API constraint: PaymentMethod=NonCash is only valid when
-				// PayerType is Sender or ThirdPerson — "payment control" is
-				// paid by the sender (merchant), not the recipient. Forcing
-				// Recipient here returns "Payment NonCash is unavailable for
-				// payer Recipient" and the whole TTN save fails.
-				if ($payer_type === 'Recipient') {
-					$payer_type = 'Sender';
-				}
+				// Nova Poshta cabinet represents "Контроль оплати" as
+				// AfterpaymentOnGoodsCost with the regular delivery payment
+				// fields left intact. Sending it as NonCash + BackwardDelivery
+				// makes NP reject the document for this FOP contract.
+				$payment_method = 'Cash';
 			} elseif ($additional === 'cod') {
 				$payment_method = 'Cash';
 			} elseif (!empty($changes['PaymentMethod'])) {
@@ -231,17 +226,14 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 
 			// CargoType selection:
 			//   - Lockers (поштомати) are Parcel-only.
-			//   - When COD or "payment control" is enabled, NP only allows
-			//     BackwardDelivery on Parcel-class shipments. With CargoType
-			//     =Cargo NP returns warning "CargoType is changed to Parcel"
-			//     AND a hard error "Передана послуга Післяплата недоступна"
-			//     — silently coercing the cargo type to Parcel but refusing
-			//     to attach BackwardDelivery to the auto-coerced document.
-			//     Sending Parcel from the start avoids the rejection.
+			//   - NP cabinet creates payment-control documents as Parcel, and
+			//     COD BackwardDelivery is also only reliable on Parcel-class
+			//     shipments. Sending Parcel from the start avoids NP's cargo
+			//     auto-coercion warnings and service rejection edge cases.
 			//   - Otherwise default to Cargo (legacy WarehouseWarehouse
 			//     freight flow for non-COD large items).
-			$has_backward_service = ($additional === 'cod' || $additional === 'control');
-			$cargo_type = ($is_locker || $has_backward_service) ? 'Parcel' : 'Cargo';
+			$has_additional_payment_service = ($additional === 'cod' || $additional === 'control');
+			$cargo_type = ($is_locker || $has_additional_payment_service) ? 'Parcel' : 'Cargo';
 
 			$payload = [
 				'PayerType' => $payer_type,
@@ -277,14 +269,19 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 				if ($cod_total === '' || (float)$cod_total <= 0) {
 					$cod_total = (string)$order_data['cost'];
 				}
-				$cod_payer = trim((string)($changes['cod_payer'] ?? 'Recipient'));
-				if ($cod_payer === '') $cod_payer = 'Recipient';
 
-				$payload['BackwardDeliveryData'] = [[
-					'PayerType' => $cod_payer,
-					'CargoType' => 'Money',
-					'RedeliveryString' => $cod_total,
-				]];
+				if ($additional === 'control') {
+					$payload['AfterpaymentOnGoodsCost'] = number_format((float)$cod_total, 2, '.', '');
+				} else {
+					$cod_payer = trim((string)($changes['cod_payer'] ?? 'Recipient'));
+					if ($cod_payer === '') $cod_payer = 'Recipient';
+
+					$payload['BackwardDeliveryData'] = [[
+						'PayerType' => $cod_payer,
+						'CargoType' => 'Money',
+						'RedeliveryString' => $cod_total,
+					]];
+				}
 			}
 
 			$response = $this->callApi($api_key, $api_url, 'InternetDocument', 'save', $payload);
@@ -446,6 +443,7 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 		$allowed = [
 			'Weight', 'SeatsAmount', 'Cost', 'CargoType', 'Description',
 			'PayerType', 'PaymentMethod', 'VolumeGeneral', 'RecipientsPhone',
+			'AfterpaymentOnGoodsCost',
 		];
 
 		$normalized_changes = [];
@@ -467,6 +465,10 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 					$normalized_changes[$key] = number_format((float)$value, 2, '.', '');
 					break;
 
+				case 'AfterpaymentOnGoodsCost':
+					$normalized_changes[$key] = number_format((float)$value, 2, '.', '');
+					break;
+
 				case 'VolumeGeneral':
 					$normalized_changes[$key] = number_format((float)$value, 4, '.', '');
 					break;
@@ -480,14 +482,22 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 			}
 		}
 
-		// High-level field: COD (post-pay). Form sends cod_enabled / cod_total /
-		// cod_payer; we translate that into the BackwardDeliveryData array NP
-		// expects. Setting cod_enabled=0 explicitly clears it via [] (NP removes
-		// existing COD when the array is empty).
-		if (array_key_exists('cod_enabled', $changes)) {
-			$cod_enabled = $changes['cod_enabled'] === '1' || $changes['cod_enabled'] === 1 || $changes['cod_enabled'] === true;
+		// High-level field: COD / payment control. The create form uses
+		// additional_service; older edit requests may still send cod_enabled.
+		if (array_key_exists('additional_service', $changes) || array_key_exists('cod_enabled', $changes)) {
+			$additional_service = trim((string)($changes['additional_service'] ?? ''));
 
-			if ($cod_enabled) {
+			if ($additional_service === '') {
+				$cod_enabled = $changes['cod_enabled'] ?? null;
+				$additional_service = ($cod_enabled === '1' || $cod_enabled === 1 || $cod_enabled === true) ? 'cod' : 'none';
+			}
+
+			if ($additional_service === 'control') {
+				$cod_total = number_format((float)($changes['cod_total'] ?? 0), 2, '.', '');
+				$normalized_changes['AfterpaymentOnGoodsCost'] = $cod_total;
+				$normalized_changes['PaymentMethod'] = 'Cash';
+				$normalized_changes['BackwardDeliveryData'] = [];
+			} elseif ($additional_service === 'cod') {
 				$cod_total = number_format((float)($changes['cod_total'] ?? 0), 2, '.', '');
 				$cod_payer = in_array($changes['cod_payer'] ?? '', ['Sender', 'Recipient', 'ThirdPerson'], true)
 					? $changes['cod_payer']
@@ -498,9 +508,12 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 					'CargoType' => 'Money',
 					'RedeliveryString' => $cod_total,
 				]];
+				$normalized_changes['AfterpaymentOnGoodsCost'] = '0.00';
 			} else {
-				// Empty array tells NP "drop any existing COD".
+				// Empty array tells NP "drop any existing COD"; zero clears
+				// payment-control amount in the stored payload.
 				$normalized_changes['BackwardDeliveryData'] = [];
+				$normalized_changes['AfterpaymentOnGoodsCost'] = '0.00';
 			}
 		}
 
