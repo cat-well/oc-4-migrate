@@ -22,6 +22,33 @@ class Checkbox extends \Opencart\System\Engine\Model {
 				PRIMARY KEY (`order_id`)
 			) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
 		);
+
+		$columns = [];
+		$query = $this->db->query("SHOW COLUMNS FROM `" . DB_PREFIX . "order_checkbox`");
+		foreach ($query->rows as $row) {
+			$columns[(string)$row['Field']] = true;
+		}
+
+		$expected = [
+			'module_id' => "`module_id` INT(11) NOT NULL DEFAULT 0 AFTER `order_id`",
+			'return_receipt_id' => "`return_receipt_id` VARCHAR(64) NOT NULL DEFAULT '' AFTER `receipt_id`",
+			'return_receipt_status' => "`return_receipt_status` VARCHAR(64) NOT NULL DEFAULT '' AFTER `return_receipt_id`",
+			'return_sms_sent' => "`return_sms_sent` TINYINT(1) NOT NULL DEFAULT 0 AFTER `return_receipt_status`",
+			'receipt_status' => "`receipt_status` VARCHAR(64) NOT NULL DEFAULT '' AFTER `return_sms_sent`",
+			'sms_phone' => "`sms_phone` VARCHAR(32) NOT NULL DEFAULT '' AFTER `receipt_status`",
+			'sms_sent' => "`sms_sent` TINYINT(1) NOT NULL DEFAULT 0 AFTER `sms_phone`",
+			'payload' => "`payload` MEDIUMTEXT NULL AFTER `sms_sent`",
+			'response' => "`response` MEDIUMTEXT NULL AFTER `payload`",
+			'error' => "`error` TEXT NULL AFTER `response`",
+			'date_added' => "`date_added` DATETIME NULL AFTER `error`",
+			'date_modified' => "`date_modified` DATETIME NULL AFTER `date_added`"
+		];
+
+		foreach ($expected as $name => $definition) {
+			if (empty($columns[$name])) {
+				$this->db->query("ALTER TABLE `" . DB_PREFIX . "order_checkbox` ADD COLUMN " . $definition);
+			}
+		}
 	}
 
 	public function getOrderMeta(int $order_id): array {
@@ -58,22 +85,36 @@ class Checkbox extends \Opencart\System\Engine\Model {
 
 		$this->ensureTable();
 
-		$module_id = (int)($meta['module_id'] ?? 0);
-		$receipt_id = trim((string)($meta['receipt_id'] ?? ''));
-		$return_receipt_id = trim((string)($meta['return_receipt_id'] ?? ''));
-		$return_receipt_status = trim((string)($meta['return_receipt_status'] ?? ''));
-		$return_sms_sent = !empty($meta['return_sms_sent']) ? 1 : 0;
-		$receipt_status = trim((string)($meta['receipt_status'] ?? ''));
-		$sms_phone = trim((string)($meta['sms_phone'] ?? ''));
-		$sms_sent = !empty($meta['sms_sent']) ? 1 : 0;
-		$payload = isset($meta['payload']) ? json_encode($meta['payload'], JSON_UNESCAPED_UNICODE) : null;
-		$response = isset($meta['response']) ? json_encode($meta['response'], JSON_UNESCAPED_UNICODE) : null;
-		$error = isset($meta['error']) ? (string)$meta['error'] : '';
+		$existing_query = $this->db->query("SELECT * FROM `" . DB_PREFIX . "order_checkbox` WHERE order_id = '" . (int)$order_id . "' LIMIT 1");
+		$existing = $existing_query->num_rows ? $existing_query->row : [];
+
+		$module_id = (int)(array_key_exists('module_id', $meta) ? $meta['module_id'] : ($existing['module_id'] ?? 0));
+		$receipt_id = trim((string)(array_key_exists('receipt_id', $meta) ? $meta['receipt_id'] : ($existing['receipt_id'] ?? '')));
+		$return_receipt_id = trim((string)(array_key_exists('return_receipt_id', $meta) ? $meta['return_receipt_id'] : ($existing['return_receipt_id'] ?? '')));
+		$return_receipt_status = trim((string)(array_key_exists('return_receipt_status', $meta) ? $meta['return_receipt_status'] : ($existing['return_receipt_status'] ?? '')));
+		$return_sms_sent = !empty(array_key_exists('return_sms_sent', $meta) ? $meta['return_sms_sent'] : ($existing['return_sms_sent'] ?? 0)) ? 1 : 0;
+		$receipt_status = trim((string)(array_key_exists('receipt_status', $meta) ? $meta['receipt_status'] : ($existing['receipt_status'] ?? '')));
+		$sms_phone = trim((string)(array_key_exists('sms_phone', $meta) ? $meta['sms_phone'] : ($existing['sms_phone'] ?? '')));
+		$sms_sent = !empty(array_key_exists('sms_sent', $meta) ? $meta['sms_sent'] : ($existing['sms_sent'] ?? 0)) ? 1 : 0;
+		$payload = array_key_exists('payload', $meta) ? json_encode($meta['payload'], JSON_UNESCAPED_UNICODE) : ($existing['payload'] ?? null);
+		$response = array_key_exists('response', $meta) ? json_encode($meta['response'], JSON_UNESCAPED_UNICODE) : ($existing['response'] ?? null);
+		$error = array_key_exists('error', $meta) ? (string)$meta['error'] : (string)($existing['error'] ?? '');
+
+		if (!is_string($payload) && $payload !== null) {
+			$payload = null;
+		}
+		if (!is_string($response) && $response !== null) {
+			$response = null;
+		}
 
 		$this->db->query(
 			"INSERT INTO `" . DB_PREFIX . "order_checkbox`
 			SET order_id = '" . (int)$order_id . "',
+				module_id = '" . (int)$module_id . "',
 				receipt_id = '" . $this->db->escape($receipt_id) . "',
+				return_receipt_id = '" . $this->db->escape($return_receipt_id) . "',
+				return_receipt_status = '" . $this->db->escape($return_receipt_status) . "',
+				return_sms_sent = '" . (int)$return_sms_sent . "',
 				receipt_status = '" . $this->db->escape($receipt_status) . "',
 				sms_phone = '" . $this->db->escape($sms_phone) . "',
 				sms_sent = '" . (int)$sms_sent . "',
@@ -83,7 +124,11 @@ class Checkbox extends \Opencart\System\Engine\Model {
 				date_added = NOW(),
 				date_modified = NOW()
 			ON DUPLICATE KEY UPDATE
+				module_id = VALUES(module_id),
 				receipt_id = VALUES(receipt_id),
+				return_receipt_id = VALUES(return_receipt_id),
+				return_receipt_status = VALUES(return_receipt_status),
+				return_sms_sent = VALUES(return_sms_sent),
 				receipt_status = VALUES(receipt_status),
 				sms_phone = VALUES(sms_phone),
 				sms_sent = VALUES(sms_sent),

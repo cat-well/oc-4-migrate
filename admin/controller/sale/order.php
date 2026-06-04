@@ -2440,11 +2440,13 @@ class Order extends \Opencart\System\Engine\Controller {
 
 		if ($this->prepareCheckboxAction($order_id, $order_info, $json)) {
 			$this->load->model('extension/manline/integration/checkbox');
-			$config = $this->getCheckboxConfig();
+			$module_id = $this->getCheckboxModuleIdFromRequest();
+			$config = $this->getCheckboxConfig($module_id);
 
 			if (empty($config['enabled'])) {
 				$json['error'] = $this->language->get('error_checkbox_disabled');
 			} else {
+				$module_id = (int)($config['module_id'] ?? $module_id);
 				$payload = $this->buildCheckboxSellPayload($order_info);
 
 				$result = $this->model_extension_manline_integration_checkbox->createSellReceipt($config, $payload);
@@ -2453,6 +2455,7 @@ class Order extends \Opencart\System\Engine\Controller {
 					$json['error'] = (string)($result['error'] ?? $this->language->get('error_checkbox_failed'));
 
 					$this->model_extension_manline_integration_checkbox->saveOrderMeta($order_id, [
+						'module_id' => $module_id,
 						'error' => $json['error'],
 						'payload' => $payload,
 						'response' => (array)($result['response'] ?? [])
@@ -2465,6 +2468,7 @@ class Order extends \Opencart\System\Engine\Controller {
 					$json['pdf_url'] = rtrim((string)$config['api_url'], '/') . '/api/v1/receipts/' . $receipt_id . '/pdf';
 
 					$this->model_extension_manline_integration_checkbox->saveOrderMeta($order_id, [
+						'module_id' => $module_id,
 						'receipt_id' => $receipt_id,
 						'receipt_status' => 'CREATED',
 						'error' => '',
@@ -2493,11 +2497,13 @@ class Order extends \Opencart\System\Engine\Controller {
 
 		if ($this->prepareCheckboxAction($order_id, $order_info, $json)) {
 			$this->load->model('extension/manline/integration/checkbox');
-			$config = $this->getCheckboxConfig();
+			$module_id = $this->getCheckboxModuleIdFromRequest();
+			$config = $this->getCheckboxConfig($module_id);
 
 			if (empty($config['enabled'])) {
 				$json['error'] = $this->language->get('error_checkbox_disabled');
 			} else {
+				$module_id = (int)($config['module_id'] ?? $module_id);
 				$meta = $this->model_extension_manline_integration_checkbox->getOrderMeta($order_id);
 				$receipt_id = trim((string)($meta['receipt_id'] ?? ''));
 
@@ -2519,6 +2525,7 @@ class Order extends \Opencart\System\Engine\Controller {
 						if (empty($result['success'])) {
 							$json['error'] = (string)($result['error'] ?? $this->language->get('error_checkbox_failed'));
 							$this->model_extension_manline_integration_checkbox->saveOrderMeta($order_id, [
+								'module_id' => $module_id,
 								'receipt_id' => $receipt_id,
 								'sms_phone' => $phone380,
 								'sms_sent' => 0,
@@ -2528,6 +2535,7 @@ class Order extends \Opencart\System\Engine\Controller {
 						} else {
 							$json['success'] = $this->language->get('text_checkbox_sms_sent');
 							$this->model_extension_manline_integration_checkbox->saveOrderMeta($order_id, [
+								'module_id' => $module_id,
 								'receipt_id' => $receipt_id,
 								'sms_phone' => $phone380,
 								'sms_sent' => 1,
@@ -2558,27 +2566,27 @@ class Order extends \Opencart\System\Engine\Controller {
 
 		if ($this->prepareCheckboxAction($order_id, $order_info, $json)) {
 			$this->load->model('extension/manline/integration/checkbox');
-			$module_id = 0;
-			if (isset($this->request->post['module_id'])) {
-				$module_id = (int)$this->request->post['module_id'];
-			}
+			$module_id = $this->getCheckboxModuleIdFromRequest();
 			$config = $this->getCheckboxConfig($module_id);
 
 			if (empty($config['enabled'])) {
 				$json['error'] = $this->language->get('error_checkbox_disabled');
 			} else {
+				$module_id = (int)($config['module_id'] ?? $module_id);
 				$meta = $this->model_extension_manline_integration_checkbox->getOrderMeta($order_id);
 				$sell_receipt_id = trim((string)($meta['receipt_id'] ?? ''));
 				if ($sell_receipt_id === '') {
 					$json['error'] = $this->language->get('error_checkbox_no_receipt');
 				} else {
-					$result = $this->model_extension_manline_integration_checkbox->createReturnReceipt($config, $sell_receipt_id);
+					$payload = $this->buildCheckboxReturnPayload($order_info, $sell_receipt_id);
+					$result = $this->model_extension_manline_integration_checkbox->createReturnReceipt($config, $payload);
 					if (empty($result['success'])) {
 						$json['error'] = (string)($result['error'] ?? $this->language->get('error_checkbox_failed'));
 						$this->model_extension_manline_integration_checkbox->saveOrderMeta($order_id, [
 							'module_id' => $module_id,
 							'receipt_id' => $sell_receipt_id,
 							'error' => $json['error'],
+							'payload' => $payload,
 							'response' => (array)($result['response'] ?? [])
 						]);
 					} else {
@@ -2593,6 +2601,7 @@ class Order extends \Opencart\System\Engine\Controller {
 							'return_receipt_id' => $return_id,
 							'return_receipt_status' => 'CREATED',
 							'error' => '',
+							'payload' => $payload,
 							'response' => (array)($result['response'] ?? [])
 						]);
 
@@ -2618,15 +2627,13 @@ class Order extends \Opencart\System\Engine\Controller {
 
 		if ($this->prepareCheckboxAction($order_id, $order_info, $json)) {
 			$this->load->model('extension/manline/integration/checkbox');
-			$module_id = 0;
-			if (isset($this->request->post['module_id'])) {
-				$module_id = (int)$this->request->post['module_id'];
-			}
+			$module_id = $this->getCheckboxModuleIdFromRequest();
 			$config = $this->getCheckboxConfig($module_id);
 
 			if (empty($config['enabled'])) {
 				$json['error'] = $this->language->get('error_checkbox_disabled');
 			} else {
+				$module_id = (int)($config['module_id'] ?? $module_id);
 				$meta = $this->model_extension_manline_integration_checkbox->getOrderMeta($order_id);
 				$return_id = trim((string)($meta['return_receipt_id'] ?? ''));
 				if ($return_id === '') {
@@ -3007,6 +3014,8 @@ class Order extends \Opencart\System\Engine\Controller {
 			$module = $this->model_setting_module->getModule($module_id);
 			if (is_array($module) && !empty($module['status'])) {
 				$module['enabled'] = true;
+				$module['module_id'] = $module_id;
+				$module['name'] = (string)($module['name'] ?? 'Checkbox');
 				return $module;
 			}
 			return $config;
@@ -3027,6 +3036,14 @@ class Order extends \Opencart\System\Engine\Controller {
 		}
 
 		return $config;
+	}
+
+	private function getCheckboxModuleIdFromRequest(): int {
+		if (isset($this->request->post['module_id'])) {
+			return (int)$this->request->post['module_id'];
+		}
+
+		return 0;
 	}
 
 	

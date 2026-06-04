@@ -15,22 +15,6 @@
     <div class="card mb-3">
       <div class="card-header"><i class="fa-solid fa-info-circle"></i> {{ text_form }}</div>
       <div class="card-body">
-
-                  {% if checkbox.modules and checkbox.modules|length > 1 %}
-                    <div class="row mb-3">
-                      <label class="col-sm-3 col-form-label">Касса/кассир</label>
-                      <div class="col-sm-9">
-                        <select id="input-checkbox-module" class="form-select">
-                          {% for m in checkbox.modules %}
-                            <option value="{{ m.module_id }}"{% if m.module_id == checkbox.selected_module_id %} selected{% endif %}>{{ m.name }}</option>
-                          {% endfor %}
-                        </select>
-                        <div class="form-text">Выбери кассу/кассира (модуль Checkbox).\</div>
-                      </div>
-                    </div>
-                  {% else %}
-                    <input type="hidden" id="input-checkbox-module" value="{{ checkbox.selected_module_id }}"/>
-                  {% endif %}
         <div class="row row-cols-1 row-cols-sm-1 row-cols-md-3 row-cols-xl-3">
           <div class="col mb-3">
             <div class="input-group">
@@ -324,22 +308,6 @@
                   </div>
                 </div>
                 <div class="card-body">
-
-                  {% if checkbox.modules and checkbox.modules|length > 1 %}
-                    <div class="row mb-3">
-                      <label class="col-sm-3 col-form-label">Касса/кассир</label>
-                      <div class="col-sm-9">
-                        <select id="input-checkbox-module" class="form-select">
-                          {% for m in checkbox.modules %}
-                            <option value="{{ m.module_id }}"{% if m.module_id == checkbox.selected_module_id %} selected{% endif %}>{{ m.name }}</option>
-                          {% endfor %}
-                        </select>
-                        <div class="form-text">Выбери кассу/кассира (модуль Checkbox).\</div>
-                      </div>
-                    </div>
-                  {% else %}
-                    <input type="hidden" id="input-checkbox-module" value="{{ checkbox.selected_module_id }}"/>
-                  {% endif %}
                   <div class="row row-cols-1 row-cols-md-2 g-2 mb-3">
                     <div class="col"><strong>{{ text_np_delivery_type }}:</strong> <span id="np-delivery-type">{{ novaposhta.delivery_type_name }}</span></div>
                     <div class="col"><strong>{{ text_np_city }}:</strong> <span id="np-city">{{ novaposhta.city ? novaposhta.city : text_none }}</span></div>
@@ -399,7 +367,7 @@
                             <option value="{{ m.module_id }}"{% if m.module_id == checkbox.selected_module_id %} selected{% endif %}>{{ m.name }}</option>
                           {% endfor %}
                         </select>
-                        <div class="form-text">Выбери кассу/кассира (модуль Checkbox).\</div>
+                        <div class="form-text">Выбери кассу/кассира (модуль Checkbox).</div>
                       </div>
                     </div>
                   {% else %}
@@ -512,22 +480,6 @@
     <div class="card mb-3">
       <div class="card-header"><i class="fa-solid fa-comment"></i> {{ text_history }}</div>
       <div class="card-body">
-
-                  {% if checkbox.modules and checkbox.modules|length > 1 %}
-                    <div class="row mb-3">
-                      <label class="col-sm-3 col-form-label">Касса/кассир</label>
-                      <div class="col-sm-9">
-                        <select id="input-checkbox-module" class="form-select">
-                          {% for m in checkbox.modules %}
-                            <option value="{{ m.module_id }}"{% if m.module_id == checkbox.selected_module_id %} selected{% endif %}>{{ m.name }}</option>
-                          {% endfor %}
-                        </select>
-                        <div class="form-text">Выбери кассу/кассира (модуль Checkbox).\</div>
-                      </div>
-                    </div>
-                  {% else %}
-                    <input type="hidden" id="input-checkbox-module" value="{{ checkbox.selected_module_id }}"/>
-                  {% endif %}
         <ul class="nav nav-tabs">
           <li class="nav-item"><a href="#tab-history" data-bs-toggle="tab" class="nav-link active">{{ tab_history }}</a></li>
           <li class="nav-item"><a href="#tab-additional" data-bs-toggle="tab" class="nav-link">{{ tab_additional }}</a></li>
@@ -3978,7 +3930,9 @@ $(document).on('click', '#button-checkbox-return-create', function() {
 });
 
 $(document).on('click', '#button-checkbox-return-sms', function() {
-    if (!phoneLooksValid()) {
+    var check = validateCheckboxPhone();
+
+    if (!check.ok) {
         $('#checkbox-error').removeClass('d-none').text('{{ error_checkbox_fix_phone|escape('js') }}');
         return;
     }
