@@ -670,6 +670,7 @@ class Order extends \Opencart\System\Engine\Controller {
 			'default_sender_warehouse' => '',
 			'default_sender_warehouse_ref' => '',
 			'default_sender_delivery_type' => 'branch',
+			'default_payment_control' => false,
 			'ttn_payload_json' => '{}'
 		];
 
@@ -1092,6 +1093,7 @@ class Order extends \Opencart\System\Engine\Controller {
 					'default_sender_warehouse' => (string)($default_sender['warehouse'] ?? ''),
 					'default_sender_warehouse_ref' => (string)($default_sender['warehouse_ref'] ?? ''),
 					'default_sender_delivery_type' => (string)($default_sender['delivery_type'] ?? 'branch'),
+					'default_payment_control' => $this->isCodPayment($order_info),
 					'ttn_payload_json' => json_encode(
 						is_array($novaposhta_meta['ttn_payload'] ?? null) ? $novaposhta_meta['ttn_payload'] : [],
 						JSON_UNESCAPED_UNICODE

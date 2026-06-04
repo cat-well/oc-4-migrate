@@ -1663,28 +1663,14 @@ $(document).on('click', '#button-np-create-ttn', function() {
     $('#np-create-cost').val(orderTotal);
     $('#np-create-description').val('Одяг');
 
-    // Payment defaults — restored to the pre-modal behavior. The
-    // original createTtnForOrder() in commit 6e524a1 sent a minimal
-    // payload (PayerType=Recipient + PaymentMethod=Cash, no
-    // BackwardDeliveryData). NP accepted it; TTN was created; the
-    // edit modal could load and update it cleanly.
-    //
-    // Commit b5ab4e2 added an "auto derive COD/control defaults from
-    // payment method" rule that pre-selected 'control' for every
-    // non-LiqPay/non-PayPal payment code. That attaches a Backward-
-    // Delivery service to the payload at NP's account level — which
-    // requires "Послуга післяплати" to be activated on the merchant
-    // side. Manline's account does not have it, so every COD order
-    // started failing at create, and the saved-payload shape changed
-    // enough to break the in-place edit flow too.
-    //
-    // We revert to operator-explicit: default 'none', let the operator
-    // tick 'cod' or 'control' from the dropdown only when they actually
-    // need NP to handle cash return. This matches the "ВСЕ РАБОТАЛО"
-    // baseline.
+    // Payment defaults. Cash-on-delivery orders should create NP
+    // payment-control documents immediately; online/card orders stay
+    // without an additional payment service.
+    var defaultPaymentControl = {{ novaposhta.default_payment_control|default(false)|json_encode|raw }} ? true : false;
+
     $('#np-create-payer-type').val('Recipient');
-    $('#np-create-additional-service').val('none');
-    $('#np-create-cod-total').val('');
+    $('#np-create-additional-service').val(defaultPaymentControl ? 'control' : 'none');
+    $('#np-create-cod-total').val(defaultPaymentControl ? orderTotal : '');
     $('#np-create-cod-payer').val('Recipient');
 
     // Sender defaults from Nova Poshta shipping settings. The operator can
@@ -1740,7 +1726,7 @@ $(document).on('click', '#button-np-create-ttn-confirm', function() {
 
     // If control/cod selected but amount not set, default to order total.
     if ((data.additional_service === 'control' || data.additional_service === 'cod') && (!data.cod_total || parseFloat(data.cod_total) <= 0)) {
-        data.cod_total = orderTotal || data.Cost;
+        data.cod_total = data.Cost || '1';
     }
 
     npTtnAction('{{ novaposhta_create_ttn|replace({'&amp;':'&'})|escape('js') }}', this, data);

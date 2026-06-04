@@ -194,27 +194,14 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 			if (!empty($changes['PayerType'])) $payer_type = (string)$changes['PayerType'];
 
 			// Additional services: COD vs payment control are mutually exclusive.
-			//
-			// Auto-derive default is intentionally 'none' so the model
-			// matches the original 6e524a1 behaviour — a minimal NP payload
-			// with no BackwardDelivery attached. Two earlier commits drifted
-			// from that:
-			//   - b5ab4e2 set the default to 'control' for any non-Liq/
-			//     non-PayPal payment, which silently attached "Послуга
-			//     післяплати" (NonCash) to every COD order and got
-			//     "Передана послуга Післяплата недоступна" back from NP
-			//     because the merchant's account does not have it active.
-			//   - The follow-up cf2743c tried to route COD payments through
-			//     the 'cod' branch (Cash + BackwardDelivery), but the same
-			//     account-side service-availability rule applies.
-			// The right behaviour is operator-explicit: only attach a
-			// BackwardDelivery service when the modal dropdown explicitly
-			// asks for 'cod' or 'control'. Bare "Оплата при доставці" still
-			// works as before — recipient pays cash at the warehouse, sender
-			// handles the cash return out-of-band.
+			// For Manline, customer "payment on delivery" orders should default
+			// to NP payment control. NP cabinet represents that service as
+			// AfterpaymentOnGoodsCost with PaymentMethod=Cash, not as NonCash
+			// BackwardDeliveryData. Online/card payments intentionally default
+			// to no additional payment service.
 			$additional = trim((string)($changes['additional_service'] ?? ''));
 			if ($additional === '') {
-				$additional = 'none';
+				$additional = $this->isPaymentOnDelivery($order_info) ? 'control' : 'none';
 			}
 			if ($additional === 'control') {
 				// Nova Poshta cabinet represents "Контроль оплати" as
@@ -1407,6 +1394,23 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 			'cost'         => number_format($cost, 2, '.', ''),
 			'options_seat' => $this->buildOptionsSeat($weight_total, $seats),
 		];
+	}
+
+	private function isPaymentOnDelivery(array $order_info): bool {
+		$code = '';
+		if (!empty($order_info['payment_method']) && is_array($order_info['payment_method'])) {
+			$code = (string)($order_info['payment_method']['code'] ?? '');
+		}
+		$code = strtolower($code);
+		if ($code === '') {
+			$code = strtolower((string)($order_info['payment_code'] ?? ''));
+		}
+
+		return $code !== '' && (
+			strpos($code, 'cod') !== false ||
+			strpos($code, 'cash') !== false ||
+			strpos($code, 'upon') !== false
+		);
 	}
 
 	private function buildOptionsSeat(float $weight_total, int $seats, int $width = 10, int $length = 20, int $height = 10, string $volumetric_volume = ''): array {
