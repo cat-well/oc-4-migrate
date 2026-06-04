@@ -235,7 +235,7 @@ $_['button_checkbox_return_create'] = 'Create return';
 $_['button_checkbox_return_pdf']    = 'Return PDF';
 $_['button_checkbox_return_sms']    = 'Send return SMS';
 $_['button_checkbox_auth_check']   = 'Check auth';
-$_['text_checkbox_auth_ok']        = 'Checkbox auth OK: %s';
+$_['text_checkbox_auth_ok']        = 'OK - кассир: %s';
 
 $_['text_checkbox_return_created']  = 'Checkbox return receipt created.';
 $_['text_checkbox_return_sms_sent'] = 'Return receipt has been sent via SMS.';

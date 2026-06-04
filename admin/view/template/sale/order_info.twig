@@ -338,22 +338,25 @@
               <div id="section-checkbox" class="card border-dark">
                 <div class="card-header d-flex justify-content-between align-items-center">
                   <span><i class="fa-solid fa-receipt"></i> {{ text_checkbox }}</span>
-                  <div class="btn-group btn-group-sm">
-                    <button type="button" id="button-checkbox-auth-check" class="btn btn-outline-dark"><i class="fa-solid fa-user-check"></i> {{ button_checkbox_auth_check }}</button>
-                    {% if not checkbox.receipt_id %}
-                      <button type="button" id="button-checkbox-create" class="btn btn-primary"><i class="fa-solid fa-plus-circle"></i> {{ button_checkbox_create }}</button>
-                    {% endif %}
-                    {% if checkbox.receipt_id %}
-                      <a href="{{ checkbox.receipt_pdf_url }}" target="_blank" id="button-checkbox-pdf" class="btn btn-info"><i class="fa-solid fa-file-pdf"></i> {{ button_checkbox_pdf }}</a>
-                      <button type="button" id="button-checkbox-sms" class="btn btn-secondary"><i class="fa-solid fa-comment-sms"></i> {{ button_checkbox_sms }}</button>
-                      {% if not checkbox.return_receipt_id %}
-                        <button type="button" id="button-checkbox-return-create" class="btn btn-warning"><i class="fa-solid fa-rotate-left"></i> {{ button_checkbox_return_create }}</button>
+                  <div class="d-flex align-items-center justify-content-end gap-2 flex-wrap">
+                    <span id="checkbox-auth-status" class="badge text-bg-secondary d-none"></span>
+                    <div class="btn-group btn-group-sm">
+                      <button type="button" id="button-checkbox-auth-check" class="btn btn-outline-dark"><i class="fa-solid fa-user-check"></i> {{ button_checkbox_auth_check }}</button>
+                      {% if not checkbox.receipt_id %}
+                        <button type="button" id="button-checkbox-create" class="btn btn-primary"><i class="fa-solid fa-plus-circle"></i> {{ button_checkbox_create }}</button>
                       {% endif %}
-                      {% if checkbox.return_receipt_id %}
-                        <a href="{{ checkbox.return_receipt_pdf_url }}" target="_blank" id="button-checkbox-return-pdf" class="btn btn-outline-warning"><i class="fa-solid fa-file-pdf"></i> {{ button_checkbox_return_pdf }}</a>
-                        <button type="button" id="button-checkbox-return-sms" class="btn btn-outline-warning"><i class="fa-solid fa-comment-sms"></i> {{ button_checkbox_return_sms }}</button>
+                      {% if checkbox.receipt_id %}
+                        <a href="{{ checkbox.receipt_pdf_url }}" target="_blank" id="button-checkbox-pdf" class="btn btn-info"><i class="fa-solid fa-file-pdf"></i> {{ button_checkbox_pdf }}</a>
+                        <button type="button" id="button-checkbox-sms" class="btn btn-secondary"><i class="fa-solid fa-comment-sms"></i> {{ button_checkbox_sms }}</button>
+                        {% if not checkbox.return_receipt_id %}
+                          <button type="button" id="button-checkbox-return-create" class="btn btn-warning"><i class="fa-solid fa-rotate-left"></i> {{ button_checkbox_return_create }}</button>
+                        {% endif %}
+                        {% if checkbox.return_receipt_id %}
+                          <a href="{{ checkbox.return_receipt_pdf_url }}" target="_blank" id="button-checkbox-return-pdf" class="btn btn-outline-warning"><i class="fa-solid fa-file-pdf"></i> {{ button_checkbox_return_pdf }}</a>
+                          <button type="button" id="button-checkbox-return-sms" class="btn btn-outline-warning"><i class="fa-solid fa-comment-sms"></i> {{ button_checkbox_return_sms }}</button>
+                        {% endif %}
                       {% endif %}
-                    {% endif %}
+                    </div>
                   </div>
                 </div>
                 <div class="card-body">
@@ -2267,8 +2270,9 @@ $(document).on('click', '#button-np-delete-ttn', function() {
     npTtnAction('{{ novaposhta_delete_ttn|replace({'&amp;':'&'})|escape('js') }}', this);
 });
 
-function checkboxAction(url, element, extraData) {
+function checkboxAction(url, element, extraData, options) {
     extraData = extraData || {};
+    options = options || {};
     extraData.module_id = parseInt($('#input-checkbox-module').val() || '0', 10) || 0;
     var data = {
         order_id: $('#input-order-id').val()
@@ -2295,15 +2299,27 @@ function checkboxAction(url, element, extraData) {
             if (json['error']) {
                 $('#alert').prepend('<div class="alert alert-danger alert-dismissible"><i class="fa-solid fa-circle-exclamation"></i> ' + json['error'] + ' <button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>');
                 $('#checkbox-error').removeClass('d-none').text(json['error']);
+
+                if (options.authStatus) {
+                    $('#checkbox-auth-status').removeClass('d-none text-bg-success').addClass('text-bg-danger').text('Auth error');
+                }
             }
 
             if (json['success']) {
-                $('#alert').prepend('<div class="alert alert-success alert-dismissible"><i class="fa-solid fa-check-circle"></i> ' + json['success'] + ' <button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>');
                 $('#checkbox-error').addClass('d-none').text('');
 
-                setTimeout(function() {
-                    location.reload();
-                }, 250);
+                if (options.authStatus) {
+                    $('#checkbox-auth-status').removeClass('d-none text-bg-secondary text-bg-danger').addClass('text-bg-success').text(json['success']);
+                    return;
+                }
+
+                $('#alert').prepend('<div class="alert alert-success alert-dismissible"><i class="fa-solid fa-check-circle"></i> ' + json['success'] + ' <button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>');
+
+                if (options.reload !== false) {
+                    setTimeout(function() {
+                        location.reload();
+                    }, 250);
+                }
             }
         },
         error: function(xhr, ajaxOptions, thrownError) {
@@ -2313,7 +2329,11 @@ function checkboxAction(url, element, extraData) {
 }
 
 $(document).on('click', '#button-checkbox-auth-check', function() {
-    checkboxAction('{{ checkbox_check_auth|replace({'&amp;':'&'})|escape('js') }}', this);
+    checkboxAction('{{ checkbox_check_auth|replace({'&amp;':'&'})|escape('js') }}', this, {}, {authStatus: true, reload: false});
+});
+
+$(document).on('change', '#input-checkbox-module', function() {
+    $('#checkbox-auth-status').addClass('d-none').removeClass('text-bg-success text-bg-danger').addClass('text-bg-secondary').text('');
 });
 
 $(document).on('click', '#button-checkbox-create', function() {
