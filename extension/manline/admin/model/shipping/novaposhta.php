@@ -149,11 +149,13 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 			// legacy auto-pick behaviour.
 			$sender = $this->fetchSenderData($api_key, $api_url, $sender_address_ref);
 			$recipient = $this->fetchOrCreateRecipientData($order_info, $city_ref, $api_key, $api_url);
-			$order_data = $this->getOrderData($order_id, $order_info, $delivery_type);
-			if (!empty($changes['Weight'])) $order_data['weight'] = (float)$changes['Weight'];
-			if (!empty($changes['SeatsAmount'])) $order_data['seats'] = (int)$changes['SeatsAmount'];
+			$order_data = $this->getOrderData($order_info);
+			if (!empty($changes['Weight'])) $order_data['weight'] = (string)max(0.1, (float)$changes['Weight']);
+			if (!empty($changes['SeatsAmount'])) $order_data['seats_amount'] = (string)max(1, (int)$changes['SeatsAmount']);
 			if (!empty($changes['Cost'])) $order_data['cost'] = (float)$changes['Cost'];
 			if (!empty($changes['Description'])) $order_data['description'] = (string)$changes['Description'];
+
+			$order_data['options_seat'] = $this->buildOptionsSeat((float)$order_data['weight'], (int)$order_data['seats_amount']);
 
 			// Locker delivery has its own validator at NP API and the
 			// payload shape differs from branch/courier. Specifically:
@@ -162,7 +164,8 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 			//   • OptionsSeat must contain exactly one entry
 			//   • Cost is capped at 10 000 UAH
 			//   • ServiceType only accepts WarehouseWarehouse or DoorsWarehouse
-			// getOrderData() already handles the seats/options_seat split.
+			// getOrderData() keeps the default TTN as one physical parcel;
+			// explicit operator overrides above rebuild OptionsSeat to match.
 			$is_locker = $delivery_type === 'locker';
 
 			if ($is_locker && (float)$order_data['cost'] > 10000.0) {
@@ -712,12 +715,6 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 		if ($needs_seats_rebuild) {
 			$weight_total = (float)$new_payload['Weight'];
 			$seats = max(1, (int)$new_payload['SeatsAmount']);
-			$weight_per_seat = round($weight_total / $seats, 3);
-
-			if ($weight_per_seat <= 0) {
-				$weight_per_seat = 0.1;
-			}
-
 			$first_existing = $current_payload['OptionsSeat'][0] ?? [];
 
 			if ($dim_rebuild !== null) {
@@ -732,17 +729,7 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 				$height = $first_existing['volumetricHeight'] ?? 10;
 			}
 
-			$options_seat = [];
-
-			for ($i = 0; $i < $seats; $i++) {
-				$options_seat[] = [
-					'volumetricVolume' => $vol,
-					'volumetricWidth'  => $width,
-					'volumetricLength' => $length,
-					'volumetricHeight' => $height,
-					'weight'           => $weight_per_seat,
-				];
-			}
+			$options_seat = $this->buildOptionsSeat($weight_total, $seats, (int)$width, (int)$length, (int)$height, (string)$vol);
 
 			$new_payload['OptionsSeat'] = $options_seat;
 
@@ -1364,72 +1351,64 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 		return $data;
 	}
 
-	private function getOrderData(int $order_id, array $order_info, string $delivery_type = ''): array {
-		$this->load->model('sale/order');
-
-		$products = $this->model_sale_order->getProducts($order_id);
-
+	private function getOrderData(array $order_info): array {
 		// NP cargo description is hard-set to a generic category string per
 		// shipper policy — the actual product line-up is irrelevant to NP and
 		// keeping it generic avoids accidental category-mismatch holds.
 		$description = 'Одяг';
-		$seats_amount = 1;
-
-		if ($products) {
-			$quantity_total = 0;
-
-			foreach ($products as $product) {
-				$quantity_total += (int)($product['quantity'] ?? 0);
-			}
-
-			if ($quantity_total > 0) {
-				$seats_amount = $quantity_total;
-			}
-		}
 
 		$description = oc_substr($description, 0, 90);
 
 		$cost = (float)($order_info['total'] ?? 0.0);
 		$cost = $cost > 0 ? $cost : 1.0;
 
-		// Locker shipments are hard-limited by NP to a single seat per
-		// document, regardless of how many items the customer ordered.
-		// Doc says: "Під час створення відправлення на поштомат можна
-		// вказувати лише одне місце на одне відправлення".
-		$is_locker = $delivery_type === 'locker';
-		$seats = $is_locker ? 1 : max($seats_amount, 1);
+		// A Manline order is one physical parcel by default, regardless of
+		// how many product rows it contains. Operators can override seats in
+		// the create/edit modal when the shipment really has multiple places.
+		$seats = 1;
 
 		// NP's InternetDocument.save now rejects payloads without OptionsSeat
 		// even for CargoType=Cargo ("OptionsSeat is empty" / errorCode
-		// 20000200226). Build a per-seat array. For non-locker the total
-		// weight is split evenly across seats; for locker everything goes
-		// into the single seat. Dimensions are a sensible underwear-shop
-		// default (20×10×10 cm ≈ 0.002 m³); locker limits are W≤40,
-		// L≤60, H≤30 so we are well within the envelope.
+		// 20000200226). A Manline order with multiple products is still one
+		// physical parcel by default; operators can override seats manually.
 		$weight_total = 1.0;
-		$weight_per_seat = round($weight_total / $seats, 3);
-		if ($weight_per_seat <= 0) {
-			$weight_per_seat = 0.1;
-		}
-
-		$options_seat = [];
-		for ($i = 0; $i < $seats; $i++) {
-			$options_seat[] = [
-				'volumetricVolume' => '0.002',
-				'volumetricWidth'  => 10,
-				'volumetricLength' => 20,
-				'volumetricHeight' => 10,
-				'weight'           => $weight_per_seat,
-			];
-		}
 
 		return [
 			'description'  => $description,
 			'seats_amount' => (string)$seats,
 			'weight'       => (string)$weight_total,
 			'cost'         => number_format($cost, 2, '.', ''),
-			'options_seat' => $options_seat,
+			'options_seat' => $this->buildOptionsSeat($weight_total, $seats),
 		];
+	}
+
+	private function buildOptionsSeat(float $weight_total, int $seats, int $width = 10, int $length = 20, int $height = 10, string $volumetric_volume = ''): array {
+		$seats = max(1, $seats);
+		$weight_total = max(0.1, $weight_total);
+		$weight_per_seat = round($weight_total / $seats, 3);
+
+		if ($weight_per_seat <= 0) {
+			$weight_per_seat = 0.1;
+		}
+
+		if ($volumetric_volume === '') {
+			$volumetric_volume = number_format(max(0.0001, round(($width * $length * $height) / 1000000, 4)), 4, '.', '');
+		}
+
+		$options_seat = [];
+		$weight_per_seat = rtrim(rtrim(number_format($weight_per_seat, 3, '.', ''), '0'), '.');
+
+		for ($i = 0; $i < $seats; $i++) {
+			$options_seat[] = [
+				'volumetricVolume' => $volumetric_volume,
+				'volumetricWidth'  => $width,
+				'volumetricLength' => $length,
+				'volumetricHeight' => $height,
+				'weight'           => $weight_per_seat,
+			];
+		}
+
+		return $options_seat;
 	}
 
 	private function fetchOrCreateRecipientData(array $order_info, string $city_ref, string $api_key, string $api_url): array {
