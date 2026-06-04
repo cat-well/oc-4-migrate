@@ -113,6 +113,7 @@ class Contact extends \Opencart\System\Engine\Controller {
 			$setting = $this->model_setting_setting->getSetting('config', $post_info['store_id']);
 
 			$store_email = $setting['config_email'] ?? $this->config->get('config_email');
+			$mail_from = $this->getSafeSenderEmail($store_email);
 
 			if (isset($this->request->get['page'])) {
 				$page = (int)$this->request->get['page'];
@@ -251,8 +252,13 @@ class Contact extends \Opencart\System\Engine\Controller {
 				$message .= '</html>' . "\n";
 
 				if ($this->config->get('config_mail_engine')) {
+					$mail_parameter = (string)$this->config->get('config_mail_parameter');
+					if ($this->config->get('config_mail_engine') === 'mail' && $mail_parameter === '' && $mail_from !== '') {
+						$mail_parameter = '-f' . $mail_from;
+					}
+
 					$mail_option = [
-						'parameter'     => $this->config->get('config_mail_parameter'),
+						'parameter'     => $mail_parameter,
 						'smtp_hostname' => $this->config->get('config_mail_smtp_hostname'),
 						'smtp_username' => $this->config->get('config_mail_smtp_username'),
 						'smtp_password' => html_entity_decode($this->config->get('config_mail_smtp_password'), ENT_QUOTES, 'UTF-8'),
@@ -265,7 +271,10 @@ class Contact extends \Opencart\System\Engine\Controller {
 					foreach ($emails as $email) {
 						if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
 							$mail->setTo(trim($email));
-							$mail->setFrom($store_email);
+							$mail->setFrom($mail_from);
+							if ($mail_from !== $store_email && filter_var($store_email, FILTER_VALIDATE_EMAIL)) {
+								$mail->setReplyTo($store_email);
+							}
 							$mail->setSender(html_entity_decode($store_name, ENT_QUOTES, 'UTF-8'));
 							$mail->setSubject(html_entity_decode($post_info['subject'], ENT_QUOTES, 'UTF-8'));
 							$mail->setHtml($message);
@@ -280,5 +289,22 @@ class Contact extends \Opencart\System\Engine\Controller {
 
 		$this->response->addHeader('Content-Type: application/json');
 		$this->response->setOutput(json_encode($json));
+	}
+
+	private function getSafeSenderEmail(string $store_email): string {
+		$smtp_username = trim((string)$this->config->get('config_mail_smtp_username'));
+		if (filter_var($smtp_username, FILTER_VALIDATE_EMAIL)) {
+			return $smtp_username;
+		}
+
+		$store_email = trim($store_email);
+		$domain = strtolower((string)substr(strrchr($store_email, '@') ?: '', 1));
+		$external_domains = ['gmail.com', 'googlemail.com', 'yahoo.com', 'outlook.com', 'hotmail.com', 'icloud.com'];
+
+		if ($domain !== '' && in_array($domain, $external_domains, true)) {
+			return 'manline@business-9.default-host.net';
+		}
+
+		return $store_email;
 	}
 }
