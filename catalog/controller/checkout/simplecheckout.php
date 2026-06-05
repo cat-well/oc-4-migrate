@@ -45,9 +45,16 @@ class Simplecheckout extends \Opencart\System\Engine\Controller {
 			$this->mirrorPaymentFromShipping();
 
 			$payment_code = (string)($state['payment_code'] ?? '');
+			$language = (string)($this->request->get['language'] ?? ($this->session->data['language'] ?? $this->config->get('config_language')));
+
+			if ($payment_code === 'liqpay.liqpay' && isset($this->session->data['order_id'])) {
+				$json['order_created'] = true;
+				$json['redirect'] = $this->url->link('extension/liqpay/payment/liqpay.process', 'language=' . $language, true);
+				unset($this->session->data['simplecheckout_show_errors']);
+			}
 
 			// For offline payment methods (COD etc.) we confirm immediately and redirect to success.
-			if (in_array($payment_code, ['cod.cod', 'cheque.cheque', 'bank_transfer.bank_transfer', 'free_checkout.free_checkout'], true)) {
+			if (empty($json['redirect']) && in_array($payment_code, ['cod.cod', 'cheque.cheque', 'bank_transfer.bank_transfer', 'free_checkout.free_checkout'], true)) {
 				if (isset($this->session->data['order_id'])) {
 					$this->load->model('checkout/order');
 
@@ -69,11 +76,10 @@ class Simplecheckout extends \Opencart\System\Engine\Controller {
 					}
 				}
 
-				$language = (string)($this->request->get['language'] ?? ($this->session->data['language'] ?? $this->config->get('config_language')));
 				$json['order_created'] = true;
 				$json['redirect'] = $this->url->link('checkout/success', 'language=' . $language, true);
 				unset($this->session->data['simplecheckout_show_errors']);
-			} else {
+			} elseif (empty($json['redirect'])) {
 				if ($payment_form) {
 					$state['payment_form'] = $payment_form;
 					$json['order_created'] = true;
