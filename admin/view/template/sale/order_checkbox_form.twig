@@ -1,0 +1,200 @@
+{{ header }}{{ column_left }}
+<div id="content">
+  <div class="page-header">
+    <div class="container-fluid">
+      <div class="float-end">
+        <button type="submit" form="form-checkbox-receipt" id="button-checkbox-submit" class="btn btn-primary">
+          <i class="fa-solid fa-receipt"></i> Створити чек
+        </button>
+        <a href="{{ back }}" class="btn btn-light"><i class="fa-solid fa-reply"></i> Назад</a>
+      </div>
+      <h1>{{ heading_title }}</h1>
+      <ol class="breadcrumb">
+        {% for breadcrumb in breadcrumbs %}
+          <li class="breadcrumb-item"><a href="{{ breadcrumb.href }}">{{ breadcrumb.text }}</a></li>
+        {% endfor %}
+      </ol>
+    </div>
+  </div>
+  <div class="container-fluid">
+    <div id="checkbox-alert"></div>
+
+    <form id="form-checkbox-receipt" action="{{ create }}" method="post">
+      <div class="row">
+        <div class="col-lg-8">
+          <div class="card mb-3">
+            <div class="card-header"><i class="fa-solid fa-list"></i> Позиції чека</div>
+            <div class="card-body p-0">
+              <div class="table-responsive">
+                <table class="table table-bordered table-hover mb-0">
+                  <thead>
+                    <tr>
+                      <th>Назва</th>
+                      <th style="width: 150px;">Код</th>
+                      <th style="width: 120px;" class="text-end">Кількість</th>
+                      <th style="width: 150px;" class="text-end">Ціна, грн</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for product in products %}
+                      <tr>
+                        <td>
+                          <input type="text" name="product[{{ product.order_product_id }}][name]" value="{{ product.name }}" class="form-control"/>
+                        </td>
+                        <td>
+                          <input type="text" name="product[{{ product.order_product_id }}][model]" value="{{ product.model }}" class="form-control"/>
+                        </td>
+                        <td>
+                          <input type="number" min="0" step="1" name="product[{{ product.order_product_id }}][quantity]" value="{{ product.quantity }}" class="form-control text-end"/>
+                        </td>
+                        <td>
+                          <input type="number" min="0" step="0.01" name="product[{{ product.order_product_id }}][price]" value="{{ product.price_uah|number_format(2, '.', '') }}" class="form-control text-end js-checkbox-line-price"/>
+                        </td>
+                      </tr>
+                    {% endfor %}
+                    <tr>
+                      <td colspan="3" class="text-end align-middle"><strong>Доставка</strong></td>
+                      <td>
+                        <input type="number" min="0" step="0.01" name="shipping_total" value="{{ shipping_total|number_format(2, '.', '') }}" class="form-control text-end"/>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-lg-4">
+          <div class="card mb-3">
+            <div class="card-header"><i class="fa-solid fa-cash-register"></i> Параметри Checkbox</div>
+            <div class="card-body">
+              {% if modules|length > 1 %}
+                <div class="mb-3">
+                  <label for="input-checkbox-module" class="form-label">Каса/касир</label>
+                  <select name="module_id" id="input-checkbox-module" class="form-select">
+                    {% for module in modules %}
+                      <option value="{{ module.module_id }}"{% if module.module_id == selected_module_id %} selected{% endif %}>{{ module.name }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+              {% else %}
+                <input type="hidden" name="module_id" value="{{ selected_module_id }}"/>
+              {% endif %}
+
+              <div class="mb-3">
+                <label for="input-payment-type" class="form-label">Оплата</label>
+                <select name="payment_type" id="input-payment-type" class="form-select">
+                  <option value="ettn"{% if payment_type == 'ettn' %} selected{% endif %}>Експрес-накладна НП</option>
+                  <option value="cash"{% if payment_type == 'cash' %} selected{% endif %}>Готівка</option>
+                  <option value="card"{% if payment_type == 'card' %} selected{% endif %}>Картка / безготівково</option>
+                </select>
+              </div>
+
+              <div class="mb-3">
+                <label for="input-payment-label" class="form-label">Назва оплати в чеку</label>
+                <input type="text" name="payment_label" id="input-payment-label" value="{% if payment_type == 'ettn' %}Експрес-накладна{% elseif payment_type == 'cash' %}Готівка{% else %}Картка{% endif %}" class="form-control"/>
+              </div>
+
+              <div class="mb-3" id="group-ttn-number">
+                <label for="input-ttn-number" class="form-label">Накладна Нової Пошти</label>
+                <input type="text" name="ttn_number" id="input-ttn-number" value="{{ ttn_number }}" class="form-control" placeholder="2045XXXXXXXXXX"/>
+                <div class="form-text">Підставляється з НП-блоку замовлення; можна поправити перед створенням чека.</div>
+              </div>
+
+              <div class="mb-3">
+                <label for="input-checkbox-phone" class="form-label">Телефон для SMS</label>
+                <input type="text" name="sms_phone" id="input-checkbox-phone" value="{{ sms_phone }}" class="form-control" placeholder="380XXXXXXXXX"/>
+              </div>
+
+              <div class="mb-3">
+                <label for="input-checkbox-email" class="form-label">E-mail</label>
+                <input type="email" name="email" id="input-checkbox-email" value="{{ email }}" class="form-control"/>
+              </div>
+
+              <div class="bg-light border rounded p-3">
+                <div class="d-flex justify-content-between">
+                  <span>Замовлення</span>
+                  <strong>#{{ order_id }}</strong>
+                </div>
+                <div class="d-flex justify-content-between">
+                  <span>Сума замовлення</span>
+                  <strong>{{ order_total_uah|number_format(2, '.', ' ') }} грн</strong>
+                </div>
+                <div class="small text-muted mt-2">Фіскалізація відбудеться тільки після натискання “Створити чек”.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+$('#input-payment-type').on('change', function() {
+    var type = $(this).val();
+
+    $('#group-ttn-number').toggleClass('d-none', type !== 'ettn');
+
+    if (type === 'ettn') {
+        $('#input-payment-label').val('Експрес-накладна');
+    } else if (type === 'cash') {
+        $('#input-payment-label').val('Готівка');
+    } else {
+        $('#input-payment-label').val('Картка');
+    }
+}).trigger('change');
+
+$('#form-checkbox-receipt').on('submit', function(e) {
+    e.preventDefault();
+
+    var $form = $(this);
+    var $button = $('#button-checkbox-submit');
+    var paymentType = $('#input-payment-type').val();
+    var ttn = ($('#input-ttn-number').val() || '').replace(/\D+/g, '');
+
+    $('#checkbox-alert').html('');
+
+    if (paymentType === 'ettn' && !ttn) {
+        $('#checkbox-alert').html('<div class="alert alert-danger"><i class="fa-solid fa-triangle-exclamation"></i> Для оплати через експрес-накладну потрібен номер ТТН.</div>');
+        $('#input-ttn-number').focus();
+        return;
+    }
+
+    $button.prop('disabled', true).find('i').attr('class', 'fa-solid fa-circle-notch fa-spin');
+
+    $.ajax({
+        url: $form.attr('action').replace(/&amp;/g, '&'),
+        type: 'post',
+        dataType: 'json',
+        data: $form.serialize(),
+        complete: function() {
+            $button.prop('disabled', false).find('i').attr('class', 'fa-solid fa-receipt');
+        },
+        success: function(json) {
+            if (json.error) {
+                $('#checkbox-alert').html('<div class="alert alert-danger"><i class="fa-solid fa-triangle-exclamation"></i> ' + json.error + '</div>');
+                return;
+            }
+
+            if (json.success) {
+                var html = '<div class="alert alert-success"><i class="fa-solid fa-check-circle"></i> ' + json.success;
+                if (json.pdf_url) {
+                    html += ' <a href="' + json.pdf_url + '" target="_blank" class="alert-link">PDF</a>';
+                }
+                html += '</div>';
+                $('#checkbox-alert').html(html);
+
+                setTimeout(function() {
+                    window.location = '{{ back|replace({'&amp;':'&'})|escape('js') }}';
+                }, 1200);
+            }
+        },
+        error: function(xhr, ajaxOptions, thrownError) {
+            $('#checkbox-alert').html('<div class="alert alert-danger"><i class="fa-solid fa-triangle-exclamation"></i> ' + thrownError + '</div>');
+        }
+    });
+});
+</script>
+{{ footer }}

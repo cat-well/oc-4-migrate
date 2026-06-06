@@ -632,6 +632,7 @@ class Order extends \Opencart\System\Engine\Controller {
 		$data['novaposhta_refresh_status'] = $this->url->link('sale/order.refreshNovaposhtaStatus', 'user_token=' . $this->session->data['user_token'] . '&order_id=' . $order_id);
 		$data['novaposhta_lookup'] = $this->url->link('sale/order.novaposhtaLookup', 'user_token=' . $this->session->data['user_token'] . '&order_id=' . $order_id);
 		$data['novaposhta_sender_lookup'] = $this->url->link('sale/order.novaposhtaSenderLookup', 'user_token=' . $this->session->data['user_token'] . '&order_id=' . $order_id);
+		$data['checkbox_prepare_receipt'] = $this->url->link('sale/order.checkboxReceiptForm', 'user_token=' . $this->session->data['user_token'] . '&order_id=' . $order_id);
 		$data['checkbox_create_receipt'] = $this->url->link('sale/order.createCheckboxReceipt', 'user_token=' . $this->session->data['user_token'] . '&order_id=' . $order_id);
 		$data['checkbox_send_sms'] = $this->url->link('sale/order.sendCheckboxReceiptSms', 'user_token=' . $this->session->data['user_token'] . '&order_id=' . $order_id);
 		$data['checkbox_create_return_receipt'] = $this->url->link('sale/order.createCheckboxReturnReceipt', 'user_token=' . $this->session->data['user_token'] . '&order_id=' . $order_id);
@@ -2447,42 +2448,161 @@ class Order extends \Opencart\System\Engine\Controller {
 				$json['error'] = $this->language->get('error_checkbox_disabled');
 			} else {
 				$module_id = (int)($config['module_id'] ?? $module_id);
-				$payload = $this->buildCheckboxSellPayload($order_info);
+				$options = $this->getCheckboxReceiptOptionsFromRequest($order_info);
+				$ttn_number = preg_replace('/\D+/', '', (string)($options['ttn_number'] ?? ''));
+				$ttn_number = is_string($ttn_number) ? $ttn_number : '';
 
-				$result = $this->model_extension_manline_integration_checkbox->createSellReceipt($config, $payload);
-
-				if (empty($result['success'])) {
-					$json['error'] = (string)($result['error'] ?? $this->language->get('error_checkbox_failed'));
-
-					$this->model_extension_manline_integration_checkbox->saveOrderMeta($order_id, [
-						'module_id' => $module_id,
-						'error' => $json['error'],
-						'payload' => $payload,
-						'response' => (array)($result['response'] ?? [])
-					]);
+				if (($options['payment_type'] ?? '') === 'ettn' && $ttn_number === '') {
+					$json['error'] = 'Для чека з оплатою експрес-накладною потрібен номер ТТН Нової Пошти.';
 				} else {
-					$receipt_id = (string)($result['receipt_id'] ?? '');
+					$payload = $this->buildCheckboxSellPayload($order_info, $options);
 
-					$json['success'] = $this->language->get('text_checkbox_receipt_created');
-					$json['receipt_id'] = $receipt_id;
-					$json['pdf_url'] = rtrim((string)$config['api_url'], '/') . '/api/v1/receipts/' . $receipt_id . '/pdf';
+					if (($options['payment_type'] ?? '') === 'ettn') {
+						$result = $this->model_extension_manline_integration_checkbox->createNpEttnReceipt($config, $payload);
+						$stored_payload = (array)($result['payload'] ?? $payload);
+					} else {
+						$result = $this->model_extension_manline_integration_checkbox->createSellReceipt($config, $payload);
+						$stored_payload = $payload;
+					}
 
-					$this->model_extension_manline_integration_checkbox->saveOrderMeta($order_id, [
-						'module_id' => $module_id,
-						'receipt_id' => $receipt_id,
-						'receipt_status' => 'CREATED',
-						'error' => '',
-						'payload' => $payload,
-						'response' => (array)($result['response'] ?? [])
-					]);
+					if (empty($result['success'])) {
+						$json['error'] = (string)($result['error'] ?? $this->language->get('error_checkbox_failed'));
 
-					$this->addOrderHistoryLog($order_id, sprintf($this->language->get('text_checkbox_history_created'), $receipt_id));
+						$this->model_extension_manline_integration_checkbox->saveOrderMeta($order_id, [
+							'module_id' => $module_id,
+							'error' => $json['error'],
+							'payload' => $stored_payload,
+							'response' => (array)($result['response'] ?? [])
+						]);
+					} else {
+						$receipt_id = (string)($result['receipt_id'] ?? '');
+
+						$json['success'] = $this->language->get('text_checkbox_receipt_created');
+						$json['receipt_id'] = $receipt_id;
+						$json['pdf_url'] = rtrim((string)$config['api_url'], '/') . '/api/v1/receipts/' . $receipt_id . '/pdf';
+
+						$this->model_extension_manline_integration_checkbox->saveOrderMeta($order_id, [
+							'module_id' => $module_id,
+							'receipt_id' => $receipt_id,
+							'receipt_status' => 'CREATED',
+							'sms_phone' => (string)($payload['delivery']['phone'] ?? ''),
+							'error' => '',
+							'payload' => $stored_payload,
+							'response' => (array)($result['response'] ?? [])
+						]);
+
+						$this->addOrderHistoryLog($order_id, sprintf($this->language->get('text_checkbox_history_created'), $receipt_id));
+					}
 				}
 			}
 		}
 
 		$this->response->addHeader('Content-Type: application/json');
 		$this->response->setOutput(json_encode($json));
+	}
+
+	/**
+	 * Prepare/edit Checkbox sell receipt before fiscalization.
+	 */
+	public function checkboxReceiptForm(): void {
+		$this->load->language('sale/order');
+
+		$order_id = $this->getOrderIdFromRequest();
+
+		$this->load->model('sale/order');
+		$order_info = $this->model_sale_order->getOrder($order_id);
+
+		if (!$order_info) {
+			$this->response->redirect($this->url->link('sale/order', 'user_token=' . $this->session->data['user_token']));
+			return;
+		}
+
+		$this->load->model('extension/manline/integration/checkbox');
+		$meta = $this->model_extension_manline_integration_checkbox->getOrderMeta($order_id);
+
+		if (trim((string)($meta['receipt_id'] ?? '')) !== '') {
+			$this->response->redirect($this->url->link('sale/order.info', 'user_token=' . $this->session->data['user_token'] . '&order_id=' . $order_id));
+			return;
+		}
+
+		$modules = $this->getCheckboxEnabledModules();
+		$selected_module_id = (int)($meta['module_id'] ?? 0);
+		if ($selected_module_id <= 0 && $modules) {
+			$selected_module_id = (int)$modules[0]['module_id'];
+		}
+
+		$this->load->model('extension/manline/shipping/novaposhta');
+		$novaposhta_meta = $this->model_extension_manline_shipping_novaposhta->getOrderMeta($order_id);
+		$ttn_number = trim((string)($novaposhta_meta['ttn_number'] ?? ''));
+
+		$products = [];
+		foreach ($this->model_sale_order->getProducts($order_id) as $product) {
+			$products[] = [
+				'order_product_id' => (int)($product['order_product_id'] ?? 0),
+				'name' => (string)($product['name'] ?? ''),
+				'model' => (string)($product['model'] ?? ''),
+				'quantity' => (int)($product['quantity'] ?? 0),
+				'price_uah' => $this->normalizeOrderCurrencyAmount((float)($product['price'] ?? 0.0), $order_info)
+			];
+		}
+
+		$shipping_total = 0.0;
+		foreach ($this->model_sale_order->getTotals($order_id) as $total) {
+			if ((string)($total['code'] ?? '') === 'shipping') {
+				$shipping_total = $this->normalizeOrderCurrencyAmount((float)($total['value'] ?? 0.0), $order_info);
+				break;
+			}
+		}
+
+		$phone = $this->model_extension_manline_integration_checkbox->normalizePhoneTo380((string)($meta['sms_phone'] ?? $order_info['telephone'] ?? ''));
+		if ($phone === '') {
+			$phone = (string)($order_info['telephone'] ?? '');
+		}
+
+		$data = [];
+		$data['user_token'] = $this->session->data['user_token'];
+		$data['heading_title'] = $this->language->get('text_checkbox_prepare_title');
+		$data['text_form'] = sprintf($this->language->get('text_checkbox_prepare_order'), $order_id);
+		$data['text_none'] = $this->language->get('text_none');
+		$data['order_id'] = $order_id;
+		$data['order_info'] = $order_info;
+		$data['products'] = $products;
+		$data['shipping_total'] = $shipping_total;
+		$data['order_total_uah'] = $this->normalizeOrderCurrencyAmount((float)($order_info['total'] ?? 0.0), $order_info);
+		$data['modules'] = $modules;
+		$data['selected_module_id'] = $selected_module_id;
+		$data['payment_type'] = $ttn_number !== '' ? 'ettn' : ($this->isCodPayment($order_info) ? 'cash' : 'card');
+		$data['ttn_number'] = $ttn_number;
+		$data['sms_phone'] = $phone;
+		$data['email'] = (string)($order_info['email'] ?? '');
+		$data['create'] = $this->url->link('sale/order.createCheckboxReceipt', 'user_token=' . $this->session->data['user_token'] . '&order_id=' . $order_id);
+		$data['back'] = $this->url->link('sale/order.info', 'user_token=' . $this->session->data['user_token'] . '&order_id=' . $order_id);
+
+		$data['breadcrumbs'] = [];
+		$data['breadcrumbs'][] = [
+			'text' => $this->language->get('text_home'),
+			'href' => $this->url->link('common/dashboard', 'user_token=' . $this->session->data['user_token'])
+		];
+		$data['breadcrumbs'][] = [
+			'text' => $this->language->get('heading_title'),
+			'href' => $this->url->link('sale/order', 'user_token=' . $this->session->data['user_token'])
+		];
+		$data['breadcrumbs'][] = [
+			'text' => '#' . $order_id,
+			'href' => $data['back']
+		];
+		$data['breadcrumbs'][] = [
+			'text' => $data['heading_title'],
+			'href' => $this->url->link('sale/order.checkboxReceiptForm', 'user_token=' . $this->session->data['user_token'] . '&order_id=' . $order_id)
+		];
+
+		$this->document->setTitle($data['heading_title']);
+
+		$data['header'] = $this->load->controller('common/header');
+		$data['column_left'] = $this->load->controller('common/column_left');
+		$data['footer'] = $this->load->controller('common/footer');
+
+		$this->response->setOutput($this->load->view('sale/order_checkbox_form', $data));
 	}
 
 	/**
@@ -3046,6 +3166,53 @@ class Order extends \Opencart\System\Engine\Controller {
 		return 0;
 	}
 
+	private function getCheckboxEnabledModules(): array {
+		$this->load->model('setting/module');
+
+		$modules = [];
+		foreach ($this->model_setting_module->getModulesByCode('manline.checkbox') as $m) {
+			$settings = json_decode($m['setting'] ?? '', true);
+			if (!is_array($settings)) {
+				$settings = [];
+			}
+
+			if (!empty($settings['status'])) {
+				$modules[] = [
+					'module_id' => (int)($m['module_id'] ?? 0),
+					'name' => (string)($m['name'] ?? 'Checkbox')
+				];
+			}
+		}
+
+		return $modules;
+	}
+
+	private function getCheckboxReceiptOptionsFromRequest(array $order_info): array {
+		$options = [];
+
+		if (isset($this->request->post['product']) && is_array($this->request->post['product'])) {
+			$options['products'] = $this->request->post['product'];
+		}
+
+		$options['payment_type'] = (string)($this->request->post['payment_type'] ?? '');
+		$options['payment_label'] = (string)($this->request->post['payment_label'] ?? '');
+		$options['ttn_number'] = (string)($this->request->post['ttn_number'] ?? '');
+		$options['sms_phone'] = (string)($this->request->post['sms_phone'] ?? '');
+		$options['email'] = (string)($this->request->post['email'] ?? '');
+		$options['shipping_total'] = (string)($this->request->post['shipping_total'] ?? '');
+
+		if ($options['sms_phone'] !== '') {
+			$this->load->model('extension/manline/integration/checkbox');
+			$options['sms_phone'] = $this->model_extension_manline_integration_checkbox->normalizePhoneTo380($options['sms_phone']);
+		}
+
+		if ($options['payment_type'] === '') {
+			$options['payment_type'] = $this->isCodPayment($order_info) ? 'cash' : 'card';
+		}
+
+		return $options;
+	}
+
 	
 	private function buildCheckboxReturnPayload(array $order_info, string $sell_receipt_id): array {
 		$payload = $this->buildCheckboxSellPayload($order_info);
@@ -3067,16 +3234,29 @@ class Order extends \Opencart\System\Engine\Controller {
 		return $payload;
 	}
 
-private function buildCheckboxSellPayload(array $order_info): array {
+	private function buildCheckboxSellPayload(array $order_info, array $options = []): array {
 		$this->load->model('sale/order');
 		$products = $this->model_sale_order->getProducts((int)$order_info['order_id']);
 
 		$goods = [];
 		foreach ($products as $p) {
+			$order_product_id = (int)($p['order_product_id'] ?? 0);
+			$override = [];
+			if ($order_product_id > 0 && !empty($options['products'][$order_product_id]) && is_array($options['products'][$order_product_id])) {
+				$override = $options['products'][$order_product_id];
+			}
+
 			$name = (string)($p['name'] ?? '');
 			$model = (string)($p['model'] ?? '');
 			$qty = (int)($p['quantity'] ?? 0);
 			$price = (float)($p['price'] ?? 0.0);
+
+			if ($override) {
+				$name = trim((string)($override['name'] ?? $name));
+				$model = trim((string)($override['model'] ?? $model));
+				$qty = max(0, (int)($override['quantity'] ?? $qty));
+				$price = (float)($override['price'] ?? $price);
+			}
 
 			if ($qty <= 0) {
 				continue;
@@ -3096,21 +3276,86 @@ private function buildCheckboxSellPayload(array $order_info): array {
 			];
 		}
 
+		$shipping_total_uah = null;
+		if (isset($options['shipping_total']) && is_numeric($options['shipping_total'])) {
+			$shipping_total_uah = max(0.0, (float)$options['shipping_total']);
+		}
+
+		if ($shipping_total_uah === null) {
+			foreach ($this->model_sale_order->getTotals((int)$order_info['order_id']) as $total) {
+				if ((string)($total['code'] ?? '') === 'shipping') {
+					$shipping_total_uah = max(0.0, $this->normalizeOrderCurrencyAmount((float)($total['value'] ?? 0.0), $order_info));
+					break;
+				}
+			}
+		}
+
+		if ($shipping_total_uah !== null && $shipping_total_uah > 0) {
+			$goods[] = [
+				'good' => [
+					'code' => 'shipping-' . (int)$order_info['order_id'],
+					'name' => 'Доставка',
+					'price' => (int)round($shipping_total_uah * 100)
+				],
+				'quantity' => 1000
+			];
+		}
+
 		$total_uah = $this->normalizeOrderCurrencyAmount((float)($order_info['total'] ?? 0.0), $order_info);
 		$total_kop = (int)round($total_uah * 100);
 
-		$payments = [];
-		if ($this->isCodPayment($order_info)) {
-			$payments[] = ['type' => 'CASH', 'value' => $total_kop, 'label' => 'COD'];
-		} else {
-			$payments[] = ['type' => 'CASHLESS', 'value' => $total_kop, 'label' => 'Online'];
+		$payment_type = strtolower(trim((string)($options['payment_type'] ?? '')));
+		if ($payment_type === '') {
+			$payment_type = $this->isCodPayment($order_info) ? 'cash' : 'card';
 		}
 
-		return [
+		$payment_label = trim((string)($options['payment_label'] ?? ''));
+		$ttn_number = preg_replace('/\D+/', '', (string)($options['ttn_number'] ?? ''));
+		$ttn_number = is_string($ttn_number) ? $ttn_number : '';
+
+		if ($payment_type === 'ettn' && $ttn_number !== '') {
+			$payments = [[
+				'type' => 'ETTN',
+				'value' => $total_kop,
+				'label' => $payment_label !== '' ? $payment_label : 'Експрес-накладна',
+				'ettn' => $ttn_number
+			]];
+		} elseif ($payment_type === 'cash') {
+			$payments = [[
+				'type' => 'CASH',
+				'value' => $total_kop,
+				'label' => $payment_label !== '' ? $payment_label : 'Готівка'
+			]];
+		} else {
+			$payments = [[
+				'type' => 'CASHLESS',
+				'value' => $total_kop,
+				'label' => $payment_label !== '' ? $payment_label : 'Картка'
+			]];
+		}
+
+		$delivery = [];
+		$email = trim((string)($options['email'] ?? ''));
+		if ($email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL)) {
+			$delivery['email'] = $email;
+		}
+
+		$sms_phone = trim((string)($options['sms_phone'] ?? ''));
+		if ($sms_phone !== '') {
+			$delivery['phone'] = $sms_phone;
+		}
+
+		$payload = [
 			'id' => $this->uuidv4(),
 			'goods' => $goods,
 			'payments' => $payments
 		];
+
+		if ($delivery) {
+			$payload['delivery'] = $delivery;
+		}
+
+		return $payload;
 	}
 
 	private function normalizeOrderCurrencyAmount(float $amount, array $order_info): float {

@@ -108,3 +108,8 @@ $_['button_np_print_ttn']           = 'Друкувати TTN';
 $_['button_np_refresh_status']      = 'Оновити статус';
 $_['button_np_save_edit']           = 'Зберегти зміни';
 $_['button_cancel']                 = 'Скасувати';
+
+// ── Checkbox ──
+$_['text_checkbox_prepare_title']    = 'Підготовка чека Checkbox';
+$_['text_checkbox_prepare_order']    = 'Підготовка чека для замовлення #%s';
+$_['button_checkbox_prepare']        = 'Підготувати чек';

@@ -292,6 +292,67 @@ class Checkbox extends \Opencart\System\Engine\Model {
 		return ['success' => true, 'receipt_id' => $receipt_id, 'response' => $data];
 	}
 
+	public function createNpEttnReceipt(array $config, array $receipt_payload): array {
+		$sign = $this->cashierSignIn($config);
+		if (empty($sign['success'])) {
+			return $sign;
+		}
+
+		$token = (string)$sign['token'];
+		$api_url = rtrim((string)($config['api_url'] ?? ''), '/');
+		$url = $api_url . '/api/v1/np/ettn';
+
+		$receipt_body = $receipt_payload;
+		$receipt_body['rounding'] = true;
+		$receipt_body['footer'] = (string)($receipt_body['footer'] ?? 'Дякуємо за покупку!');
+
+		if (!empty($receipt_body['delivery']) && is_array($receipt_body['delivery'])) {
+			$delivery = $receipt_body['delivery'];
+			if (!empty($delivery['email']) && empty($delivery['emails'])) {
+				$delivery['emails'] = [(string)$delivery['email']];
+				unset($delivery['email']);
+			}
+			$receipt_body['delivery'] = $delivery;
+		}
+
+		$request_payload = [
+			'receipt_body' => $receipt_body
+		];
+
+		if (!empty($config['sender_phone'])) {
+			$sender_phone = $this->normalizePhoneTo380((string)$config['sender_phone']);
+			if ($sender_phone !== '') {
+				$request_payload['senderPhone'] = $sender_phone;
+			}
+		}
+
+		$payload = json_encode($request_payload, JSON_UNESCAPED_UNICODE);
+		if (!is_string($payload)) {
+			$payload = '{}';
+		}
+
+		$headers = [
+			'Content-Type: application/json',
+			'Authorization: Bearer ' . $token
+		];
+		$headers = $this->addClientHeaders($headers, $config, !empty($config['license_key']));
+
+		$res = $this->request('POST', $url, $headers, $payload);
+
+		$data = json_decode((string)$res['body'], true);
+		if (!is_array($data)) {
+			return ['success' => false, 'error' => 'Invalid response from Checkbox ETTN create.', 'http_code' => (int)$res['code'], 'response' => $res['body'], 'payload' => $request_payload];
+		}
+
+		if ((int)$res['code'] >= 400) {
+			return ['success' => false, 'error' => (string)($data['message'] ?? 'Checkbox ETTN API error.'), 'http_code' => (int)$res['code'], 'response' => $data, 'payload' => $request_payload];
+		}
+
+		$receipt_id = (string)($data['receiptId'] ?? ($data['receipt_id'] ?? ($data['id'] ?? '')));
+
+		return ['success' => true, 'receipt_id' => $receipt_id, 'response' => $data, 'payload' => $request_payload];
+	}
+
 	/**
 	 * Create return receipt.
 	 *
