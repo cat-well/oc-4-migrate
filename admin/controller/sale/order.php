@@ -312,13 +312,12 @@ class Order extends \Opencart\System\Engine\Controller {
 			$url_page .= '&order=' . urlencode($order);
 		}
 
-		$pagination = new \Opencart\System\Library\Pagination();
-		$pagination->total = $receipt_total;
-		$pagination->page = $page;
-		$pagination->limit = $limit;
-		$pagination->url = $this->url->link('sale/order.checkboxReceipts', 'user_token=' . $this->session->data['user_token'] . $url_page . '&page={page}');
-
-		$data['pagination'] = $pagination->render();
+		$data['pagination'] = $this->load->controller('common/pagination', [
+			'total' => $receipt_total,
+			'page'  => $page,
+			'limit' => $limit,
+			'url'   => $this->url->link('sale/order.checkboxReceipts', 'user_token=' . $this->session->data['user_token'] . $url_page . '&page={page}')
+		]);
 		$data['results'] = sprintf($this->language->get('text_pagination'), ($receipt_total) ? (($page - 1) * $limit) + 1 : 0, ((($page - 1) * $limit) > ($receipt_total - $limit)) ? $receipt_total : ((($page - 1) * $limit) + $limit), $receipt_total, ceil($receipt_total / $limit));
 
 		$data['filter_order_id'] = $filter_order_id;
