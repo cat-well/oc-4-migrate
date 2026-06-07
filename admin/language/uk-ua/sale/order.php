@@ -116,6 +116,6 @@ $_['button_checkbox_prepare']        = 'Підготувати чек';
 $_['button_checkbox_refresh_status'] = 'Оновити';
 $_['button_checkbox_sync_visible']   = 'Синхронізувати видимі';
 $_['text_checkbox_status_refreshed'] = 'Статус Checkbox оновлено: %s.';
-$_['text_checkbox_sync_visible_done'] = 'Синхронізацію Checkbox завершено: %s оновлено, %s з помилкою.';
+$_['text_checkbox_sync_visible_done'] = 'Синхронізацію Checkbox завершено: %s оновлено, %s пропущено, %s з помилкою.';
 $_['text_checkbox_history_status_refreshed'] = 'Оновлено статус Checkbox: %s';
 $_['error_checkbox_sync_empty']      = 'На цій сторінці немає рядків Checkbox для синхронізації.';

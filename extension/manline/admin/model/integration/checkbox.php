@@ -555,6 +555,36 @@ class Checkbox extends \Opencart\System\Engine\Model {
 		return ['success' => true, 'response' => $data];
 	}
 
+	public function getNpEttnReceiptProjects(array $config): array {
+		$sign = $this->cashierSignIn($config);
+		if (empty($sign['success'])) {
+			return $sign;
+		}
+
+		$token = (string)$sign['token'];
+		$api_url = rtrim((string)($config['api_url'] ?? ''), '/');
+		$url = $api_url . '/api/v1/np/ettn';
+
+		$headers = [
+			'Accept: application/json',
+			'Authorization: Bearer ' . $token
+		];
+		$headers = $this->addClientHeaders($headers, $config, !empty($config['license_key']));
+
+		$res = $this->request('GET', $url, $headers);
+		$data = json_decode((string)$res['body'], true);
+
+		if (!is_array($data)) {
+			return ['success' => false, 'error' => 'Invalid response from Checkbox ETTN list.', 'http_code' => (int)$res['code'], 'response' => (string)$res['body']];
+		}
+
+		if ((int)$res['code'] >= 400) {
+			return ['success' => false, 'error' => (string)($data['message'] ?? 'Checkbox ETTN list error.'), 'http_code' => (int)$res['code'], 'response' => $data];
+		}
+
+		return ['success' => true, 'response' => $data];
+	}
+
 	public function cashierMe(array $config): array {
 		$sign = $this->cashierSignIn($config);
 		if (empty($sign['success'])) {

@@ -260,7 +260,7 @@ $_['text_checkbox_ettn_created']    = 'Checkbox NP receipt project created. Fisc
 $_['text_checkbox_ettn_deleted']    = 'Checkbox NP receipt project deleted.';
 $_['text_checkbox_ettn_confirm_delete'] = 'Delete the Checkbox NP receipt project? This is available only before fiscalization.';
 $_['text_checkbox_status_refreshed'] = 'Checkbox status refreshed: %s.';
-$_['text_checkbox_sync_visible_done'] = 'Checkbox sync finished: %s updated, %s failed.';
+$_['text_checkbox_sync_visible_done'] = 'Checkbox sync finished: %s updated, %s skipped, %s failed.';
 $_['text_checkbox_sms_sent']        = 'Receipt has been sent via SMS.';
 
 $_['text_checkbox_history_created'] = 'Checkbox receipt created: %s';

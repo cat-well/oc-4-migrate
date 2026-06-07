@@ -2952,27 +2952,32 @@ class Order extends \Opencart\System\Engine\Controller {
 			} else {
 				$synced = 0;
 				$failed = 0;
+				$skipped = 0;
 				$errors = [];
 
 				foreach ($order_ids as $order_id) {
-					$result = $this->refreshCheckboxOrderMeta((int)$order_id);
+					$result = $this->refreshCheckboxOrderMeta((int)$order_id, 0, true);
 					if (!empty($result['success'])) {
-						$synced++;
+						if (!empty($result['skipped'])) {
+							$skipped++;
+						} else {
+							$synced++;
+						}
 					} else {
 						$failed++;
 						$errors[] = '#' . $order_id . ': ' . (string)($result['error'] ?? $this->language->get('error_checkbox_failed'));
 					}
 				}
 
-				if ($synced > 0) {
-					$json['success'] = sprintf($this->language->get('text_checkbox_sync_visible_done'), $synced, $failed);
+				if ($synced > 0 || $skipped > 0) {
+					$json['success'] = sprintf($this->language->get('text_checkbox_sync_visible_done'), $synced, $skipped, $failed);
 				}
 
 				if ($failed > 0) {
 					$json['warning'] = implode("\n", array_slice($errors, 0, 5));
 				}
 
-				if ($synced === 0 && $failed > 0) {
+				if ($synced === 0 && $skipped === 0 && $failed > 0) {
 					$json['error'] = $json['warning'];
 					unset($json['warning']);
 				}
@@ -3500,7 +3505,7 @@ class Order extends \Opencart\System\Engine\Controller {
 		return '';
 	}
 
-	private function refreshCheckboxOrderMeta(int $order_id, int $module_id = 0): array {
+	private function refreshCheckboxOrderMeta(int $order_id, int $module_id = 0, bool $allow_skip = false): array {
 		if ($order_id <= 0) {
 			return ['success' => false, 'error' => $this->language->get('error_order')];
 		}
@@ -3527,10 +3532,40 @@ class Order extends \Opencart\System\Engine\Controller {
 		$response = is_array($meta['response'] ?? null) ? $meta['response'] : [];
 		$is_ettn = $this->isCheckboxEttnMeta($meta);
 
+		if ($allow_skip && !$is_ettn && $receipt_id === '') {
+			return ['success' => true, 'skipped' => true, 'reason' => $this->language->get('error_checkbox_no_receipt')];
+		}
+
 		if ($is_ettn) {
 			$ettn_order_id = $this->extractCheckboxEttnOrderId($response);
 			if ($ettn_order_id === '') {
-				return ['success' => false, 'error' => $this->language->get('error_checkbox_ettn_project_id')];
+				$matched = $this->findCheckboxEttnProjectForMeta($config, $meta);
+
+				if (!$matched) {
+					return $allow_skip
+						? ['success' => true, 'skipped' => true, 'reason' => $this->language->get('error_checkbox_ettn_project_id')]
+						: ['success' => false, 'error' => $this->language->get('error_checkbox_ettn_project_id')];
+				}
+
+				$ettn_order_id = $this->extractCheckboxEttnOrderId($matched);
+				if ($ettn_order_id === '') {
+					$remote_status = $this->extractCheckboxStatus($matched);
+					$new_status = $remote_status !== '' ? 'ETTN_' . $remote_status : ($receipt_status !== '' ? $receipt_status : 'ETTN_CREATED');
+					$new_receipt_id = $this->extractCheckboxReceiptId($matched);
+					if ($new_receipt_id === '') {
+						$new_receipt_id = $receipt_id;
+					}
+
+					$this->model_extension_manline_integration_checkbox->saveOrderMeta($order_id, [
+						'module_id' => $module_id,
+						'receipt_id' => $new_receipt_id,
+						'receipt_status' => $new_status,
+						'error' => '',
+						'response' => $matched
+					]);
+
+					return ['success' => true, 'receipt_id' => $new_receipt_id, 'receipt_status' => $new_status, 'response' => $matched];
+				}
 			}
 
 			$result = $this->model_extension_manline_integration_checkbox->getNpEttnReceiptProject($config, $ettn_order_id);
@@ -3669,6 +3704,62 @@ class Order extends \Opencart\System\Engine\Controller {
 		$status = preg_replace('/[^A-Z0-9_]+/', '_', $status);
 
 		return is_string($status) ? trim($status, '_') : '';
+	}
+
+	private function findCheckboxEttnProjectForMeta(array $config, array $meta): array {
+		$payload = is_array($meta['payload'] ?? null) ? $meta['payload'] : [];
+		$response = is_array($meta['response'] ?? null) ? $meta['response'] : [];
+		$ttn_number = preg_replace('/\D+/', '', $this->extractCheckboxTtnNumber($payload, $response));
+		$ttn_number = is_string($ttn_number) ? $ttn_number : '';
+		$receipt_id = trim((string)($meta['receipt_id'] ?? ''));
+
+		if ($ttn_number === '' && $receipt_id === '') {
+			return [];
+		}
+
+		$result = $this->model_extension_manline_integration_checkbox->getNpEttnReceiptProjects($config);
+		if (empty($result['success'])) {
+			return [];
+		}
+
+		$items = $this->normalizeCheckboxListResponse($result['response'] ?? []);
+		foreach ($items as $item) {
+			$item_ttn = preg_replace('/\D+/', '', $this->extractCheckboxTtnNumber([], $item));
+			$item_ttn = is_string($item_ttn) ? $item_ttn : '';
+			$item_receipt_id = $this->extractCheckboxReceiptId($item);
+
+			if ($ttn_number !== '' && $item_ttn === $ttn_number) {
+				return $item;
+			}
+
+			if ($receipt_id !== '' && $item_receipt_id !== '' && $item_receipt_id === $receipt_id) {
+				return $item;
+			}
+		}
+
+		return [];
+	}
+
+	private function normalizeCheckboxListResponse($response): array {
+		if (!is_array($response)) {
+			return [];
+		}
+
+		if (!$response) {
+			return [];
+		}
+
+		if (array_keys($response) === range(0, count($response) - 1)) {
+			return array_values(array_filter($response, 'is_array'));
+		}
+
+		foreach (['results', 'items', 'data'] as $field) {
+			if (!empty($response[$field]) && is_array($response[$field])) {
+				return array_values(array_filter($response[$field], 'is_array'));
+			}
+		}
+
+		return [];
 	}
 
 	private function getCheckboxConfig(int $module_id = 0): array {
