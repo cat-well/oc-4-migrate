@@ -635,6 +635,7 @@ class Order extends \Opencart\System\Engine\Controller {
 		$data['checkbox_prepare_receipt'] = $this->url->link('sale/order.checkboxReceiptForm', 'user_token=' . $this->session->data['user_token'] . '&order_id=' . $order_id);
 		$data['checkbox_create_receipt'] = $this->url->link('sale/order.createCheckboxReceipt', 'user_token=' . $this->session->data['user_token'] . '&order_id=' . $order_id);
 		$data['checkbox_send_sms'] = $this->url->link('sale/order.sendCheckboxReceiptSms', 'user_token=' . $this->session->data['user_token'] . '&order_id=' . $order_id);
+		$data['checkbox_delete_ettn_project'] = $this->url->link('sale/order.deleteCheckboxEttnProject', 'user_token=' . $this->session->data['user_token'] . '&order_id=' . $order_id);
 		$data['checkbox_create_return_receipt'] = $this->url->link('sale/order.createCheckboxReturnReceipt', 'user_token=' . $this->session->data['user_token'] . '&order_id=' . $order_id);
 		$data['checkbox_send_return_sms'] = $this->url->link('sale/order.sendCheckboxReturnReceiptSms', 'user_token=' . $this->session->data['user_token'] . '&order_id=' . $order_id);
 		$data['checkbox_check_auth'] = $this->url->link('sale/order.checkCheckboxAuth', 'user_token=' . $this->session->data['user_token'] . '&order_id=' . $order_id);
@@ -1138,8 +1139,10 @@ class Order extends \Opencart\System\Engine\Controller {
 
 			if (!empty($checkbox_module['enabled'])) {
 				$receipt_id = trim((string)($meta['receipt_id'] ?? ''));
+				$receipt_status = trim((string)($meta['receipt_status'] ?? ''));
+				$is_ettn_project = $receipt_status === 'ETTN_CREATED';
 				$receipt_pdf_url = '';
-				if ($receipt_id !== '') {
+				if ($receipt_id !== '' && !$is_ettn_project) {
 					$api = rtrim((string)($checkbox_module['api_url'] ?? 'https://api.checkbox.ua'), '/');
 					$receipt_pdf_url = $api . '/api/v1/receipts/' . $receipt_id . '/pdf';
 				}
@@ -1156,6 +1159,8 @@ class Order extends \Opencart\System\Engine\Controller {
 					'modules' => $enabled_modules,
 					'selected_module_id' => $selected_module_id,
 					'receipt_id' => $receipt_id,
+					'receipt_status' => $receipt_status,
+					'is_ettn_project' => $is_ettn_project,
 					'receipt_pdf_url' => $receipt_pdf_url,
 					'return_receipt_id' => $return_receipt_id,
 					'return_receipt_pdf_url' => $return_receipt_pdf_url,
@@ -2455,9 +2460,14 @@ class Order extends \Opencart\System\Engine\Controller {
 				if (($options['payment_type'] ?? '') === 'ettn' && $ttn_number === '') {
 					$json['error'] = 'Для чека з оплатою експрес-накладною потрібен номер ТТН Нової Пошти.';
 				} else {
+					$is_ettn = (($options['payment_type'] ?? '') === 'ettn');
+					if ($is_ettn) {
+						$options['include_is_return_field'] = true;
+					}
+
 					$payload = $this->buildCheckboxSellPayload($order_info, $options);
 
-					if (($options['payment_type'] ?? '') === 'ettn') {
+					if ($is_ettn) {
 						$result = $this->model_extension_manline_integration_checkbox->createNpEttnReceipt($config, $payload);
 						$stored_payload = (array)($result['payload'] ?? $payload);
 					} else {
@@ -2477,21 +2487,27 @@ class Order extends \Opencart\System\Engine\Controller {
 					} else {
 						$receipt_id = (string)($result['receipt_id'] ?? '');
 
-						$json['success'] = $this->language->get('text_checkbox_receipt_created');
+						$json['success'] = $is_ettn ? $this->language->get('text_checkbox_ettn_created') : $this->language->get('text_checkbox_receipt_created');
 						$json['receipt_id'] = $receipt_id;
-						$json['pdf_url'] = rtrim((string)$config['api_url'], '/') . '/api/v1/receipts/' . $receipt_id . '/pdf';
+						if (!$is_ettn && $receipt_id !== '') {
+							$json['pdf_url'] = rtrim((string)$config['api_url'], '/') . '/api/v1/receipts/' . $receipt_id . '/pdf';
+						}
 
 						$this->model_extension_manline_integration_checkbox->saveOrderMeta($order_id, [
 							'module_id' => $module_id,
 							'receipt_id' => $receipt_id,
-							'receipt_status' => 'CREATED',
+							'receipt_status' => $is_ettn ? 'ETTN_CREATED' : 'CREATED',
 							'sms_phone' => (string)($payload['delivery']['phone'] ?? ''),
 							'error' => '',
 							'payload' => $stored_payload,
 							'response' => (array)($result['response'] ?? [])
 						]);
 
-						$this->addOrderHistoryLog($order_id, sprintf($this->language->get('text_checkbox_history_created'), $receipt_id));
+						if ($is_ettn) {
+							$this->addOrderHistoryLog($order_id, sprintf($this->language->get('text_checkbox_history_ettn_created'), $receipt_id, $ttn_number));
+						} else {
+							$this->addOrderHistoryLog($order_id, sprintf($this->language->get('text_checkbox_history_created'), $receipt_id));
+						}
 					}
 				}
 			}
@@ -2664,6 +2680,64 @@ class Order extends \Opencart\System\Engine\Controller {
 
 							$this->addOrderHistoryLog($order_id, sprintf($this->language->get('text_checkbox_history_sms'), $receipt_id, $phone380));
 						}
+					}
+				}
+			}
+		}
+
+		$this->response->addHeader('Content-Type: application/json');
+		$this->response->setOutput(json_encode($json));
+	}
+
+	/**
+	 * Delete pending Checkbox NP ETTN receipt project.
+	 */
+	public function deleteCheckboxEttnProject(): void {
+		$this->load->language('sale/order');
+
+		$json = [];
+		$order_id = $this->getOrderIdFromRequest();
+		$order_info = [];
+
+		if ($this->prepareCheckboxAction($order_id, $order_info, $json)) {
+			$this->load->model('extension/manline/integration/checkbox');
+			$module_id = $this->getCheckboxModuleIdFromRequest();
+			$config = $this->getCheckboxConfig($module_id);
+
+			if (empty($config['enabled'])) {
+				$json['error'] = $this->language->get('error_checkbox_disabled');
+			} else {
+				$module_id = (int)($config['module_id'] ?? $module_id);
+				$meta = $this->model_extension_manline_integration_checkbox->getOrderMeta($order_id);
+				$receipt_status = trim((string)($meta['receipt_status'] ?? ''));
+				$response = (array)($meta['response'] ?? []);
+				$ettn_order_id = trim((string)($response['id'] ?? ''));
+
+				if ($receipt_status !== 'ETTN_CREATED') {
+					$json['error'] = $this->language->get('error_checkbox_ettn_not_project');
+				} elseif ($ettn_order_id === '') {
+					$json['error'] = $this->language->get('error_checkbox_ettn_project_id');
+				} else {
+					$result = $this->model_extension_manline_integration_checkbox->deleteNpEttnReceiptProject($config, $ettn_order_id);
+
+					if (empty($result['success'])) {
+						$json['error'] = (string)($result['error'] ?? $this->language->get('error_checkbox_failed'));
+						$this->model_extension_manline_integration_checkbox->saveOrderMeta($order_id, [
+							'module_id' => $module_id,
+							'error' => $json['error']
+						]);
+					} else {
+						$json['success'] = $this->language->get('text_checkbox_ettn_deleted');
+						$this->model_extension_manline_integration_checkbox->saveOrderMeta($order_id, [
+							'module_id' => $module_id,
+							'receipt_id' => '',
+							'receipt_status' => 'ETTN_DELETED',
+							'sms_sent' => 0,
+							'error' => '',
+							'response' => (array)($result['response'] ?? [])
+						]);
+
+						$this->addOrderHistoryLog($order_id, sprintf($this->language->get('text_checkbox_history_ettn_deleted'), $ettn_order_id));
 					}
 				}
 			}
@@ -3220,6 +3294,12 @@ class Order extends \Opencart\System\Engine\Controller {
 		// Mark as RETURN by linking to original receipt
 		$payload['id'] = $this->uuidv4();
 		$payload['related_receipt_id'] = $sell_receipt_id;
+		foreach ($payload['goods'] as &$item) {
+			if (is_array($item)) {
+				$item['is_return'] = true;
+			}
+		}
+		unset($item);
 
 		// For return receipts, payments should be negative values (money outflow).
 		if (!empty($payload['payments']) && is_array($payload['payments'])) {
@@ -3237,6 +3317,7 @@ class Order extends \Opencart\System\Engine\Controller {
 	private function buildCheckboxSellPayload(array $order_info, array $options = []): array {
 		$this->load->model('sale/order');
 		$products = $this->model_sale_order->getProducts((int)$order_info['order_id']);
+		$include_is_return_field = !empty($options['include_is_return_field']);
 
 		$goods = [];
 		foreach ($products as $p) {
@@ -3266,7 +3347,7 @@ class Order extends \Opencart\System\Engine\Controller {
 			$price_uah = $this->normalizeOrderCurrencyAmount($price, $order_info);
 			$price_kop = (int)round($price_uah * 100);
 
-			$goods[] = [
+			$item = [
 				'good' => [
 					'code' => $model !== '' ? $model : ('order-' . (int)$order_info['order_id']),
 					'name' => $name,
@@ -3274,6 +3355,12 @@ class Order extends \Opencart\System\Engine\Controller {
 				],
 				'quantity' => $qty * 1000
 			];
+
+			if ($include_is_return_field) {
+				$item['is_return'] = false;
+			}
+
+			$goods[] = $item;
 		}
 
 		$shipping_total_uah = null;
@@ -3291,7 +3378,7 @@ class Order extends \Opencart\System\Engine\Controller {
 		}
 
 		if ($shipping_total_uah !== null && $shipping_total_uah > 0) {
-			$goods[] = [
+			$item = [
 				'good' => [
 					'code' => 'shipping-' . (int)$order_info['order_id'],
 					'name' => 'Доставка',
@@ -3299,6 +3386,12 @@ class Order extends \Opencart\System\Engine\Controller {
 				],
 				'quantity' => 1000
 			];
+
+			if ($include_is_return_field) {
+				$item['is_return'] = false;
+			}
+
+			$goods[] = $item;
 		}
 
 		$total_uah = $this->normalizeOrderCurrencyAmount((float)($order_info['total'] ?? 0.0), $order_info);

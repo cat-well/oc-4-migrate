@@ -4,7 +4,7 @@
     <div class="container-fluid">
       <div class="float-end">
         <button type="submit" form="form-checkbox-receipt" id="button-checkbox-submit" class="btn btn-primary">
-          <i class="fa-solid fa-receipt"></i> Створити чек
+          <i class="fa-solid fa-receipt"></i> <span id="button-checkbox-submit-text">Створити чек</span>
         </button>
         <a href="{{ back }}" class="btn btn-light"><i class="fa-solid fa-reply"></i> Назад</a>
       </div>
@@ -121,7 +121,7 @@
                   <span>Сума замовлення</span>
                   <strong>{{ order_total_uah|number_format(2, '.', ' ') }} грн</strong>
                 </div>
-                <div class="small text-muted mt-2">Фіскалізація відбудеться тільки після натискання “Створити чек”.</div>
+                <div class="small text-muted mt-2" id="checkbox-payment-note">Фіскалізація відбудеться тільки після натискання “Створити чек”.</div>
               </div>
             </div>
           </div>
@@ -139,10 +139,16 @@ $('#input-payment-type').on('change', function() {
 
     if (type === 'ettn') {
         $('#input-payment-label').val('Експрес-накладна');
+        $('#button-checkbox-submit-text').text('Створити проект чека');
+        $('#checkbox-payment-note').text('Checkbox створить проект по ТТН; фіскальний чек буде проведений автоматично після отримання посилки.');
     } else if (type === 'cash') {
         $('#input-payment-label').val('Готівка');
+        $('#button-checkbox-submit-text').text('Створити чек');
+        $('#checkbox-payment-note').text('Фіскалізація відбудеться тільки після натискання “Створити чек”.');
     } else {
         $('#input-payment-label').val('Картка');
+        $('#button-checkbox-submit-text').text('Створити чек');
+        $('#checkbox-payment-note').text('Фіскалізація відбудеться тільки після натискання “Створити чек”.');
     }
 }).trigger('change');
 

@@ -363,6 +363,40 @@ class Checkbox extends \Opencart\System\Engine\Model {
 		return $this->createSellReceipt($config, $return_payload);
 	}
 
+	public function deleteNpEttnReceiptProject(array $config, string $ettn_order_id): array {
+		$ettn_order_id = trim($ettn_order_id);
+		if ($ettn_order_id === '') {
+			return ['success' => false, 'error' => 'Checkbox ETTN project id is empty.'];
+		}
+
+		$sign = $this->cashierSignIn($config);
+		if (empty($sign['success'])) {
+			return $sign;
+		}
+
+		$token = (string)$sign['token'];
+		$api_url = rtrim((string)($config['api_url'] ?? ''), '/');
+		$url = $api_url . '/api/v1/ettn/' . rawurlencode($ettn_order_id);
+
+		$headers = [
+			'Authorization: Bearer ' . $token
+		];
+		$headers = $this->addClientHeaders($headers, $config, !empty($config['license_key']));
+
+		$res = $this->request('DELETE', $url, $headers);
+		$data = json_decode((string)$res['body'], true);
+
+		if ((int)$res['code'] >= 400) {
+			if (!is_array($data)) {
+				$data = ['message' => (string)$res['body']];
+			}
+
+			return ['success' => false, 'error' => (string)($data['message'] ?? 'Checkbox ETTN delete error.'), 'http_code' => (int)$res['code'], 'response' => $data];
+		}
+
+		return ['success' => true, 'response' => is_array($data) ? $data : (string)$res['body']];
+	}
+
 	public function cashierMe(array $config): array {
 		$sign = $this->cashierSignIn($config);
 		if (empty($sign['success'])) {

@@ -345,7 +345,10 @@
                       {% if not checkbox.receipt_id %}
                         <a href="{{ checkbox_prepare_receipt }}" class="btn btn-primary"><i class="fa-solid fa-pen-to-square"></i> {{ button_checkbox_prepare }}</a>
                       {% endif %}
-                      {% if checkbox.receipt_id %}
+                      {% if checkbox.is_ettn_project %}
+                        <button type="button" id="button-checkbox-ettn-delete" class="btn btn-outline-danger"><i class="fa-solid fa-trash"></i> {{ button_checkbox_ettn_delete }}</button>
+                      {% endif %}
+                      {% if checkbox.receipt_id and not checkbox.is_ettn_project %}
                         <a href="{{ checkbox.receipt_pdf_url }}" target="_blank" id="button-checkbox-pdf" class="btn btn-info"><i class="fa-solid fa-file-pdf"></i> {{ button_checkbox_pdf }}</a>
                         <button type="button" id="button-checkbox-sms" class="btn btn-secondary"><i class="fa-solid fa-comment-sms"></i> {{ button_checkbox_sms }}</button>
                         {% if not checkbox.return_receipt_id %}
@@ -377,9 +380,20 @@
                     <input type="hidden" id="input-checkbox-module" value="{{ checkbox.selected_module_id }}"/>
                   {% endif %}
                   <div class="row row-cols-1 row-cols-md-2 g-2">
-                    <div class="col"><strong>{{ text_checkbox_receipt_id }}:</strong> <span id="checkbox-receipt-id">{{ checkbox.receipt_id ? checkbox.receipt_id : text_none }}</span></div>
+                    <div class="col">
+                      <strong>{{ text_checkbox_receipt_id }}:</strong>
+                      <span id="checkbox-receipt-id">{{ checkbox.receipt_id ? checkbox.receipt_id : text_none }}</span>
+                      {% if checkbox.is_ettn_project %}
+                        <span class="badge text-bg-warning ms-2">NP ETTN project</span>
+                      {% endif %}
+                    </div>
                     <div class="col"><strong>{{ text_checkbox_sms_phone }}:</strong> <span id="checkbox-sms-phone">{{ checkbox.sms_phone ? checkbox.sms_phone : text_none }}</span></div>
                   </div>
+                  {% if checkbox.is_ettn_project %}
+                    <div class="alert alert-info mt-3 mb-0">
+                      Створено проект чека для Нової Пошти. Checkbox автоматично проведе фіскальний чек і надішле його клієнту після отримання посилки.
+                    </div>
+                  {% endif %}
 
                   <div class="row mt-3">
                     <label for="input-checkbox-phone" class="col-sm-3 col-form-label">{{ text_checkbox_sms_phone }}</label>
@@ -2338,6 +2352,14 @@ $(document).on('change', '#input-checkbox-module', function() {
 
 $(document).on('click', '#button-checkbox-create', function() {
     checkboxAction('{{ checkbox_create_receipt|replace({'&amp;':'&'})|escape('js') }}', this);
+});
+
+$(document).on('click', '#button-checkbox-ettn-delete', function() {
+    if (!confirm('{{ text_checkbox_ettn_confirm_delete|escape('js') }}')) {
+        return;
+    }
+
+    checkboxAction('{{ checkbox_delete_ettn_project|replace({'&amp;':'&'})|escape('js') }}', this);
 });
 
 function normalizePhoneTo380(raw) {
