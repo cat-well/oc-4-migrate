@@ -78,6 +78,94 @@ class Checkbox extends \Opencart\System\Engine\Model {
 		return $row;
 	}
 
+	public function getOrderMetas(array $data = []): array {
+		$this->ensureTable();
+
+		$sql = "SELECT oc.*, o.firstname, o.lastname, o.email, o.telephone, o.total, o.currency_code, o.currency_value, os.name AS order_status
+			FROM `" . DB_PREFIX . "order_checkbox` oc
+			LEFT JOIN `" . DB_PREFIX . "order` o ON (o.order_id = oc.order_id)
+			LEFT JOIN `" . DB_PREFIX . "order_status` os ON (os.order_status_id = o.order_status_id AND os.language_id = '" . (int)$this->config->get('config_language_id') . "')";
+
+		$where = [];
+
+		if (!empty($data['filter_order_id'])) {
+			$where[] = "oc.order_id = '" . (int)$data['filter_order_id'] . "'";
+		}
+
+		if (!empty($data['filter_receipt_status'])) {
+			$where[] = "oc.receipt_status = '" . $this->db->escape((string)$data['filter_receipt_status']) . "'";
+		}
+
+		if ($where) {
+			$sql .= " WHERE " . implode(" AND ", $where);
+		}
+
+		$sort_data = [
+			'oc.order_id',
+			'oc.receipt_id',
+			'oc.receipt_status',
+			'oc.date_added',
+			'oc.date_modified'
+		];
+
+		if (!empty($data['sort']) && in_array($data['sort'], $sort_data, true)) {
+			$sql .= " ORDER BY " . $data['sort'];
+		} else {
+			$sql .= " ORDER BY oc.date_modified";
+		}
+
+		if (!empty($data['order']) && strtoupper((string)$data['order']) === 'ASC') {
+			$sql .= " ASC";
+		} else {
+			$sql .= " DESC";
+		}
+
+		if (isset($data['start']) || isset($data['limit'])) {
+			$start = max(0, (int)($data['start'] ?? 0));
+			$limit = max(1, (int)($data['limit'] ?? 20));
+			$sql .= " LIMIT " . $start . "," . $limit;
+		}
+
+		$query = $this->db->query($sql);
+
+		foreach ($query->rows as &$row) {
+			foreach (['payload', 'response'] as $field) {
+				if (!empty($row[$field]) && is_string($row[$field])) {
+					$decoded = json_decode($row[$field], true);
+					if (is_array($decoded)) {
+						$row[$field] = $decoded;
+					}
+				}
+			}
+		}
+		unset($row);
+
+		return $query->rows;
+	}
+
+	public function getTotalOrderMetas(array $data = []): int {
+		$this->ensureTable();
+
+		$sql = "SELECT COUNT(*) AS total FROM `" . DB_PREFIX . "order_checkbox` oc";
+		$where = [];
+
+		if (!empty($data['filter_order_id'])) {
+			$where[] = "oc.order_id = '" . (int)$data['filter_order_id'] . "'";
+		}
+
+		if (!empty($data['filter_receipt_status'])) {
+			$where[] = "oc.receipt_status = '" . $this->db->escape((string)$data['filter_receipt_status']) . "'";
+		}
+
+		if ($where) {
+			$sql .= " WHERE " . implode(" AND ", $where);
+		}
+
+		$query = $this->db->query($sql);
+
+		return (int)($query->row['total'] ?? 0);
+	}
+
 	public function saveOrderMeta(int $order_id, array $meta): void {
 		if ($order_id <= 0) {
 			return;
@@ -395,6 +483,76 @@ class Checkbox extends \Opencart\System\Engine\Model {
 		}
 
 		return ['success' => true, 'response' => is_array($data) ? $data : (string)$res['body']];
+	}
+
+	public function getReceipt(array $config, string $receipt_id): array {
+		$receipt_id = trim($receipt_id);
+		if ($receipt_id === '') {
+			return ['success' => false, 'error' => 'Checkbox receipt id is empty.'];
+		}
+
+		$sign = $this->cashierSignIn($config);
+		if (empty($sign['success'])) {
+			return $sign;
+		}
+
+		$token = (string)$sign['token'];
+		$api_url = rtrim((string)($config['api_url'] ?? ''), '/');
+		$url = $api_url . '/api/v1/receipts/' . rawurlencode($receipt_id);
+
+		$headers = [
+			'Accept: application/json',
+			'Authorization: Bearer ' . $token
+		];
+		$headers = $this->addClientHeaders($headers, $config, !empty($config['license_key']));
+
+		$res = $this->request('GET', $url, $headers);
+		$data = json_decode((string)$res['body'], true);
+
+		if (!is_array($data)) {
+			return ['success' => false, 'error' => 'Invalid response from Checkbox receipt status.', 'http_code' => (int)$res['code'], 'response' => (string)$res['body']];
+		}
+
+		if ((int)$res['code'] >= 400) {
+			return ['success' => false, 'error' => (string)($data['message'] ?? 'Checkbox receipt status error.'), 'http_code' => (int)$res['code'], 'response' => $data];
+		}
+
+		return ['success' => true, 'response' => $data];
+	}
+
+	public function getNpEttnReceiptProject(array $config, string $ettn_order_id): array {
+		$ettn_order_id = trim($ettn_order_id);
+		if ($ettn_order_id === '') {
+			return ['success' => false, 'error' => 'Checkbox ETTN project id is empty.'];
+		}
+
+		$sign = $this->cashierSignIn($config);
+		if (empty($sign['success'])) {
+			return $sign;
+		}
+
+		$token = (string)$sign['token'];
+		$api_url = rtrim((string)($config['api_url'] ?? ''), '/');
+		$url = $api_url . '/api/v1/ettn/' . rawurlencode($ettn_order_id);
+
+		$headers = [
+			'Accept: application/json',
+			'Authorization: Bearer ' . $token
+		];
+		$headers = $this->addClientHeaders($headers, $config, !empty($config['license_key']));
+
+		$res = $this->request('GET', $url, $headers);
+		$data = json_decode((string)$res['body'], true);
+
+		if (!is_array($data)) {
+			return ['success' => false, 'error' => 'Invalid response from Checkbox ETTN status.', 'http_code' => (int)$res['code'], 'response' => (string)$res['body']];
+		}
+
+		if ((int)$res['code'] >= 400) {
+			return ['success' => false, 'error' => (string)($data['message'] ?? 'Checkbox ETTN status error.'), 'http_code' => (int)$res['code'], 'response' => $data];
+		}
+
+		return ['success' => true, 'response' => $data];
 	}
 
 	public function cashierMe(array $config): array {

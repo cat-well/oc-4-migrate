@@ -341,9 +341,13 @@
                   <div class="d-flex align-items-center justify-content-end gap-2 flex-wrap">
                     <span id="checkbox-auth-status" class="badge text-bg-secondary d-none"></span>
                     <div class="btn-group btn-group-sm">
+                      <a href="{{ checkbox_receipts_url }}" class="btn btn-outline-dark" data-bs-toggle="tooltip" title="{{ text_checkbox_receipts_title }}"><i class="fa-solid fa-list"></i></a>
                       <button type="button" id="button-checkbox-auth-check" class="btn btn-outline-dark"><i class="fa-solid fa-user-check"></i> {{ button_checkbox_auth_check }}</button>
                       {% if not checkbox.receipt_id %}
                         <a href="{{ checkbox_prepare_receipt }}" class="btn btn-primary"><i class="fa-solid fa-pen-to-square"></i> {{ button_checkbox_prepare }}</a>
+                      {% endif %}
+                      {% if checkbox.receipt_id %}
+                        <button type="button" id="button-checkbox-refresh-status" class="btn btn-outline-dark"><i class="fa-solid fa-arrows-rotate"></i> {{ button_checkbox_refresh_status }}</button>
                       {% endif %}
                       {% if checkbox.is_ettn_project %}
                         <button type="button" id="button-checkbox-ettn-delete" class="btn btn-outline-danger"><i class="fa-solid fa-trash"></i> {{ button_checkbox_ettn_delete }}</button>
@@ -2360,6 +2364,10 @@ $(document).on('click', '#button-checkbox-ettn-delete', function() {
     }
 
     checkboxAction('{{ checkbox_delete_ettn_project|replace({'&amp;':'&'})|escape('js') }}', this);
+});
+
+$(document).on('click', '#button-checkbox-refresh-status', function() {
+    checkboxAction('{{ checkbox_refresh_status|replace({'&amp;':'&'})|escape('js') }}', this);
 });
 
 function normalizePhoneTo380(raw) {

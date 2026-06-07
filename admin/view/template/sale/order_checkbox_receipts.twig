@@ -1,0 +1,194 @@
+{{ header }}{{ column_left }}
+<div id="content">
+  <div class="page-header">
+    <div class="container-fluid">
+      <div class="float-end">
+        <button type="button" id="button-checkbox-sync-visible" class="btn btn-primary"><i class="fa-solid fa-arrows-rotate"></i> {{ button_checkbox_sync_visible }}</button>
+        <a href="index.php?route=sale/order&user_token={{ user_token }}" data-bs-toggle="tooltip" title="{{ button_back }}" class="btn btn-light"><i class="fa-solid fa-reply"></i></a>
+      </div>
+      <h1>{{ text_checkbox_receipts_title }}</h1>
+      <ol class="breadcrumb">
+        {% for breadcrumb in breadcrumbs %}
+          <li class="breadcrumb-item"><a href="{{ breadcrumb.href }}">{{ breadcrumb.text }}</a></li>
+        {% endfor %}
+      </ol>
+    </div>
+  </div>
+  <div class="container-fluid">
+    <div id="alert"></div>
+    <div class="card mb-3">
+      <div class="card-header"><i class="fa-solid fa-filter"></i> {{ text_filter }}</div>
+      <div class="card-body">
+        <form id="form-checkbox-receipts-filter" class="row g-3 align-items-end">
+          <div class="col-sm-3">
+            <label for="input-filter-order-id" class="form-label">{{ entry_order_id }}</label>
+            <input type="text" name="filter_order_id" value="{{ filter_order_id }}" id="input-filter-order-id" class="form-control"/>
+          </div>
+          <div class="col-sm-3">
+            <label for="input-filter-receipt-status" class="form-label">{{ text_checkbox_receipt_status }}</label>
+            <select name="filter_receipt_status" id="input-filter-receipt-status" class="form-select">
+              <option value=""></option>
+              {% for status in receipt_statuses %}
+                <option value="{{ status }}"{% if status == filter_receipt_status %} selected{% endif %}>{{ status }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-sm-6 text-end">
+            <button type="button" id="button-checkbox-receipts-filter" class="btn btn-light"><i class="fa-solid fa-filter"></i> {{ button_filter }}</button>
+            <a href="{{ clear }}" class="btn btn-outline-secondary"><i class="fa-solid fa-filter-circle-xmark"></i></a>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><i class="fa-solid fa-receipt"></i> {{ text_checkbox_receipts_title }}</div>
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-bordered table-hover align-middle">
+            <thead>
+              <tr>
+                <th class="text-end"><a href="{{ sort_order_id }}"{% if sort == 'oc.order_id' %} class="{{ order|lower }}"{% endif %}>{{ column_order_id }}</a></th>
+                <th>{{ column_customer }}</th>
+                <th><a href="{{ sort_receipt_status }}"{% if sort == 'oc.receipt_status' %} class="{{ order|lower }}"{% endif %}>{{ text_checkbox_receipt_status }}</a></th>
+                <th><a href="{{ sort_receipt_id }}"{% if sort == 'oc.receipt_id' %} class="{{ order|lower }}"{% endif %}>{{ text_checkbox_receipt_id }}</a></th>
+                <th>{{ text_np_ttn }}</th>
+                <th>{{ entry_payment_method }}</th>
+                <th><a href="{{ sort_date_modified }}"{% if sort == 'oc.date_modified' %} class="{{ order|lower }}"{% endif %}>{{ column_date_modified }}</a></th>
+                <th>{{ text_checkbox_payload }}</th>
+                <th class="text-end">{{ column_action }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% if checkbox_receipts %}
+                {% for item in checkbox_receipts %}
+                  <tr data-order-id="{{ item.order_id }}">
+                    <td class="text-end">#{{ item.order_id }}</td>
+                    <td>
+                      <div>{{ item.customer ? item.customer : text_none }}</div>
+                      {% if item.order_status %}
+                        <div class="small text-muted">{{ item.order_status }}</div>
+                      {% endif %}
+                    </td>
+                    <td>
+                      <span class="badge{% if item.receipt_status == 'ETTN_CREATED' %} text-bg-warning{% elseif item.receipt_status == 'CREATED' or item.receipt_status == 'DONE' or item.receipt_status == 'ETTN_DONE' %} text-bg-success{% elseif item.receipt_status == 'ETTN_DELETED' or item.receipt_status == 'ETTN_CANCELLED' %} text-bg-secondary{% else %} text-bg-light text-dark{% endif %}">{{ item.receipt_status }}</span>
+                      {% if item.return_receipt_status %}
+                        <div class="small text-muted">{{ text_checkbox_return }}: {{ item.return_receipt_status }}</div>
+                      {% endif %}
+                      {% if item.error %}
+                        <div class="small text-danger mt-1">{{ item.error }}</div>
+                      {% endif %}
+                    </td>
+                    <td>
+                      <div class="text-break">{{ item.receipt_id ? item.receipt_id : text_none }}</div>
+                      {% if item.return_receipt_id %}
+                        <div class="small text-muted text-break">{{ text_checkbox_return }}: {{ item.return_receipt_id }}</div>
+                      {% endif %}
+                    </td>
+                    <td>{{ item.ttn_number ? item.ttn_number : text_none }}</td>
+                    <td>{{ item.payment_type ? item.payment_type : text_none }}</td>
+                    <td>
+                      <div>{{ item.date_modified }}</div>
+                      <div class="small text-muted">{{ item.date_added }}</div>
+                    </td>
+                    <td style="min-width: 280px;">
+                      <details>
+                        <summary>{{ text_checkbox_payload }}</summary>
+                        <pre class="bg-light border rounded p-2 mt-2 small" style="max-height: 320px; overflow: auto; white-space: pre-wrap;">{{ item.payload_json ? item.payload_json : text_none }}</pre>
+                      </details>
+                      <details class="mt-2">
+                        <summary>{{ text_checkbox_response }}</summary>
+                        <pre class="bg-light border rounded p-2 mt-2 small" style="max-height: 320px; overflow: auto; white-space: pre-wrap;">{{ item.response_json ? item.response_json : text_none }}</pre>
+                      </details>
+                    </td>
+                    <td class="text-end">
+                      <a href="{{ item.view }}" data-bs-toggle="tooltip" title="{{ button_view }}" class="btn btn-primary"><i class="fa-solid fa-eye"></i></a>
+                    </td>
+                  </tr>
+                {% endfor %}
+              {% else %}
+                <tr>
+                  <td colspan="9" class="text-center">{{ text_no_results }}</td>
+                </tr>
+              {% endif %}
+            </tbody>
+          </table>
+        </div>
+        <div class="row">
+          <div class="col-sm-6 text-start">{{ pagination }}</div>
+          <div class="col-sm-6 text-end">{{ results }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+$('#button-checkbox-receipts-filter').on('click', function() {
+    var url = 'index.php?route=sale/order.checkboxReceipts&user_token={{ user_token }}';
+    var orderId = $('#input-filter-order-id').val();
+    var receiptStatus = $('#input-filter-receipt-status').val();
+
+    if (orderId) {
+        url += '&filter_order_id=' + encodeURIComponent(orderId);
+    }
+
+    if (receiptStatus) {
+        url += '&filter_receipt_status=' + encodeURIComponent(receiptStatus);
+    }
+
+    window.location = url;
+});
+
+$('#button-checkbox-sync-visible').on('click', function() {
+    var orderIds = [];
+
+    $('tr[data-order-id]').each(function() {
+        var orderId = parseInt($(this).data('order-id'), 10);
+        if (orderId) {
+            orderIds.push(orderId);
+        }
+    });
+
+    if (!orderIds.length) {
+        return;
+    }
+
+    $.ajax({
+        url: '{{ sync_visible|replace({'&amp;':'&'})|escape('js') }}',
+        type: 'post',
+        dataType: 'json',
+        data: {order_ids: orderIds},
+        beforeSend: function() {
+            $('#button-checkbox-sync-visible').prop('disabled', true);
+        },
+        complete: function() {
+            $('#button-checkbox-sync-visible').prop('disabled', false);
+        },
+        success: function(json) {
+            $('.alert-dismissible').remove();
+
+            if (json['error']) {
+                $('#alert').prepend('<div class="alert alert-danger alert-dismissible"><i class="fa-solid fa-circle-exclamation"></i> ' + String(json['error']).replace(/\n/g, '<br>') + ' <button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>');
+                return;
+            }
+
+            if (json['warning']) {
+                $('#alert').prepend('<div class="alert alert-warning alert-dismissible"><i class="fa-solid fa-circle-exclamation"></i> ' + String(json['warning']).replace(/\n/g, '<br>') + ' <button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>');
+            }
+
+            if (json['success']) {
+                $('#alert').prepend('<div class="alert alert-success alert-dismissible"><i class="fa-solid fa-check-circle"></i> ' + json['success'] + ' <button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>');
+                if (!json['warning']) {
+                    setTimeout(function() {
+                        location.reload();
+                    }, 400);
+                }
+            }
+        },
+        error: function(xhr, ajaxOptions, thrownError) {
+            console.log(thrownError + "\r\n" + xhr.statusText + "\r\n" + xhr.responseText);
+        }
+    });
+});
+</script>
+{{ footer }}

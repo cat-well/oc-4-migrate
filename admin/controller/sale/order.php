@@ -156,6 +156,7 @@ class Order extends \Opencart\System\Engine\Controller {
 		$data['delete'] = $this->url->link('sale/order.delete', 'user_token=' . $this->session->data['user_token'] . $url);
 		$data['invoice'] = $this->url->link('sale/order.invoice', 'user_token=' . $this->session->data['user_token']);
 		$data['shipping'] = $this->url->link('sale/order.shipping', 'user_token=' . $this->session->data['user_token']);
+		$data['checkbox_receipts_url'] = $this->url->link('sale/order.checkboxReceipts', 'user_token=' . $this->session->data['user_token']);
 
 		$data['list'] = $this->getList();
 
@@ -210,6 +211,154 @@ class Order extends \Opencart\System\Engine\Controller {
 		$this->load->language('sale/order');
 
 		$this->response->setOutput($this->getList());
+	}
+
+	public function checkboxReceipts(): void {
+		$this->load->language('sale/order');
+
+		$this->document->setTitle($this->language->get('text_checkbox_receipts_title'));
+
+		$filter_order_id = isset($this->request->get['filter_order_id']) ? (int)$this->request->get['filter_order_id'] : '';
+		$filter_receipt_status = isset($this->request->get['filter_receipt_status']) ? (string)$this->request->get['filter_receipt_status'] : '';
+		$sort = isset($this->request->get['sort']) ? (string)$this->request->get['sort'] : 'oc.date_modified';
+		$order = isset($this->request->get['order']) ? (string)$this->request->get['order'] : 'DESC';
+		$page = isset($this->request->get['page']) ? max(1, (int)$this->request->get['page']) : 1;
+		$limit = max(1, (int)$this->config->get('config_pagination_admin'));
+
+		$url = '';
+		if ($filter_order_id !== '') {
+			$url .= '&filter_order_id=' . (int)$filter_order_id;
+		}
+		if ($filter_receipt_status !== '') {
+			$url .= '&filter_receipt_status=' . urlencode($filter_receipt_status);
+		}
+		if ($sort !== '') {
+			$url .= '&sort=' . urlencode($sort);
+		}
+		if ($order !== '') {
+			$url .= '&order=' . urlencode($order);
+		}
+		if ($page > 1) {
+			$url .= '&page=' . $page;
+		}
+
+		$this->load->model('extension/manline/integration/checkbox');
+
+		$filter_data = [
+			'filter_order_id' => $filter_order_id,
+			'filter_receipt_status' => $filter_receipt_status,
+			'sort' => $sort,
+			'order' => $order,
+			'start' => ($page - 1) * $limit,
+			'limit' => $limit
+		];
+
+		$receipt_total = $this->model_extension_manline_integration_checkbox->getTotalOrderMetas($filter_data);
+		$results = $this->model_extension_manline_integration_checkbox->getOrderMetas($filter_data);
+
+		$data = [];
+		$data['checkbox_receipts'] = [];
+
+		foreach ($results as $result) {
+			$payload = $result['payload'] ?? [];
+			$response = $result['response'] ?? [];
+			$receipt_status = trim((string)($result['receipt_status'] ?? ''));
+
+			$data['checkbox_receipts'][] = [
+				'order_id' => (int)($result['order_id'] ?? 0),
+				'customer' => trim((string)($result['firstname'] ?? '') . ' ' . (string)($result['lastname'] ?? '')),
+				'order_status' => (string)($result['order_status'] ?? ''),
+				'receipt_id' => (string)($result['receipt_id'] ?? ''),
+				'receipt_status' => $receipt_status !== '' ? $receipt_status : $this->language->get('text_none'),
+				'return_receipt_id' => (string)($result['return_receipt_id'] ?? ''),
+				'return_receipt_status' => (string)($result['return_receipt_status'] ?? ''),
+				'ttn_number' => $this->extractCheckboxTtnNumber($payload, $response),
+				'payment_type' => $this->extractCheckboxPaymentType($payload),
+				'payload_json' => $this->formatCheckboxJson($payload),
+				'response_json' => $this->formatCheckboxJson($response),
+				'error' => trim((string)($result['error'] ?? '')),
+				'date_added' => !empty($result['date_added']) ? date($this->language->get('datetime_format'), strtotime((string)$result['date_added'])) : '',
+				'date_modified' => !empty($result['date_modified']) ? date($this->language->get('datetime_format'), strtotime((string)$result['date_modified'])) : '',
+				'view' => $this->url->link('sale/order.info', 'user_token=' . $this->session->data['user_token'] . '&order_id=' . (int)($result['order_id'] ?? 0))
+			];
+		}
+
+		$url_sort = '';
+		if ($filter_order_id !== '') {
+			$url_sort .= '&filter_order_id=' . (int)$filter_order_id;
+		}
+		if ($filter_receipt_status !== '') {
+			$url_sort .= '&filter_receipt_status=' . urlencode($filter_receipt_status);
+		}
+		$url_sort .= strtoupper($order) === 'ASC' ? '&order=DESC' : '&order=ASC';
+
+		$data['sort_order_id'] = $this->url->link('sale/order.checkboxReceipts', 'user_token=' . $this->session->data['user_token'] . '&sort=oc.order_id' . $url_sort);
+		$data['sort_receipt_id'] = $this->url->link('sale/order.checkboxReceipts', 'user_token=' . $this->session->data['user_token'] . '&sort=oc.receipt_id' . $url_sort);
+		$data['sort_receipt_status'] = $this->url->link('sale/order.checkboxReceipts', 'user_token=' . $this->session->data['user_token'] . '&sort=oc.receipt_status' . $url_sort);
+		$data['sort_date_added'] = $this->url->link('sale/order.checkboxReceipts', 'user_token=' . $this->session->data['user_token'] . '&sort=oc.date_added' . $url_sort);
+		$data['sort_date_modified'] = $this->url->link('sale/order.checkboxReceipts', 'user_token=' . $this->session->data['user_token'] . '&sort=oc.date_modified' . $url_sort);
+
+		$url_page = '';
+		if ($filter_order_id !== '') {
+			$url_page .= '&filter_order_id=' . (int)$filter_order_id;
+		}
+		if ($filter_receipt_status !== '') {
+			$url_page .= '&filter_receipt_status=' . urlencode($filter_receipt_status);
+		}
+		if ($sort !== '') {
+			$url_page .= '&sort=' . urlencode($sort);
+		}
+		if ($order !== '') {
+			$url_page .= '&order=' . urlencode($order);
+		}
+
+		$pagination = new \Opencart\System\Library\Pagination();
+		$pagination->total = $receipt_total;
+		$pagination->page = $page;
+		$pagination->limit = $limit;
+		$pagination->url = $this->url->link('sale/order.checkboxReceipts', 'user_token=' . $this->session->data['user_token'] . $url_page . '&page={page}');
+
+		$data['pagination'] = $pagination->render();
+		$data['results'] = sprintf($this->language->get('text_pagination'), ($receipt_total) ? (($page - 1) * $limit) + 1 : 0, ((($page - 1) * $limit) > ($receipt_total - $limit)) ? $receipt_total : ((($page - 1) * $limit) + $limit), $receipt_total, ceil($receipt_total / $limit));
+
+		$data['filter_order_id'] = $filter_order_id;
+		$data['filter_receipt_status'] = $filter_receipt_status;
+		$data['sort'] = $sort;
+		$data['order'] = $order;
+		$data['user_token'] = $this->session->data['user_token'];
+		$data['sync_visible'] = $this->url->link('sale/order.syncCheckboxReceiptsVisible', 'user_token=' . $this->session->data['user_token']);
+		$data['clear'] = $this->url->link('sale/order.checkboxReceipts', 'user_token=' . $this->session->data['user_token']);
+		$data['filter'] = $this->url->link('sale/order.checkboxReceipts', 'user_token=' . $this->session->data['user_token']);
+
+		$data['receipt_statuses'] = [
+			'CREATED',
+			'DONE',
+			'ETTN_CREATED',
+			'ETTN_DONE',
+			'ETTN_CANCELLED',
+			'ETTN_DELETED',
+			'RETURN_CREATED'
+		];
+
+		$data['breadcrumbs'] = [];
+		$data['breadcrumbs'][] = [
+			'text' => $this->language->get('text_home'),
+			'href' => $this->url->link('common/dashboard', 'user_token=' . $this->session->data['user_token'])
+		];
+		$data['breadcrumbs'][] = [
+			'text' => $this->language->get('heading_title'),
+			'href' => $this->url->link('sale/order', 'user_token=' . $this->session->data['user_token'])
+		];
+		$data['breadcrumbs'][] = [
+			'text' => $this->language->get('text_checkbox_receipts_title'),
+			'href' => $this->url->link('sale/order.checkboxReceipts', 'user_token=' . $this->session->data['user_token'] . $url)
+		];
+
+		$data['header'] = $this->load->controller('common/header');
+		$data['column_left'] = $this->load->controller('common/column_left');
+		$data['footer'] = $this->load->controller('common/footer');
+
+		$this->response->setOutput($this->load->view('sale/order_checkbox_receipts', $data));
 	}
 
 	/**
@@ -636,9 +785,11 @@ class Order extends \Opencart\System\Engine\Controller {
 		$data['checkbox_create_receipt'] = $this->url->link('sale/order.createCheckboxReceipt', 'user_token=' . $this->session->data['user_token'] . '&order_id=' . $order_id);
 		$data['checkbox_send_sms'] = $this->url->link('sale/order.sendCheckboxReceiptSms', 'user_token=' . $this->session->data['user_token'] . '&order_id=' . $order_id);
 		$data['checkbox_delete_ettn_project'] = $this->url->link('sale/order.deleteCheckboxEttnProject', 'user_token=' . $this->session->data['user_token'] . '&order_id=' . $order_id);
+		$data['checkbox_refresh_status'] = $this->url->link('sale/order.refreshCheckboxStatus', 'user_token=' . $this->session->data['user_token'] . '&order_id=' . $order_id);
 		$data['checkbox_create_return_receipt'] = $this->url->link('sale/order.createCheckboxReturnReceipt', 'user_token=' . $this->session->data['user_token'] . '&order_id=' . $order_id);
 		$data['checkbox_send_return_sms'] = $this->url->link('sale/order.sendCheckboxReturnReceiptSms', 'user_token=' . $this->session->data['user_token'] . '&order_id=' . $order_id);
 		$data['checkbox_check_auth'] = $this->url->link('sale/order.checkCheckboxAuth', 'user_token=' . $this->session->data['user_token'] . '&order_id=' . $order_id);
+		$data['checkbox_receipts_url'] = $this->url->link('sale/order.checkboxReceipts', 'user_token=' . $this->session->data['user_token'] . '&filter_order_id=' . $order_id);
 		$data['upload'] = $this->url->link('tool/upload.upload', 'user_token=' . $this->session->data['user_token']);
 		$data['customer_add'] = $this->url->link('customer/customer.form', 'user_token=' . $this->session->data['user_token']);
 
@@ -2747,6 +2898,92 @@ class Order extends \Opencart\System\Engine\Controller {
 		$this->response->setOutput(json_encode($json));
 	}
 
+	/**
+	 * Refresh one Checkbox receipt/project from Checkbox API.
+	 */
+	public function refreshCheckboxStatus(): void {
+		$this->load->language('sale/order');
+
+		$json = [];
+		$order_id = $this->getOrderIdFromRequest();
+		$order_info = [];
+
+		if ($this->prepareCheckboxAction($order_id, $order_info, $json)) {
+			$module_id = $this->getCheckboxModuleIdFromRequest();
+			$result = $this->refreshCheckboxOrderMeta($order_id, $module_id);
+
+			if (empty($result['success'])) {
+				$json['error'] = (string)($result['error'] ?? $this->language->get('error_checkbox_failed'));
+			} else {
+				$json['success'] = sprintf($this->language->get('text_checkbox_status_refreshed'), (string)$result['receipt_status']);
+				$json['receipt_status'] = (string)$result['receipt_status'];
+				$json['receipt_id'] = (string)($result['receipt_id'] ?? '');
+
+				$this->addOrderHistoryLog($order_id, sprintf($this->language->get('text_checkbox_history_status_refreshed'), (string)$result['receipt_status']));
+			}
+		}
+
+		$this->response->addHeader('Content-Type: application/json');
+		$this->response->setOutput(json_encode($json));
+	}
+
+	/**
+	 * Refresh Checkbox rows currently visible in the admin list.
+	 */
+	public function syncCheckboxReceiptsVisible(): void {
+		$this->load->language('sale/order');
+
+		$json = [];
+
+		if (!$this->user->hasPermission('modify', 'sale/order')) {
+			$json['error'] = $this->language->get('error_permission');
+		} else {
+			$order_ids = [];
+			if (isset($this->request->post['order_ids']) && is_array($this->request->post['order_ids'])) {
+				foreach ($this->request->post['order_ids'] as $order_id) {
+					$order_id = (int)$order_id;
+					if ($order_id > 0) {
+						$order_ids[$order_id] = $order_id;
+					}
+				}
+			}
+
+			if (!$order_ids) {
+				$json['error'] = $this->language->get('error_checkbox_sync_empty');
+			} else {
+				$synced = 0;
+				$failed = 0;
+				$errors = [];
+
+				foreach ($order_ids as $order_id) {
+					$result = $this->refreshCheckboxOrderMeta((int)$order_id);
+					if (!empty($result['success'])) {
+						$synced++;
+					} else {
+						$failed++;
+						$errors[] = '#' . $order_id . ': ' . (string)($result['error'] ?? $this->language->get('error_checkbox_failed'));
+					}
+				}
+
+				if ($synced > 0) {
+					$json['success'] = sprintf($this->language->get('text_checkbox_sync_visible_done'), $synced, $failed);
+				}
+
+				if ($failed > 0) {
+					$json['warning'] = implode("\n", array_slice($errors, 0, 5));
+				}
+
+				if ($synced === 0 && $failed > 0) {
+					$json['error'] = $json['warning'];
+					unset($json['warning']);
+				}
+			}
+		}
+
+		$this->response->addHeader('Content-Type: application/json');
+		$this->response->setOutput(json_encode($json));
+	}
+
 	
 	/**
 	 * Create Checkbox return receipt (manual refund/storno)
@@ -3197,6 +3434,242 @@ class Order extends \Opencart\System\Engine\Controller {
 		}
 
 		return true;
+	}
+
+	private function extractCheckboxTtnNumber($payload, $response): string {
+		$payload = is_array($payload) ? $payload : [];
+		$response = is_array($response) ? $response : [];
+
+		$payments = [];
+		if (!empty($payload['receipt_body']['payments']) && is_array($payload['receipt_body']['payments'])) {
+			$payments = $payload['receipt_body']['payments'];
+		} elseif (!empty($payload['payments']) && is_array($payload['payments'])) {
+			$payments = $payload['payments'];
+		}
+
+		foreach ($payments as $payment) {
+			if (is_array($payment) && !empty($payment['ettn'])) {
+				return (string)$payment['ettn'];
+			}
+		}
+
+		foreach (['ettnNumber', 'ettn_number', 'ttnNumber', 'ttn_number'] as $field) {
+			if (!empty($response[$field])) {
+				return (string)$response[$field];
+			}
+		}
+
+		return '';
+	}
+
+	private function extractCheckboxPaymentType($payload): string {
+		$payload = is_array($payload) ? $payload : [];
+		$payments = [];
+
+		if (!empty($payload['receipt_body']['payments']) && is_array($payload['receipt_body']['payments'])) {
+			$payments = $payload['receipt_body']['payments'];
+		} elseif (!empty($payload['payments']) && is_array($payload['payments'])) {
+			$payments = $payload['payments'];
+		}
+
+		if (!empty($payments[0]) && is_array($payments[0])) {
+			$type = (string)($payments[0]['type'] ?? '');
+			$label = (string)($payments[0]['label'] ?? '');
+
+			return trim($type . ($label !== '' ? ' / ' . $label : ''));
+		}
+
+		return '';
+	}
+
+	private function formatCheckboxJson($value): string {
+		if (is_array($value)) {
+			$json = json_encode($value, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+			return is_string($json) ? $json : '';
+		}
+
+		if (is_string($value)) {
+			$decoded = json_decode($value, true);
+			if (is_array($decoded)) {
+				$json = json_encode($decoded, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+				return is_string($json) ? $json : $value;
+			}
+
+			return $value;
+		}
+
+		return '';
+	}
+
+	private function refreshCheckboxOrderMeta(int $order_id, int $module_id = 0): array {
+		if ($order_id <= 0) {
+			return ['success' => false, 'error' => $this->language->get('error_order')];
+		}
+
+		$this->load->model('extension/manline/integration/checkbox');
+
+		$meta = $this->model_extension_manline_integration_checkbox->getOrderMeta($order_id);
+		if (!$meta) {
+			return ['success' => false, 'error' => $this->language->get('error_checkbox_no_receipt')];
+		}
+
+		if ($module_id <= 0) {
+			$module_id = (int)($meta['module_id'] ?? 0);
+		}
+
+		$config = $this->getCheckboxConfig($module_id);
+		if (empty($config['enabled'])) {
+			return ['success' => false, 'error' => $this->language->get('error_checkbox_disabled')];
+		}
+
+		$module_id = (int)($config['module_id'] ?? $module_id);
+		$receipt_id = trim((string)($meta['receipt_id'] ?? ''));
+		$receipt_status = trim((string)($meta['receipt_status'] ?? ''));
+		$response = is_array($meta['response'] ?? null) ? $meta['response'] : [];
+		$is_ettn = $this->isCheckboxEttnMeta($meta);
+
+		if ($is_ettn) {
+			$ettn_order_id = $this->extractCheckboxEttnOrderId($response);
+			if ($ettn_order_id === '') {
+				return ['success' => false, 'error' => $this->language->get('error_checkbox_ettn_project_id')];
+			}
+
+			$result = $this->model_extension_manline_integration_checkbox->getNpEttnReceiptProject($config, $ettn_order_id);
+			if (empty($result['success'])) {
+				$error = (string)($result['error'] ?? $this->language->get('error_checkbox_failed'));
+				$this->model_extension_manline_integration_checkbox->saveOrderMeta($order_id, [
+					'module_id' => $module_id,
+					'error' => $error,
+					'response' => is_array($result['response'] ?? null) ? $result['response'] : $response
+				]);
+
+				return ['success' => false, 'error' => $error];
+			}
+
+			$remote = is_array($result['response'] ?? null) ? $result['response'] : [];
+			$remote_status = $this->extractCheckboxStatus($remote);
+			$new_status = $remote_status !== '' ? 'ETTN_' . $remote_status : ($receipt_status !== '' ? $receipt_status : 'ETTN_CREATED');
+			$new_receipt_id = $this->extractCheckboxReceiptId($remote);
+			if ($new_receipt_id === '') {
+				$new_receipt_id = $receipt_id;
+			}
+
+			$this->model_extension_manline_integration_checkbox->saveOrderMeta($order_id, [
+				'module_id' => $module_id,
+				'receipt_id' => $new_receipt_id,
+				'receipt_status' => $new_status,
+				'error' => '',
+				'response' => $remote
+			]);
+
+			return ['success' => true, 'receipt_id' => $new_receipt_id, 'receipt_status' => $new_status, 'response' => $remote];
+		}
+
+		if ($receipt_id === '') {
+			return ['success' => false, 'error' => $this->language->get('error_checkbox_no_receipt')];
+		}
+
+		$result = $this->model_extension_manline_integration_checkbox->getReceipt($config, $receipt_id);
+		if (empty($result['success'])) {
+			$error = (string)($result['error'] ?? $this->language->get('error_checkbox_failed'));
+			$this->model_extension_manline_integration_checkbox->saveOrderMeta($order_id, [
+				'module_id' => $module_id,
+				'error' => $error,
+				'response' => is_array($result['response'] ?? null) ? $result['response'] : $response
+			]);
+
+			return ['success' => false, 'error' => $error];
+		}
+
+		$remote = is_array($result['response'] ?? null) ? $result['response'] : [];
+		$new_status = $this->extractCheckboxStatus($remote);
+		if ($new_status === '') {
+			$new_status = $receipt_status !== '' ? $receipt_status : 'CREATED';
+		}
+
+		$save = [
+			'module_id' => $module_id,
+			'receipt_id' => $receipt_id,
+			'receipt_status' => $new_status,
+			'error' => '',
+			'response' => $remote
+		];
+
+		$return_receipt_id = trim((string)($meta['return_receipt_id'] ?? ''));
+		if ($return_receipt_id !== '') {
+			$return_result = $this->model_extension_manline_integration_checkbox->getReceipt($config, $return_receipt_id);
+			if (!empty($return_result['success']) && is_array($return_result['response'] ?? null)) {
+				$return_status = $this->extractCheckboxStatus($return_result['response']);
+				if ($return_status !== '') {
+					$save['return_receipt_status'] = $return_status;
+				}
+			}
+		}
+
+		$this->model_extension_manline_integration_checkbox->saveOrderMeta($order_id, $save);
+
+		return ['success' => true, 'receipt_id' => $receipt_id, 'receipt_status' => $new_status, 'response' => $remote];
+	}
+
+	private function isCheckboxEttnMeta(array $meta): bool {
+		$receipt_status = strtoupper(trim((string)($meta['receipt_status'] ?? '')));
+		if (strpos($receipt_status, 'ETTN_') === 0 && $receipt_status !== 'ETTN_DELETED') {
+			return true;
+		}
+
+		$payload = is_array($meta['payload'] ?? null) ? $meta['payload'] : [];
+		$payments = [];
+		if (!empty($payload['receipt_body']['payments']) && is_array($payload['receipt_body']['payments'])) {
+			$payments = $payload['receipt_body']['payments'];
+		} elseif (!empty($payload['payments']) && is_array($payload['payments'])) {
+			$payments = $payload['payments'];
+		}
+
+		foreach ($payments as $payment) {
+			if (is_array($payment) && strtoupper((string)($payment['type'] ?? '')) === 'ETTN') {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	private function extractCheckboxEttnOrderId(array $response): string {
+		foreach (['id', 'orderId', 'order_id', 'ettnOrderId', 'ettn_order_id'] as $field) {
+			if (!empty($response[$field])) {
+				return trim((string)$response[$field]);
+			}
+		}
+
+		return '';
+	}
+
+	private function extractCheckboxReceiptId(array $response): string {
+		foreach (['receiptId', 'receipt_id', 'receiptID', 'id'] as $field) {
+			if (!empty($response[$field])) {
+				return trim((string)$response[$field]);
+			}
+		}
+
+		return '';
+	}
+
+	private function extractCheckboxStatus(array $response): string {
+		$status = '';
+		if (!empty($response['status'])) {
+			$status = (string)$response['status'];
+		} elseif (!empty($response['transaction']['status'])) {
+			$status = (string)$response['transaction']['status'];
+		} elseif (!empty($response['receiptStatus'])) {
+			$status = (string)$response['receiptStatus'];
+		} elseif (!empty($response['receipt_status'])) {
+			$status = (string)$response['receipt_status'];
+		}
+
+		$status = strtoupper(trim($status));
+		$status = preg_replace('/[^A-Z0-9_]+/', '_', $status);
+
+		return is_string($status) ? trim($status, '_') : '';
 	}
 
 	private function getCheckboxConfig(int $module_id = 0): array {

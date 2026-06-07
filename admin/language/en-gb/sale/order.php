@@ -225,13 +225,20 @@ $_['button_np_save_edit']           = 'Save changes';
 
 // Checkbox
 $_['text_checkbox']                 = 'Checkbox receipt';
+$_['text_checkbox_receipts_title']  = 'Checkbox receipts';
 $_['text_checkbox_receipt_id']      = 'Receipt ID';
+$_['text_checkbox_receipt_status']  = 'Receipt status';
 $_['text_checkbox_sms_phone']       = 'SMS phone';
+$_['text_checkbox_payload']         = 'Payload';
+$_['text_checkbox_response']        = 'Response';
+$_['text_checkbox_return']          = 'Return';
 $_['text_checkbox_prepare_title']    = 'Prepare Checkbox receipt';
 $_['text_checkbox_prepare_order']    = 'Prepare receipt for order #%s';
 $_['button_checkbox_prepare']        = 'Prepare receipt';
 $_['button_checkbox_create']        = 'Create receipt';
 $_['button_checkbox_ettn_delete']    = 'Delete NP project';
+$_['button_checkbox_refresh_status'] = 'Refresh';
+$_['button_checkbox_sync_visible']   = 'Sync visible rows';
 $_['button_checkbox_pdf']           = 'Open PDF';
 $_['button_checkbox_sms']           = 'Send SMS';
 
@@ -252,11 +259,14 @@ $_['text_checkbox_receipt_created'] = 'Checkbox receipt created.';
 $_['text_checkbox_ettn_created']    = 'Checkbox NP receipt project created. Fiscal receipt will be issued automatically after parcel pickup.';
 $_['text_checkbox_ettn_deleted']    = 'Checkbox NP receipt project deleted.';
 $_['text_checkbox_ettn_confirm_delete'] = 'Delete the Checkbox NP receipt project? This is available only before fiscalization.';
+$_['text_checkbox_status_refreshed'] = 'Checkbox status refreshed: %s.';
+$_['text_checkbox_sync_visible_done'] = 'Checkbox sync finished: %s updated, %s failed.';
 $_['text_checkbox_sms_sent']        = 'Receipt has been sent via SMS.';
 
 $_['text_checkbox_history_created'] = 'Checkbox receipt created: %s';
 $_['text_checkbox_history_ettn_created'] = 'Checkbox NP receipt project created: %s (TTN %s). Fiscal receipt will be issued automatically after parcel pickup.';
 $_['text_checkbox_history_ettn_deleted'] = 'Checkbox NP receipt project deleted: %s';
+$_['text_checkbox_history_status_refreshed'] = 'Checkbox status refreshed: %s';
 $_['text_checkbox_history_sms']     = 'Checkbox receipt %s sent via SMS to %s';
 
 $_['error_checkbox_disabled']       = 'Checkbox module is disabled or not configured.';
@@ -264,6 +274,7 @@ $_['error_checkbox_failed']         = 'Checkbox API request failed.';
 $_['error_checkbox_no_receipt']     = 'Receipt was not created yet.';
 $_['error_checkbox_ettn_not_project'] = 'This Checkbox receipt is not a pending NP project.';
 $_['error_checkbox_ettn_project_id'] = 'Checkbox NP project id was not saved. Delete it in Checkbox cabinet.';
+$_['error_checkbox_sync_empty']      = 'There are no Checkbox rows to sync on this page.';
 $_['error_checkbox_phone']          = 'Customer phone is invalid. Expected format: 380XXXXXXXXX.';
 $_['error_checkbox_phone_client']   = 'Неверный номер. Пример: +380XXXXXXXXX или 0XXXXXXXXX (будет приведено к 380XXXXXXXXX).';
 $_['error_checkbox_fix_phone']      = 'Исправь номер телефона перед отправкой SMS.';
