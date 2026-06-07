@@ -257,6 +257,7 @@ $_['text_checkbox_history_return_sms']     = 'Checkbox return receipt %s sent vi
 $_['error_checkbox_no_return']      = 'Return receipt was not created yet.';
 $_['text_checkbox_receipt_created'] = 'Checkbox receipt created.';
 $_['text_checkbox_ettn_created']    = 'Checkbox NP receipt project created. Fiscal receipt will be issued automatically after parcel pickup.';
+$_['text_checkbox_ettn_linked']     = 'Checkbox NP receipt project already existed and was linked to this order.';
 $_['text_checkbox_ettn_deleted']    = 'Checkbox NP receipt project deleted.';
 $_['text_checkbox_ettn_confirm_delete'] = 'Delete the Checkbox NP receipt project? This is available only before fiscalization.';
 $_['text_checkbox_status_refreshed'] = 'Checkbox status refreshed: %s.';
@@ -265,6 +266,7 @@ $_['text_checkbox_sms_sent']        = 'Receipt has been sent via SMS.';
 
 $_['text_checkbox_history_created'] = 'Checkbox receipt created: %s';
 $_['text_checkbox_history_ettn_created'] = 'Checkbox NP receipt project created: %s (TTN %s). Fiscal receipt will be issued automatically after parcel pickup.';
+$_['text_checkbox_history_ettn_linked'] = 'Existing Checkbox NP receipt project linked: %s (TTN %s)';
 $_['text_checkbox_history_ettn_deleted'] = 'Checkbox NP receipt project deleted: %s';
 $_['text_checkbox_history_status_refreshed'] = 'Checkbox status refreshed: %s';
 $_['text_checkbox_history_sms']     = 'Checkbox receipt %s sent via SMS to %s';

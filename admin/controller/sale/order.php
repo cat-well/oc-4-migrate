@@ -2627,13 +2627,48 @@ class Order extends \Opencart\System\Engine\Controller {
 
 					if (empty($result['success'])) {
 						$json['error'] = (string)($result['error'] ?? $this->language->get('error_checkbox_failed'));
+						$linked_existing_ettn = false;
 
-						$this->model_extension_manline_integration_checkbox->saveOrderMeta($order_id, [
-							'module_id' => $module_id,
-							'error' => $json['error'],
-							'payload' => $stored_payload,
-							'response' => (array)($result['response'] ?? [])
-						]);
+						if ($is_ettn && $this->isCheckboxDuplicateEttnError($json['error'], $result['response'] ?? null)) {
+							$matched = $this->findCheckboxEttnProjectForMeta($config, [
+								'payload' => $stored_payload,
+								'response' => is_array($result['response'] ?? null) ? $result['response'] : []
+							]);
+
+							if ($matched) {
+								$receipt_id = $this->extractCheckboxReceiptId($matched);
+								$remote_status = $this->extractCheckboxStatus($matched);
+								$receipt_status = $remote_status !== '' ? 'ETTN_' . $remote_status : 'ETTN_CREATED';
+
+								$json = [
+									'success' => $this->language->get('text_checkbox_ettn_linked'),
+									'receipt_id' => $receipt_id
+								];
+
+								$this->model_extension_manline_integration_checkbox->saveOrderMeta($order_id, [
+									'module_id' => $module_id,
+									'receipt_id' => $receipt_id,
+									'receipt_status' => $receipt_status,
+									'sms_phone' => (string)($payload['delivery']['phone'] ?? ''),
+									'error' => '',
+									'payload' => $stored_payload,
+									'response' => $matched
+								]);
+
+								$this->addOrderHistoryLog($order_id, sprintf($this->language->get('text_checkbox_history_ettn_linked'), $receipt_id !== '' ? $receipt_id : $ttn_number, $ttn_number));
+
+								$linked_existing_ettn = true;
+							}
+						}
+
+						if (!$linked_existing_ettn) {
+							$this->model_extension_manline_integration_checkbox->saveOrderMeta($order_id, [
+								'module_id' => $module_id,
+								'error' => $json['error'],
+								'payload' => $stored_payload,
+								'response' => (array)($result['response'] ?? [])
+							]);
+						}
 					} else {
 						$receipt_id = (string)($result['receipt_id'] ?? '');
 
@@ -3704,6 +3739,27 @@ class Order extends \Opencart\System\Engine\Controller {
 		$status = preg_replace('/[^A-Z0-9_]+/', '_', $status);
 
 		return is_string($status) ? trim($status, '_') : '';
+	}
+
+	private function isCheckboxDuplicateEttnError(string $error, $response): bool {
+		$haystack = $error;
+		if (is_array($response)) {
+			$json = json_encode($response, JSON_UNESCAPED_UNICODE);
+			if (is_string($json)) {
+				$haystack .= ' ' . $json;
+			}
+		} elseif (is_string($response)) {
+			$haystack .= ' ' . $response;
+		}
+
+		$lower = strtolower($haystack);
+
+		return (
+			strpos($haystack, 'ЕН з таким номером') !== false
+			|| strpos($haystack, 'вже була отримана') !== false
+			|| strpos($lower, 'already') !== false
+			|| strpos($lower, 'duplicate') !== false
+		);
 	}
 
 	private function findCheckboxEttnProjectForMeta(array $config, array $meta): array {
