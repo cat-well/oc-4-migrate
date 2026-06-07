@@ -3479,22 +3479,58 @@ class Order extends \Opencart\System\Engine\Controller {
 		$payload = is_array($payload) ? $payload : [];
 		$response = is_array($response) ? $response : [];
 
-		$payments = [];
-		if (!empty($payload['receipt_body']['payments']) && is_array($payload['receipt_body']['payments'])) {
-			$payments = $payload['receipt_body']['payments'];
-		} elseif (!empty($payload['payments']) && is_array($payload['payments'])) {
-			$payments = $payload['payments'];
-		}
+		// The ETTN number can live in either side: in our stored payload
+		// (receipt_body.payments[].ettn) AND in a remote list/status item,
+		// whose payments live under the same shape. Earlier this only looked
+		// at payload payments, so matching a remote project (passed as
+		// $response with empty $payload) always failed → link/sync skipped.
+		foreach ([$payload, $response] as $src) {
+			if (!is_array($src)) {
+				continue;
+			}
 
-		foreach ($payments as $payment) {
-			if (is_array($payment) && !empty($payment['ettn'])) {
-				return (string)$payment['ettn'];
+			$payments = [];
+			if (!empty($src['receipt_body']['payments']) && is_array($src['receipt_body']['payments'])) {
+				$payments = $src['receipt_body']['payments'];
+			} elseif (!empty($src['payments']) && is_array($src['payments'])) {
+				$payments = $src['payments'];
+			}
+
+			foreach ($payments as $payment) {
+				if (is_array($payment) && !empty($payment['ettn'])) {
+					return (string)$payment['ettn'];
+				}
+			}
+
+			foreach (['ettnNumber', 'ettn_number', 'ttnNumber', 'ttn_number', 'ettn'] as $field) {
+				if (!empty($src[$field]) && !is_array($src[$field])) {
+					return (string)$src[$field];
+				}
 			}
 		}
 
-		foreach (['ettnNumber', 'ettn_number', 'ttnNumber', 'ttn_number'] as $field) {
-			if (!empty($response[$field])) {
-				return (string)$response[$field];
+		// Last resort: the remote item shape is not fully known, so walk it
+		// for any `ettn` key (the express-waybill number is unique enough to
+		// match on safely).
+		$deep = $this->deepFindCheckboxEttn($response);
+		if ($deep === '') {
+			$deep = $this->deepFindCheckboxEttn($payload);
+		}
+
+		return $deep;
+	}
+
+	private function deepFindCheckboxEttn($node): string {
+		if (is_array($node)) {
+			foreach ($node as $key => $value) {
+				if (is_string($key) && strtolower($key) === 'ettn' && !is_array($value) && (string)$value !== '') {
+					return (string)$value;
+				}
+
+				$found = $this->deepFindCheckboxEttn($value);
+				if ($found !== '') {
+					return $found;
+				}
 			}
 		}
 
