@@ -3809,23 +3809,41 @@ class Order extends \Opencart\System\Engine\Controller {
 			return [];
 		}
 
-		$result = $this->model_extension_manline_integration_checkbox->getNpEttnReceiptProjects($config);
-		if (empty($result['success'])) {
-			return [];
-		}
+		// The Checkbox project list is paginated and the account can hold
+		// thousands of ETTN projects, so a single page misses older ones.
+		// Walk pages until we match or run out (bounded so a missing project
+		// can't loop forever).
+		$limit = 100;
+		$max_pages = 100;
 
-		$items = $this->normalizeCheckboxListResponse($result['response'] ?? []);
-		foreach ($items as $item) {
-			$item_ttn = preg_replace('/\D+/', '', $this->extractCheckboxTtnNumber([], $item));
-			$item_ttn = is_string($item_ttn) ? $item_ttn : '';
-			$item_receipt_id = $this->extractCheckboxReceiptId($item);
-
-			if ($ttn_number !== '' && $item_ttn === $ttn_number) {
-				return $item;
+		for ($page = 0; $page < $max_pages; $page++) {
+			$result = $this->model_extension_manline_integration_checkbox->getNpEttnReceiptProjects($config, $limit, $page * $limit);
+			if (empty($result['success'])) {
+				return [];
 			}
 
-			if ($receipt_id !== '' && $item_receipt_id !== '' && $item_receipt_id === $receipt_id) {
-				return $item;
+			$items = $this->normalizeCheckboxListResponse($result['response'] ?? []);
+			if (!$items) {
+				return [];
+			}
+
+			foreach ($items as $item) {
+				$item_ttn = preg_replace('/\D+/', '', $this->extractCheckboxTtnNumber([], $item));
+				$item_ttn = is_string($item_ttn) ? $item_ttn : '';
+				$item_receipt_id = $this->extractCheckboxReceiptId($item);
+
+				if ($ttn_number !== '' && $item_ttn === $ttn_number) {
+					return $item;
+				}
+
+				if ($receipt_id !== '' && $item_receipt_id !== '' && $item_receipt_id === $receipt_id) {
+					return $item;
+				}
+			}
+
+			// Last (partial) page reached — nothing more to scan.
+			if (count($items) < $limit) {
+				return [];
 			}
 		}
 

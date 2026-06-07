@@ -555,15 +555,25 @@ class Checkbox extends \Opencart\System\Engine\Model {
 		return ['success' => true, 'response' => $data];
 	}
 
-	public function getNpEttnReceiptProjects(array $config): array {
+	public function getNpEttnReceiptProjects(array $config, int $limit = 100, int $offset = 0): array {
 		$sign = $this->cashierSignIn($config);
 		if (empty($sign['success'])) {
 			return $sign;
 		}
 
+		if ($limit <= 0 || $limit > 100) {
+			$limit = 100;
+		}
+		if ($offset < 0) {
+			$offset = 0;
+		}
+
 		$token = (string)$sign['token'];
 		$api_url = rtrim((string)($config['api_url'] ?? ''), '/');
-		$url = $api_url . '/api/v1/np/ettn';
+		// The list is paginated (default page is small, the account can hold
+		// thousands of projects). Always request an explicit page so the caller
+		// can walk it — otherwise old projects are unreachable.
+		$url = $api_url . '/api/v1/np/ettn?limit=' . $limit . '&offset=' . $offset;
 
 		$headers = [
 			'Accept: application/json',
