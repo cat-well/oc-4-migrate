@@ -151,7 +151,25 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 			// preferred over the auto-picked "first Warehouse, else first"
 			// fallback inside fetchSenderData. Empty string keeps the
 			// legacy auto-pick behaviour.
-			$sender = $this->fetchSenderData($api_key, $api_url, $sender_address_ref);
+			//
+			// If the chosen ref doesn't resolve in NP (stale/invalid pick from
+			// the picker — the configured default sender is still valid), fall
+			// back to the default sender instead of hard-failing. Sender is
+			// effectively a single fixed warehouse, so this can't ship from the
+			// wrong place silently in any meaningful way; it just unblocks TTN
+			// creation. We log the swap on the order error field for visibility.
+			try {
+				$sender = $this->fetchSenderData($api_key, $api_url, $sender_address_ref);
+			} catch (\Throwable $e) {
+				$default_sender_ref = trim((string)$this->config->get('shipping_novaposhta_default_sender_warehouse_ref'));
+
+				if ($default_sender_ref === '' || $default_sender_ref === trim((string)$sender_address_ref)) {
+					throw $e;
+				}
+
+				$sender = $this->fetchSenderData($api_key, $api_url, $default_sender_ref);
+				$sender_address_ref = $default_sender_ref;
+			}
 			$recipient = $this->fetchOrCreateRecipientData($order_info, $city_ref, $api_key, $api_url);
 			$order_data = $this->getOrderData($order_info);
 			if (!empty($changes['Weight'])) $order_data['weight'] = (string)max(0.1, (float)$changes['Weight']);
