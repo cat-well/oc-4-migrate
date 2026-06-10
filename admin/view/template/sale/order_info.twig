@@ -2585,12 +2585,13 @@ $('#input-store, #input-language, #input-currency').on('change', function(e) {
 $('#input-product').autocomplete({
     'source': function(request, response) {
         $.ajax({
-            url: 'index.php?route=catalog/product.autocomplete&user_token={{ user_token }}&filter_name=' + encodeURIComponent(request),
+            url: 'index.php?route=catalog/product.autocomplete&user_token={{ user_token }}&filter_search=' + encodeURIComponent(request),
             dataType: 'json',
             success: function(json) {
                 response($.map(json, function(item) {
                     return {
-                        label: item['name'],
+                        label: item['model'] ? item['name'] + ' [' + item['model'] + ']' : item['name'],
+                        name: item['name'],
                         value: item['product_id'],
                         option: item['option'],
                         subscription: item['subscription'],
@@ -2605,7 +2606,7 @@ $('#input-product').autocomplete({
     },
     'select': function(item) {
         $('#input-product-id').val(item['value']);
-        $('#input-product').val(decodeHTMLEntities(item['label']));
+        $('#input-product').val(decodeHTMLEntities(item['name']));
 
         if (item['option'] != '') {
             html = '<fieldset class="mb-0">';

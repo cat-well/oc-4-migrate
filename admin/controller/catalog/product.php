@@ -1461,6 +1461,12 @@ class Product extends \Opencart\System\Engine\Controller {
 			$filter_model = '';
 		}
 
+		if (isset($this->request->get['filter_search'])) {
+			$filter_search = $this->request->get['filter_search'];
+		} else {
+			$filter_search = '';
+		}
+
 		if (isset($this->request->get['limit'])) {
 			$limit = (int)$this->request->get['limit'];
 		} else {
@@ -1468,10 +1474,11 @@ class Product extends \Opencart\System\Engine\Controller {
 		}
 
 		$filter_data = [
-			'filter_name'  => $filter_name,
-			'filter_model' => $filter_model,
-			'start'        => 0,
-			'limit'        => $limit
+			'filter_name'   => $filter_name,
+			'filter_model'  => $filter_model,
+			'filter_search' => $filter_search,
+			'start'         => 0,
+			'limit'         => $limit
 		];
 
 		// Product
