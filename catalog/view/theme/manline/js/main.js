@@ -632,7 +632,6 @@ function bindSimplecheckoutFallback() {
                     var settings = $.extend({}, options || {});
                     var $list = $('<ul class="dropdown-address"></ul>').hide();
                     var timer = null;
-                    var items = {};
 
                     function hide() {
                         $list.hide();
@@ -649,15 +648,14 @@ function bindSimplecheckoutFallback() {
                     }
 
                     function render(data) {
-                        items = {};
+                        $list.empty();
 
                         if (!Array.isArray(data) || !data.length) {
                             hide();
-                            $list.html('');
                             return;
                         }
 
-                        var html = '';
+                        var has = false;
 
                         $.each(data, function (_, item) {
                             var value = String(item.value || item.description || '');
@@ -666,15 +664,18 @@ function bindSimplecheckoutFallback() {
                                 return;
                             }
 
-                            var key = value + '|' + String(item.ref || '');
-                            items[key] = item;
+                            has = true;
 
-                            html += '<li data-key="' + $('<div/>').text(key).html() + '"><a href="#">' + $('<div/>').text(String(item.label || value)).html() + '</a></li>';
+                            // Store the item object on the <li> via jQuery .data()
+                            // instead of a string key in a data-attribute — branch
+                            // descriptions are plain but locker ones can contain a
+                            // double-quote, which broke the data-key attribute and
+                            // made the lookup (and thus selection) silently fail.
+                            var $a = $('<a href="#"></a>').text(String(item.label || value));
+                            $('<li></li>').append($a).data('npItem', item).appendTo($list);
                         });
 
-                        $list.html(html);
-
-                        if (html && $input.is(':focus')) {
+                        if (has && $input.is(':focus')) {
                             show();
                         } else {
                             hide();
@@ -719,8 +720,7 @@ function bindSimplecheckoutFallback() {
                         event.preventDefault();
                         event.stopPropagation();
 
-                        var key = String($(this).closest('li').attr('data-key') || '');
-                        var item = items[key];
+                        var item = $(this).closest('li').data('npItem');
 
                         if (!item) {
                             return;
