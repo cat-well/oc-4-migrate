@@ -162,13 +162,28 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 				$sender = $this->fetchSenderData($api_key, $api_url, $sender_address_ref);
 			} catch (\Throwable $e) {
 				$default_sender_ref = trim((string)$this->config->get('shipping_novaposhta_default_sender_warehouse_ref'));
+				$sender = null;
 
-				if ($default_sender_ref === '' || $default_sender_ref === trim((string)$sender_address_ref)) {
-					throw $e;
+				// 1) Try the configured default sender (if it differs from the pick).
+				if ($default_sender_ref !== '' && $default_sender_ref !== trim((string)$sender_address_ref)) {
+					try {
+						$sender = $this->fetchSenderData($api_key, $api_url, $default_sender_ref);
+						$sender_address_ref = $default_sender_ref;
+					} catch (\Throwable $e2) {
+						$sender = null;
+					}
 				}
 
-				$sender = $this->fetchSenderData($api_key, $api_url, $default_sender_ref);
-				$sender_address_ref = $default_sender_ref;
+				// 2) Last resort: auto-pick the sender's first Warehouse address
+				// (empty override). Covers the case where the picked ref AND the
+				// default are both stale — e.g. the ref was invalidated by
+				// deleting the previous TTN. Sender is one fixed warehouse, so
+				// this can't ship from a meaningfully wrong place; it just
+				// unblocks creation. If this also throws, it's a real NP outage.
+				if (!$sender) {
+					$sender = $this->fetchSenderData($api_key, $api_url, '');
+					$sender_address_ref = '';
+				}
 			}
 			$recipient = $this->fetchOrCreateRecipientData($order_info, $city_ref, $api_key, $api_url);
 			$order_data = $this->getOrderData($order_info);
