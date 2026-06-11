@@ -475,6 +475,11 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 
 		$normalized_changes = [];
 
+		// Fields to force-remove from the final update payload. Clearing the
+		// payment control cannot be expressed as AfterpaymentOnGoodsCost=0.00
+		// (NP rejects that as invalid) — the field must be absent.
+		$strip_fields = [];
+
 		foreach ($changes as $key => $value) {
 			if (!in_array($key, $allowed, true)) {
 				continue;
@@ -520,10 +525,16 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 			}
 
 			if ($additional_service === 'control') {
-				$cod_total = number_format((float)($changes['cod_total'] ?? 0), 2, '.', '');
-				$normalized_changes['AfterpaymentOnGoodsCost'] = $cod_total;
-				$normalized_changes['PaymentMethod'] = 'Cash';
+				$cod_amount = (float)($changes['cod_total'] ?? 0);
 				$normalized_changes['BackwardDeliveryData'] = [];
+
+				if ($cod_amount > 0) {
+					$normalized_changes['AfterpaymentOnGoodsCost'] = number_format($cod_amount, 2, '.', '');
+					$normalized_changes['PaymentMethod'] = 'Cash';
+				} else {
+					// Control amount cleared — remove the field (0.00 is invalid).
+					$strip_fields[] = 'AfterpaymentOnGoodsCost';
+				}
 			} elseif ($additional_service === 'cod') {
 				$cod_total = number_format((float)($changes['cod_total'] ?? 0), 2, '.', '');
 				$cod_payer = in_array($changes['cod_payer'] ?? '', ['Sender', 'Recipient', 'ThirdPerson'], true)
@@ -535,12 +546,13 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 					'CargoType' => 'Money',
 					'RedeliveryString' => $cod_total,
 				]];
-				$normalized_changes['AfterpaymentOnGoodsCost'] = '0.00';
+				// COD rides on BackwardDeliveryData; the afterpayment-control field
+				// must be absent (0.00 is rejected by NP as invalid).
+				$strip_fields[] = 'AfterpaymentOnGoodsCost';
 			} else {
-				// Empty array tells NP "drop any existing COD"; zero clears
-				// payment-control amount in the stored payload.
+				// Drop COD (empty BackwardDeliveryData) and remove payment control.
 				$normalized_changes['BackwardDeliveryData'] = [];
-				$normalized_changes['AfterpaymentOnGoodsCost'] = '0.00';
+				$strip_fields[] = 'AfterpaymentOnGoodsCost';
 			}
 		}
 
@@ -772,6 +784,21 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 				}
 			}
 		}
+
+		// Remove fields explicitly marked for stripping (cleared payment
+		// control — AfterpaymentOnGoodsCost must be absent, 0.00 is invalid).
+		foreach ($strip_fields as $strip_key) {
+			unset($new_payload[$strip_key]);
+		}
+
+		// Don't re-assert physical params the operator didn't change. NP
+		// recomputes VolumeWeight and compares Weight / VolumeGeneral against
+		// its own normalized stored values; re-sending our stored copy trips
+		// "Weight is changed" / "VolumeGeneral is changed" on an otherwise
+		// unrelated edit (e.g. removing the COD amount).
+		unset($new_payload['VolumeWeight']);
+		if (!isset($diff_changes['Weight'])) unset($new_payload['Weight']);
+		if (!isset($diff_changes['VolumeGeneral'])) unset($new_payload['VolumeGeneral']);
 
 		// NP needs Ref to identify which document to mutate; without it
 		// the API would treat the payload as a create attempt and fail.
