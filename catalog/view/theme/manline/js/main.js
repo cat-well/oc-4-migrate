@@ -733,6 +733,13 @@ function bindSimplecheckoutFallback() {
                         hide();
                     });
 
+                    // Selection runs on mousedown above; the click that follows
+                    // would otherwise navigate (<a href="#"> + <base href> = home).
+                    // Confirmed via HAR: GET https://manline.com.ua/# initiator "other".
+                    $list.on('click.npAutocompleteAddress', 'a', function (event) {
+                        event.preventDefault();
+                    });
+
                     $('body').append($list);
                     $input.data('npAutocompleteAddress', true);
                     $input.data('npAutocompleteAddressList', $list);
