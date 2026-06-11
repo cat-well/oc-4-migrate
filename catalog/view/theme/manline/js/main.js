@@ -733,12 +733,6 @@ function bindSimplecheckoutFallback() {
                         hide();
                     });
 
-                    // href="#" + <base href> would navigate to home on the click
-                    // that follows mousedown; selection already ran above.
-                    $list.on('click.npAutocompleteAddress', 'a', function (event) {
-                        event.preventDefault();
-                    });
-
                     $('body').append($list);
                     $input.data('npAutocompleteAddress', true);
                     $input.data('npAutocompleteAddressList', $list);
