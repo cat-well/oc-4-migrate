@@ -1628,6 +1628,11 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 		$sender_address = [];
 		$override_address_ref = trim($override_address_ref);
 
+		// No explicit pick: use the configured default sender warehouse, never guess from the address list (its first row is a Lviv courier address).
+		if ($override_address_ref === '') {
+			$override_address_ref = trim((string)$this->config->get('shipping_novaposhta_default_sender_warehouse_ref'));
+		}
+
 		// 1) If the operator picked an explicit sender warehouse/address from
 		//    the UI, honour that ref exactly. The create/edit picker returns
 		//    AddressGeneral warehouse refs; Counterparty.getCounterpartyAddresses
@@ -1661,9 +1666,9 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 			}
 		}
 
-		// 3) Last-resort fallback: whatever NP returned first.
+		// 3) Fail loudly instead of silently shipping from NP's first-listed address (historically Lviv).
 		if (!$sender_address) {
-			$sender_address = $addresses_response['data'][0];
+			throw new \RuntimeException('Не вдалося визначити відділення відправника НП. ТТН не створено — повторіть спробу.');
 		}
 
 		$sender_address_ref = trim((string)($sender_address['Ref'] ?? ''));
@@ -1821,6 +1826,36 @@ class Novaposhta extends \Opencart\System\Engine\Model {
 			throw new \RuntimeException('Unable to encode Nova Poshta API payload.');
 		}
 
+		// NP throttles bursts with success:false/"To many requests" (HTTP 200) — retry with backoff.
+		$response = [];
+		for ($attempt = 1; $attempt <= 4; $attempt++) {
+			$response = $this->dispatchApi($endpoint, $payload);
+
+			if (!$this->isRateLimited($response)) {
+				return $response;
+			}
+
+			usleep(400000 * $attempt);
+		}
+
+		return $response;
+	}
+
+	private function isRateLimited(array $response): bool {
+		if (!empty($response['success'])) {
+			return false;
+		}
+
+		foreach ((array)($response['errors'] ?? []) as $error) {
+			if (stripos((string)$error, 'many request') !== false) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	private function dispatchApi(string $endpoint, string $payload): array {
 		if (function_exists('curl_init')) {
 			$curl = curl_init($endpoint);
 
