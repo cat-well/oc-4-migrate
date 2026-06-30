@@ -6310,7 +6310,13 @@ ul.nav_menu > li:hover div {
     }
 
     span.pl_min {
-        display: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    #cart .pm_cart {
+        width: 24px;
     }
 
     #cart .content.white-popup {
@@ -6915,7 +6921,7 @@ ul.nav_menu > li:hover div {
     }
 
     .qnt_w {
-        display: none;
+        display: block;
     }
 
     .cart_r .color.styled {
