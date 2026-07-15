@@ -23,14 +23,6 @@ namespace Opencart\Catalog\Controller\Extension\Manline\Feed;
  */
 class ProductFeed extends \Opencart\System\Engine\Controller {
 
-	/**
-	 * Default to Ukrainian (man_language.language_id = 4). Rozetka and
-	 * Hotline customers expect UA descriptions; can be overridden later
-	 * per-feed by adding a column to product_feed if a marketplace
-	 * needs RU.
-	 */
-	private const FEED_LANGUAGE_ID = 4;
-
 	public function index(): void {
 		$shortname = isset($this->request->get['shortname'])
 			? preg_replace('/[^a-z0-9_]/', '', strtolower((string)$this->request->get['shortname']))
@@ -49,9 +41,11 @@ class ProductFeed extends \Opencart\System\Engine\Controller {
 		$manufacturer_ids = $this->parseIdList($config['manufacturers']);
 		$sql_where = $this->sanitiseProductFilter((string)$config['sql_code']);
 		$currency = $config['currency'] !== '' ? (string)$config['currency'] : 'UAH';
-		$language_id = self::FEED_LANGUAGE_ID;
+		$language_id = (int)($config['language_id'] ?: 3);
 		$image_width = (int)($config['image_width'] ?: 600);
 		$image_height = (int)($config['image_height'] ?: 600);
+		$size_option_id = (int)$config['size_option_id'];
+		$format = (string)$config['format'] === 'prom' ? 'prom' : 'yml';
 
 		$shop_url = $this->resolveShopUrl();
 
@@ -65,10 +59,13 @@ class ProductFeed extends \Opencart\System\Engine\Controller {
 			$language_id,
 			$shop_url,
 			$image_width,
-			$image_height
+			$image_height,
+			$size_option_id
 		);
 
-		$xml = $this->renderYml($categories, $offers, $currency, $shop_url);
+		$xml = $format === 'prom'
+			? $this->renderPrice($categories, $offers, $currency, $shop_url)
+			: $this->renderYml($categories, $offers, $currency, $shop_url);
 
 		$this->response->addHeader('Content-Type: application/xml; charset=utf-8');
 		// Aggressive feeds (Rozetka polls multiple times a day) — let CDN
@@ -176,7 +173,8 @@ class ProductFeed extends \Opencart\System\Engine\Controller {
 		int $language_id,
 		string $shop_url,
 		int $image_width,
-		int $image_height
+		int $image_height,
+		int $size_option_id
 	): array {
 		if (!$category_ids) return [];
 
@@ -186,6 +184,9 @@ class ProductFeed extends \Opencart\System\Engine\Controller {
 			: '';
 		$where_extra = $sql_where !== '' ? ' AND (' . $sql_where . ')' : '';
 
+		// OC4 product_to_category has no main_category flag (that was an OC2
+		// NeoSeo column) — pick the lowest feed category per product instead,
+		// via a grouped subquery so multi-category products don't fan out.
 		$rows = $this->db->query(
 			"SELECT
 				p.product_id, p.model, p.sku, p.price, p.quantity, p.image, p.manufacturer_id,
@@ -195,12 +196,15 @@ class ProductFeed extends \Opencart\System\Engine\Controller {
 			FROM `" . DB_PREFIX . "product` p
 			INNER JOIN `" . DB_PREFIX . "product_description` pd
 			  ON pd.product_id = p.product_id AND pd.language_id = '" . (int)$language_id . "'
-			INNER JOIN `" . DB_PREFIX . "product_to_category` p2c
-			  ON p2c.product_id = p.product_id AND p2c.main_category = 1
+			INNER JOIN (
+				SELECT product_id, MIN(category_id) AS category_id
+				FROM `" . DB_PREFIX . "product_to_category`
+				WHERE category_id IN (" . $cat_placeholders . ")
+				GROUP BY product_id
+			) p2c ON p2c.product_id = p.product_id
 			LEFT JOIN `" . DB_PREFIX . "manufacturer` m
 			  ON m.manufacturer_id = p.manufacturer_id
 			WHERE p.status = 1
-			  AND p2c.category_id IN (" . $cat_placeholders . ")
 			  " . $man_filter . "
 			  " . $where_extra
 		)->rows;
@@ -215,6 +219,9 @@ class ProductFeed extends \Opencart\System\Engine\Controller {
 		$images_by_pid     = $this->loadImages($product_ids);
 		$attributes_by_pid = $this->loadAttributes($product_ids, $language_id);
 		$specials_by_pid   = $this->loadActiveSpecials($product_ids);
+		$sizes_by_pid      = $size_option_id
+			? $this->loadSizesInStock($product_ids, $language_id, $size_option_id)
+			: [];
 
 		$offers = [];
 
@@ -233,11 +240,13 @@ class ProductFeed extends \Opencart\System\Engine\Controller {
 			$price = (float)$row['price'];
 			$special_price = $specials_by_pid[$pid] ?? null;
 			$has_special = $special_price !== null && $special_price > 0 && $special_price < $price;
+			$base_price = $has_special ? (float)$special_price : $price;
 
-			$offers[] = [
+			$offer = [
 				'id' => $pid,
+				'group_id' => 0,
 				'url' => $shop_url . '/index.php?route=product/product&product_id=' . $pid,
-				'price' => number_format($has_special ? (float)$special_price : $price, 2, '.', ''),
+				'price' => number_format($base_price, 2, '.', ''),
 				'oldprice' => $has_special ? number_format($price, 2, '.', '') : null,
 				'categoryId' => (int)$row['category_id'],
 				'name' => trim((string)$row['name']),
@@ -245,12 +254,69 @@ class ProductFeed extends \Opencart\System\Engine\Controller {
 				'model' => trim((string)$row['model']),
 				'vendor' => trim((string)$row['vendor']),
 				'vendorCode' => trim((string)$row['sku']),
+				'quantity' => (int)$row['quantity'],
+				'size' => '',
 				'image' => $image_urls,
 				'attributes' => $attributes_by_pid[$pid] ?? [],
 			];
+
+			if (!$size_option_id) {
+				$offers[] = $offer;
+				continue;
+			}
+
+			// Size-aware feeds (Prom) list one offer per in-stock size, tied
+			// back to the product via group_id. A product with no size in
+			// stock is not sellable there, so it drops out of the feed.
+			foreach ($sizes_by_pid[$pid] ?? [] as $size) {
+				$offers[] = [
+					'id' => $pid . '-' . $size['id'],
+					'group_id' => $pid,
+					'price' => number_format($base_price + $size['price_delta'], 2, '.', ''),
+					'quantity' => $size['quantity'],
+					'size' => $size['name'],
+					'name' => $offer['name'] . ' ' . $size['name'],
+				] + $offer;
+			}
 		}
 
 		return $offers;
+	}
+
+	/**
+	 * @param list<int> $product_ids
+	 * @return array<int, list<array{id:int,name:string,quantity:int,price_delta:float}>>
+	 */
+	private function loadSizesInStock(array $product_ids, int $language_id, int $size_option_id): array {
+		if (!$product_ids) return [];
+
+		$placeholders = implode(',', $product_ids);
+
+		$rows = $this->db->query(
+			"SELECT po.product_id, pov.product_option_value_id, pov.quantity, pov.price, pov.price_prefix, ovd.name
+			FROM `" . DB_PREFIX . "product_option` po
+			INNER JOIN `" . DB_PREFIX . "product_option_value` pov
+			  ON pov.product_option_id = po.product_option_id
+			INNER JOIN `" . DB_PREFIX . "option_value_description` ovd
+			  ON ovd.option_value_id = pov.option_value_id AND ovd.language_id = '" . (int)$language_id . "'
+			WHERE po.product_id IN (" . $placeholders . ")
+			  AND po.option_id = '" . (int)$size_option_id . "'
+			  AND pov.quantity > 0
+			ORDER BY po.product_id ASC, ovd.name ASC"
+		)->rows;
+
+		$out = [];
+		foreach ($rows as $r) {
+			$delta = (float)$r['price'];
+			$out[(int)$r['product_id']][] = [
+				'id' => (int)$r['product_option_value_id'],
+				'name' => trim((string)$r['name']),
+				'quantity' => (int)$r['quantity'],
+				'price_delta' => $r['price_prefix'] === '-' ? -$delta : $delta,
+			];
+		}
+
+		return $out;
 	}
 
 	/**
@@ -402,6 +468,67 @@ class ProductFeed extends \Opencart\System\Engine\Controller {
 
 		$xml .= '  </shop>' . "\n";
 		$xml .= '</yml_catalog>' . "\n";
+
+		return $xml;
+	}
+
+	/**
+	 * Prom.ua price XML — one offer per in-stock size, grouped by product.
+	 *
+	 * @param list<array{id:int,parentId:int,name:string}> $categories
+	 * @param list<array<string,mixed>>                    $offers
+	 */
+	private function renderPrice(array $categories, array $offers, string $currency, string $shop_url): string {
+		$esc = static fn (string $s): string => htmlspecialchars($s, ENT_XML1 | ENT_QUOTES, 'UTF-8');
+
+		$xml  = '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
+		$xml .= '<price date="' . date('Y-m-d H:i') . '">' . "\n";
+		$xml .= '  <name>Manline</name>' . "\n";
+		$xml .= '  <company>Manline</company>' . "\n";
+		$xml .= '  <url>' . $esc($shop_url) . '</url>' . "\n";
+		$xml .= '  <currency code="' . $esc($currency) . '" rate="1"/>' . "\n";
+
+		$xml .= '  <categories>' . "\n";
+		$selected_ids = array_flip(array_map(static fn ($c) => (int)$c['id'], $categories));
+		foreach ($categories as $cat) {
+			$parent_attr = '';
+			if ($cat['parentId'] > 0 && isset($selected_ids[$cat['parentId']])) {
+				$parent_attr = ' parentId="' . $cat['parentId'] . '"';
+			}
+			$xml .= '    <category id="' . $cat['id'] . '"' . $parent_attr . '>' . $esc($cat['name']) . '</category>' . "\n";
+		}
+		$xml .= '  </categories>' . "\n";
+
+		$xml .= '  <items>' . "\n";
+		foreach ($offers as $o) {
+			$group_attr = $o['group_id'] ? ' group_id="' . (int)$o['group_id'] . '"' : '';
+
+			$xml .= '    <offer available="true" id="' . $esc((string)$o['id']) . '"' . $group_attr . '>' . "\n";
+			$xml .= '      <url>' . $esc((string)$o['url']) . '</url>' . "\n";
+			$xml .= '      <price>' . (string)$o['price'] . '</price>' . "\n";
+			if (!empty($o['oldprice'])) {
+				$xml .= '      <oldprice>' . (string)$o['oldprice'] . '</oldprice>' . "\n";
+			}
+			$xml .= '      <currencyId>' . $esc($currency) . '</currencyId>' . "\n";
+			$xml .= '      <categoryId>' . (int)$o['categoryId'] . '</categoryId>' . "\n";
+			foreach ($o['image'] as $image_url) {
+				$xml .= '      <picture>' . $esc((string)$image_url) . '</picture>' . "\n";
+			}
+			$xml .= '      <name>' . $esc((string)$o['name']) . '</name>' . "\n";
+			$xml .= '      <vendor>' . $esc((string)$o['vendor']) . '</vendor>' . "\n";
+			$xml .= '      <description>' . $esc((string)$o['description']) . '</description>' . "\n";
+			$xml .= '      <vendorCode>' . $esc((string)$o['model']) . '</vendorCode>' . "\n";
+			foreach ($o['attributes'] as $attr) {
+				$xml .= '      <param name="' . $esc((string)$attr['name']) . '">' . $esc((string)$attr['value']) . '</param>' . "\n";
+			}
+			if ($o['size'] !== '') {
+				$xml .= '      <param name="Розмір">' . $esc((string)$o['size']) . '</param>' . "\n";
+			}
+			$xml .= '      <quantity_in_stock>' . (int)$o['quantity'] . '</quantity_in_stock>' . "\n";
+			$xml .= '    </offer>' . "\n";
+		}
+		$xml .= '  </items>' . "\n";
+		$xml .= '</price>' . "\n";
 
 		return $xml;
 	}
