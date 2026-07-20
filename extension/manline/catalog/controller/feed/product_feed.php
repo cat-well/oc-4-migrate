@@ -23,7 +23,13 @@ namespace Opencart\Catalog\Controller\Extension\Manline\Feed;
  */
 class ProductFeed extends \Opencart\System\Engine\Controller {
 
+	/** Cap pictures per offer — resizing a cold image cache is the slowest step. */
+	private const MAX_PICTURES = 5;
+
 	public function index(): void {
+		// Building a full feed can outlive the default 30s limit on a cold image cache.
+		set_time_limit(0);
+
 		$shortname = isset($this->request->get['shortname'])
 			? preg_replace('/[^a-z0-9_]/', '', strtolower((string)$this->request->get['shortname']))
 			: 'rozetka';
@@ -228,14 +234,22 @@ class ProductFeed extends \Opencart\System\Engine\Controller {
 		foreach ($rows as $row) {
 			$pid = (int)$row['product_id'];
 
-			$image_urls = [];
+			$raw_images = [];
 			if (!empty($row['image'])) {
-				$image_urls[] = $this->model_tool_image->resize((string)$row['image'], $image_width, $image_height);
+				$raw_images[] = (string)$row['image'];
 			}
 			foreach ($images_by_pid[$pid] ?? [] as $extra) {
-				$image_urls[] = $this->model_tool_image->resize((string)$extra, $image_width, $image_height);
+				$raw_images[] = (string)$extra;
 			}
-			$image_urls = array_values(array_unique(array_filter($image_urls)));
+
+			// Slice before resizing so we never build thumbnails we then discard.
+			$raw_images = array_slice(array_values(array_unique(array_filter($raw_images))), 0, self::MAX_PICTURES);
+
+			$image_urls = [];
+			foreach ($raw_images as $raw_image) {
+				$image_urls[] = $this->model_tool_image->resize($raw_image, $image_width, $image_height);
+			}
+			$image_urls = array_values(array_filter($image_urls));
 
 			$price = (float)$row['price'];
 			$special_price = $specials_by_pid[$pid] ?? null;
