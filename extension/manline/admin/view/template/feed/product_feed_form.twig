@@ -1,0 +1,161 @@
+{{ header }}{{ column_left }}
+<div id="content">
+  <div class="page-header">
+    <div class="container-fluid">
+      <div class="float-end">
+        <button type="submit" form="form-feed" data-bs-toggle="tooltip" title="{{ button_save }}" class="btn btn-primary"><i class="fa-solid fa-save"></i></button>
+        <a href="{{ back }}" data-bs-toggle="tooltip" title="{{ button_back }}" class="btn btn-light"><i class="fa-solid fa-reply"></i></a>
+      </div>
+      <h1>{{ heading_title }}</h1>
+      <ol class="breadcrumb">
+        {% for breadcrumb in breadcrumbs %}
+          <li class="breadcrumb-item"><a href="{{ breadcrumb.href }}">{{ breadcrumb.text }}</a></li>
+        {% endfor %}
+      </ol>
+    </div>
+  </div>
+
+  <div class="container-fluid">
+    {% if error_warning %}
+      <div class="alert alert-danger"><i class="fa-solid fa-circle-exclamation"></i> {{ error_warning }}</div>
+    {% endif %}
+
+    <div class="card">
+      <div class="card-header"><i class="fa-solid fa-pencil"></i> {{ text_edit }} — {{ feed_name }}</div>
+      <div class="card-body">
+        <form id="form-feed" action="{{ save }}" method="post">
+
+          <div class="row mb-3">
+            <label class="col-sm-2 col-form-label">{{ entry_url }}</label>
+            <div class="col-sm-10">
+              <div class="input-group">
+                <input type="text" value="{{ url }}" class="form-control" readonly onclick="this.select();"/>
+                <a href="{{ url }}" target="_blank" class="btn btn-outline-secondary"><i class="fa-solid fa-up-right-from-square"></i></a>
+              </div>
+              <div class="form-text">{{ help_url }}</div>
+            </div>
+          </div>
+
+          <div class="row mb-3">
+            <label class="col-sm-2 col-form-label" for="input-name">{{ entry_name }}</label>
+            <div class="col-sm-10">
+              <input type="text" name="feed_name" value="{{ feed_name }}" id="input-name" class="form-control"/>
+            </div>
+          </div>
+
+          <div class="row mb-3">
+            <label class="col-sm-2 col-form-label" for="input-status">{{ entry_status }}</label>
+            <div class="col-sm-10">
+              <div class="form-check form-switch form-switch-lg">
+                <input type="hidden" name="status" value="0"/>
+                <input type="checkbox" name="status" value="1" id="input-status" class="form-check-input"{{ status ? ' checked' : '' }}/>
+              </div>
+              <div class="form-text">{{ help_status }}</div>
+            </div>
+          </div>
+
+          <div class="row mb-3">
+            <label class="col-sm-2 col-form-label" for="input-format">{{ entry_format }}</label>
+            <div class="col-sm-10">
+              <select name="format" id="input-format" class="form-select">
+                <option value="yml"{{ format == 'yml' ? ' selected' : '' }}>{{ text_format_yml }}</option>
+                <option value="prom"{{ format == 'prom' ? ' selected' : '' }}>{{ text_format_prom }}</option>
+              </select>
+              <div class="form-text">{{ help_format }}</div>
+            </div>
+          </div>
+
+          <div class="row mb-3">
+            <label class="col-sm-2 col-form-label" for="input-size-option">{{ entry_size_option }}</label>
+            <div class="col-sm-10">
+              <select name="size_option_id" id="input-size-option" class="form-select">
+                <option value="0">{{ text_no_sizes }}</option>
+                {% for option in options %}
+                  <option value="{{ option.option_id }}"{{ option.option_id == size_option_id ? ' selected' : '' }}>{{ option.name }}</option>
+                {% endfor %}
+              </select>
+              <div class="form-text">{{ help_size_option }}</div>
+            </div>
+          </div>
+
+          <div class="row mb-3">
+            <label class="col-sm-2 col-form-label" for="input-language">{{ entry_language }}</label>
+            <div class="col-sm-10">
+              <select name="language_id" id="input-language" class="form-select">
+                {% for language in languages %}
+                  <option value="{{ language.language_id }}"{{ language.language_id == language_id ? ' selected' : '' }}>{{ language.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+
+          <div class="row mb-3">
+            <label class="col-sm-2 col-form-label" for="input-currency">{{ entry_currency }}</label>
+            <div class="col-sm-10">
+              <select name="currency" id="input-currency" class="form-select">
+                {% for item in currencies %}
+                  <option value="{{ item.code }}"{{ item.code == currency ? ' selected' : '' }}>{{ item.title }} ({{ item.code }})</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+
+          <div class="row mb-3">
+            <label class="col-sm-2 col-form-label">{{ entry_in_stock }}</label>
+            <div class="col-sm-10">
+              <div class="form-check">
+                <input type="hidden" name="in_stock_only" value="0"/>
+                <input type="checkbox" name="in_stock_only" value="1" id="input-in-stock" class="form-check-input"{{ in_stock_only ? ' checked' : '' }}/>
+                <label class="form-check-label" for="input-in-stock">{{ text_in_stock_only }}</label>
+              </div>
+            </div>
+          </div>
+
+          <div class="row mb-3">
+            <label class="col-sm-2 col-form-label">{{ entry_categories }}</label>
+            <div class="col-sm-10">
+              <div class="border rounded p-2" style="height: 260px; overflow: auto;">
+                {% for category in categories %}
+                  <div class="form-check">
+                    <input type="checkbox" name="feed_category[]" value="{{ category.category_id }}" id="cat-{{ category.category_id }}" class="form-check-input"{{ category.category_id in feed_category ? ' checked' : '' }}/>
+                    <label class="form-check-label" for="cat-{{ category.category_id }}">{{ category.name }}</label>
+                  </div>
+                {% endfor %}
+              </div>
+              <div class="form-text">{{ help_categories }}</div>
+            </div>
+          </div>
+
+          <div class="row mb-3">
+            <label class="col-sm-2 col-form-label">{{ entry_manufacturers }}</label>
+            <div class="col-sm-10">
+              <div class="border rounded p-2" style="height: 260px; overflow: auto;">
+                {% for manufacturer in manufacturers %}
+                  <div class="form-check">
+                    <input type="checkbox" name="feed_manufacturer[]" value="{{ manufacturer.manufacturer_id }}" id="man-{{ manufacturer.manufacturer_id }}" class="form-check-input"{{ manufacturer.manufacturer_id in feed_manufacturer ? ' checked' : '' }}/>
+                    <label class="form-check-label" for="man-{{ manufacturer.manufacturer_id }}">{{ manufacturer.name }}</label>
+                  </div>
+                {% endfor %}
+              </div>
+              <div class="form-text">{{ help_manufacturers }}</div>
+            </div>
+          </div>
+
+          <div class="row mb-3">
+            <label class="col-sm-2 col-form-label" for="input-width">{{ entry_image }}</label>
+            <div class="col-sm-10">
+              <div class="input-group" style="max-width: 320px;">
+                <input type="number" name="image_width" value="{{ image_width }}" id="input-width" class="form-control" min="1"/>
+                <span class="input-group-text">&times;</span>
+                <input type="number" name="image_height" value="{{ image_height }}" class="form-control" min="1"/>
+                <span class="input-group-text">px</span>
+              </div>
+            </div>
+          </div>
+
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{{ footer }}
