@@ -25,7 +25,7 @@ $_['entry_password']   = 'Password';
 $_['entry_endpoint']   = 'URL for 1C';
 
 // Help
-$_['help_status']      = 'Master switch. When off, the endpoint answers 1C with "exchange disabled" and accepts nothing.';
+$_['help_status']      = 'Master switch. Off: 1C is rejected at the door, but the knock and auth verdict are still logged (so you can see whether the real 1C is calling). On: safe in this skeleton — it is an observe mode that only receives/saves files and logs; products and orders are NOT changed.';
 $_['help_credentials'] = 'Login and password 1C sends to authenticate (Basic auth). Must match the exchange settings in 1C.';
 $_['help_password']    = 'Leave blank to keep the stored password.';
 $_['help_endpoint']    = 'This is the exact URL 1C uses. The host has not changed, so nothing needs reconfiguring in 1C.';

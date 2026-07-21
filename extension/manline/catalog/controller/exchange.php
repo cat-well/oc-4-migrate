@@ -25,7 +25,10 @@ class Exchange extends \Opencart\System\Engine\Controller {
 		$this->response->addHeader('Content-Type: text/plain; charset=utf-8');
 
 		if ($this->setting('module_manline_exchange1c_status') !== '1') {
-			$log->write('rejected: exchange disabled');
+			// Still record the knock (with auth verdict) so you can confirm the
+			// real 1C is reaching us — and that its credentials match — without
+			// turning the exchange on.
+			$log->write('exchange DISABLED — ignored ' . $type . '/' . $mode . ' [' . $this->authNote() . ']');
 			$this->response->setOutput("failure\nОбмен отключён в админке магазина");
 			return;
 		}
@@ -113,6 +116,24 @@ class Exchange extends \Opencart\System\Engine\Controller {
 
 		$log->write('file saved: ' . $filename . ' (+' . strlen((string)$body) . ' bytes)');
 		$this->response->setOutput('success');
+	}
+
+	/**
+	 * Human-readable auth verdict for the log — lets you tell the real 1C
+	 * (correct credentials) apart from random bots hitting the URL.
+	 */
+	private function authNote(): string {
+		[$user, $pass] = $this->basicAuth();
+
+		if ($user === '') {
+			return 'no credentials';
+		}
+
+		if ($user === $this->setting('module_manline_exchange1c_username') && $pass === $this->setting('module_manline_exchange1c_password')) {
+			return 'credentials OK — this is the real 1C';
+		}
+
+		return 'WRONG credentials (user=' . $user . ')';
 	}
 
 	private function authed(): bool {
