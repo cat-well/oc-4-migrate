@@ -22,9 +22,9 @@ class Exchange extends \Opencart\System\Engine\Controller {
 
 		$log->write('type=' . $type . '&mode=' . $mode . ($filename ? '&filename=' . $filename : '') . ' from ' . ($this->request->server['REMOTE_ADDR'] ?? '?'));
 
-		$this->response->addHeader('Content-Type: text/plain; charset=utf-8');
-		// Set-Cookie makes the host's Cloudflare treat this endpoint as dynamic and skip caching (a cached checkauth broke 1C auth)
-		$this->response->addHeader('Set-Cookie: mln1c=1; Path=/; HttpOnly; SameSite=Lax');
+		// text/html + a cookie make the host's Cloudflare treat this as dynamic — it caches text/plain and strips the cookie, which broke 1C auth
+		$this->response->addHeader('Content-Type: text/html; charset=utf-8');
+		$this->response->addHeader('Set-Cookie: mln1c=1; Path=/; Secure; HttpOnly; SameSite=Lax');
 
 		if ($this->setting('module_manline_exchange1c_status') !== '1') {
 			// Still record the knock (with auth verdict) so you can confirm the
