@@ -22,9 +22,9 @@ class Exchange extends \Opencart\System\Engine\Controller {
 
 		$log->write('type=' . $type . '&mode=' . $mode . ($filename ? '&filename=' . $filename : '') . ' from ' . ($this->request->server['REMOTE_ADDR'] ?? '?'));
 
-		// text/html + a cookie make the host's Cloudflare treat this as dynamic — it caches text/plain and strips the cookie, which broke 1C auth
+		// The host cache passes responses that set a SESSION cookie (cart sets OCSESSID; the old OC2 endpoint started a PHPSESSID session) but caches+strips any other cookie — so emit a session-named one
 		$this->response->addHeader('Content-Type: text/html; charset=utf-8');
-		$this->response->addHeader('Set-Cookie: mln1c=1; Path=/; Secure; HttpOnly; SameSite=Lax');
+		$this->response->addHeader('Set-Cookie: OCSESSID=' . substr(hash('sha256', 'manline1c'), 0, 26) . '; path=/; Secure; SameSite=None');
 
 		if ($this->setting('module_manline_exchange1c_status') !== '1') {
 			// Still record the knock (with auth verdict) so you can confirm the
