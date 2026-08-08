@@ -170,7 +170,7 @@ class Exchange extends \Opencart\System\Engine\Controller {
 			$xml .= "\t\t<Номер>{$oid}</Номер>\n";
 			$xml .= "\t\t<Дата>{$date}</Дата>\n";
 			$xml .= "\t\t<Время>{$time}</Время>\n";
-			$xml .= "\t\t<ХозяйственнаяОперация>Заказ товара</ХозяйственнаяОперация>\n";
+			$xml .= "\t\t<ХозОперация>Заказ товара</ХозОперация>\n";
 			$xml .= "\t\t<Роль>Продавец</Роль>\n";
 			$xml .= "\t\t<Валюта>" . $esc($o['currency_code']) . "</Валюта>\n";
 			$xml .= "\t\t<Курс>" . rtrim(rtrim((string)$o['currency_value'], '0'), '.') . "</Курс>\n";
