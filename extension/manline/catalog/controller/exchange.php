@@ -14,6 +14,7 @@ class Exchange extends \Opencart\System\Engine\Controller {
 	private const FILE_LIMIT = 52428800; // 50 MB per chunk
 	private const ORDER_STATUSES = '1,2'; // Ожидание, В обработке
 	private const ORDER_EXPORT_FROM = '2026-06-01 00:00:00';
+	private const ORDER_EXPORT_LIMIT = 3; // TEMP: small first batch; set to 0 for all after Iryna verifies matching
 
 	public function index(): void {
 		$log = new \Opencart\System\Library\Log('manline_1c.log');
@@ -107,7 +108,7 @@ class Exchange extends \Opencart\System\Engine\Controller {
 
 		$header = '<?xml version="1.0" encoding="UTF-8"?>' . "\n" . '<КоммерческаяИнформация ВерсияСхемы="2.07" xmlns="urn:1C.ru:commerceml_2"';
 
-		$orders = $this->db->query("SELECT `order_id`, `firstname`, `lastname`, `email`, `telephone`, `payment_country`, `payment_zone`, `payment_city`, `payment_address_1`, `shipping_method`, `payment_method`, `currency_code`, `currency_value`, `total`, `date_added`, `comment` FROM `" . DB_PREFIX . "order` WHERE `order_status_id` IN (" . self::ORDER_STATUSES . ") AND `date_added` >= '" . $this->db->escape(self::ORDER_EXPORT_FROM) . "' ORDER BY `order_id`")->rows;
+		$orders = $this->db->query("SELECT `order_id`, `firstname`, `lastname`, `email`, `telephone`, `payment_country`, `payment_zone`, `payment_city`, `payment_address_1`, `shipping_method`, `payment_method`, `currency_code`, `currency_value`, `total`, `date_added`, `comment` FROM `" . DB_PREFIX . "order` WHERE `order_status_id` IN (" . self::ORDER_STATUSES . ") AND `date_added` >= '" . $this->db->escape(self::ORDER_EXPORT_FROM) . "' ORDER BY `order_id`" . (self::ORDER_EXPORT_LIMIT > 0 ? " DESC LIMIT " . self::ORDER_EXPORT_LIMIT : ""))->rows;
 
 		if (!$orders) {
 			$log->write('query — 0 orders to export');
