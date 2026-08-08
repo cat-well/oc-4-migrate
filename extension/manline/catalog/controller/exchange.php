@@ -106,7 +106,7 @@ class Exchange extends \Opencart\System\Engine\Controller {
 	private function modeQuery(\Opencart\System\Library\Log $log): void {
 		$this->response->addHeader('Content-Type: application/xml; charset=utf-8');
 
-		$header = '<?xml version="1.0" encoding="UTF-8"?>' . "\n" . '<КоммерческаяИнформация ВерсияСхемы="2.07" xmlns="urn:1C.ru:commerceml_2"';
+		$header = '<?xml version="1.0" encoding="UTF-8"?>' . "\n" . '<КоммерческаяИнформация ВерсияСхемы="2.05" ДатаФормирования="' . date('Y-m-d\TH:i:s') . '"';
 
 		$orders = $this->db->query("SELECT `order_id`, `firstname`, `lastname`, `email`, `telephone`, `payment_country`, `payment_zone`, `payment_city`, `payment_address_1`, `shipping_method`, `payment_method`, `currency_code`, `currency_value`, `total`, `date_added`, `comment` FROM `" . DB_PREFIX . "order` WHERE `order_status_id` IN (" . self::ORDER_STATUSES . ") AND `date_added` >= '" . $this->db->escape(self::ORDER_EXPORT_FROM) . "' ORDER BY `order_id`" . (self::ORDER_EXPORT_LIMIT > 0 ? " DESC LIMIT " . self::ORDER_EXPORT_LIMIT : ""))->rows;
 
