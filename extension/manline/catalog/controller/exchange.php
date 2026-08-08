@@ -124,8 +124,26 @@ class Exchange extends \Opencart\System\Engine\Controller {
 		}
 
 		$options = [];
-		foreach ($this->db->query("SELECT `order_product_id`, `name`, `value` FROM `" . DB_PREFIX . "order_option` WHERE `order_id` IN (" . $in . ")")->rows as $o) {
+		foreach ($this->db->query("SELECT `order_product_id`, `product_option_value_id`, `name`, `value` FROM `" . DB_PREFIX . "order_option` WHERE `order_id` IN (" . $in . ")")->rows as $o) {
 			$options[(int)$o['order_product_id']][] = $o;
+		}
+
+		// 1C nomenclature GUIDs (imported from the legacy shop): variant (product#characteristic) preferred, product-level as fallback.
+		$pids = [];
+		foreach ($products as $ps) {
+			foreach ($ps as $p) {
+				$pids[(int)$p['product_id']] = true;
+			}
+		}
+		$pin = $pids ? implode(',', array_keys($pids)) : '0';
+
+		$productGuid = [];
+		foreach ($this->db->query("SELECT `product_id`, `1c_id` FROM `" . DB_PREFIX . "product_to_1c` WHERE `product_id` IN (" . $pin . ")")->rows as $r) {
+			$productGuid[(int)$r['product_id']] = $r['1c_id'];
+		}
+		$variantGuid = [];
+		foreach ($this->db->query("SELECT `product_id`, `product_option_value_id`, `1c_id` FROM `" . DB_PREFIX . "product_option_to_1c` WHERE `product_id` IN (" . $pin . ")")->rows as $r) {
+			$variantGuid[(int)$r['product_id'] . '-' . (int)$r['product_option_value_id']] = $r['1c_id'];
 		}
 
 		$esc = static fn($v): string => htmlspecialchars((string)$v, ENT_XML1 | ENT_QUOTES, 'UTF-8');
@@ -178,8 +196,19 @@ class Exchange extends \Opencart\System\Engine\Controller {
 
 			$xml .= "\t\t<Товары>\n";
 			foreach ($products[$oid] ?? [] as $p) {
+				$pid = (int)$p['product_id'];
+				$id1c = (string)$pid;
+				foreach ($options[(int)$p['order_product_id']] ?? [] as $opt) {
+					if (isset($variantGuid[$pid . '-' . (int)$opt['product_option_value_id']])) {
+						$id1c = $variantGuid[$pid . '-' . (int)$opt['product_option_value_id']];
+						break;
+					}
+				}
+				if ($id1c === (string)$pid && isset($productGuid[$pid])) {
+					$id1c = $productGuid[$pid];
+				}
 				$xml .= "\t\t\t<Товар>\n";
-				$xml .= "\t\t\t\t<Ид>" . (int)$p['product_id'] . "</Ид>\n";
+				$xml .= "\t\t\t\t<Ид>" . $esc($id1c) . "</Ид>\n";
 				if ((string)$p['model'] !== '') {
 					$xml .= "\t\t\t\t<Артикул>" . $esc($p['model']) . "</Артикул>\n";
 				}
