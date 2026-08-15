@@ -148,7 +148,7 @@ class Exchange extends \Opencart\System\Engine\Controller {
 
 		// Nova Poshta delivery details (city, warehouse address + its NP Ref = 1C's IDОтделения).
 		$np = [];
-		foreach ($this->db->query("SELECT `order_id`, `delivery_type`, `city`, `address`, `address_ref` FROM `" . DB_PREFIX . "order_novaposhta` WHERE `order_id` IN (" . $in . ")")->rows as $r) {
+		foreach ($this->db->query("SELECT `order_id`, `delivery_type`, `city`, `address`, `address_ref`, `ttn_number`, `ttn_ref` FROM `" . DB_PREFIX . "order_novaposhta` WHERE `order_id` IN (" . $in . ")")->rows as $r) {
 			$np[(int)$r['order_id']] = $r;
 		}
 		// 1C matches the delivery method by an exact string; map our codes to what ОбменССайтом expects.
@@ -207,7 +207,7 @@ class Exchange extends \Opencart\System\Engine\Controller {
 				$xml .= "\t\t\t\t\t<Контакт><Тип>Почта</Тип><Значение>" . $esc($o['email']) . "</Значение></Контакт>\n";
 			}
 			if ((string)$o['telephone'] !== '') {
-				$xml .= "\t\t\t\t\t<Контакт><Тип>Телефон рабочий</Тип><Значение>" . $esc($o['telephone']) . "</Значение></Контакт>\n";
+				$xml .= "\t\t\t\t\t<Контакт><Тип>ТелефонРабочий</Тип><Значение>" . $esc($o['telephone']) . "</Значение></Контакт>\n";
 			}
 			$xml .= "\t\t\t\t</Контакты>\n";
 			if ($address !== '') {
@@ -262,6 +262,13 @@ class Exchange extends \Opencart\System\Engine\Controller {
 				}
 				if ((string)$n['address_ref'] !== '') {
 					$xml .= "\t\t\t<ЗначениеРеквизита><Наименование>address_ref</Наименование><Значение>" . $esc($n['address_ref']) . "</Значение></ЗначениеРеквизита>\n";
+				}
+				// Nova Poshta waybill (TTN) — 1C stores it in ф_НоваяПочтаТТН (needs the small 1C-side addition to ОбновитьКСпоНП).
+				if ((string)$n['ttn_number'] !== '') {
+					$xml .= "\t\t\t<ЗначениеРеквизита><Наименование>ТТН</Наименование><Значение>" . $esc($n['ttn_number']) . "</Значение></ЗначениеРеквизита>\n";
+				}
+				if ((string)$n['ttn_ref'] !== '') {
+					$xml .= "\t\t\t<ЗначениеРеквизита><Наименование>RefTTN</Наименование><Значение>" . $esc($n['ttn_ref']) . "</Значение></ЗначениеРеквизита>\n";
 				}
 			}
 			$pay = $method($o['payment_method']);
