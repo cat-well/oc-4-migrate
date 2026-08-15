@@ -3,6 +3,7 @@
   <div class="page-header">
     <div class="container-fluid">
       <div class="float-end">
+        {% if token_set %}<a href="{{ import }}" onclick="return confirm('Створити замовлення OC4 з нових замовлень Rozetka? Вже імпортовані буде пропущено.');" class="btn btn-success"><i class="fa-solid fa-download"></i> Імпортувати в OC4</a>{% endif %}
         <a href="{{ back }}" data-bs-toggle="tooltip" title="{{ button_back }}" class="btn btn-light"><i class="fa-solid fa-reply"></i></a>
       </div>
       <h1>{{ heading_title }}</h1>

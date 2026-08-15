@@ -41,6 +41,7 @@ class RozetkaOrders extends \Opencart\System\Engine\Controller {
 		];
 
 		$data['save'] = $this->url->link(self::ROUTE . '.save', 'user_token=' . $this->session->data['user_token']);
+		$data['import'] = $this->url->link(self::ROUTE . '.import', 'user_token=' . $this->session->data['user_token']);
 		$data['back'] = $this->url->link('marketplace/extension', 'user_token=' . $this->session->data['user_token'] . '&type=module');
 
 		$data['orders'] = [];
@@ -64,9 +65,10 @@ class RozetkaOrders extends \Opencart\System\Engine\Controller {
 					foreach ($purchases as $purchase) {
 						$item = $purchase['item'] ?? [];
 						$offer = (string)($item['uploader_offer_id'] ?? $item['price_offer_id'] ?? '');
+						$article = (string)($item['article'] ?? '');
 						$name = (string)($item['name'] ?? $purchase['item_name'] ?? '');
 
-						$match = $this->model_extension_manline_module_rozetka_orders->matchProduct($offer, $name);
+						$match = $this->model_extension_manline_module_rozetka_orders->matchProduct($offer, $name, $article);
 
 						$data['summary']['items']++;
 						if ($match['confidence'] === 'exact') { $data['summary']['exact']++; $data['summary']['matched']++; }
@@ -137,6 +139,30 @@ class RozetkaOrders extends \Opencart\System\Engine\Controller {
 		]);
 
 		$this->session->data['success'] = $this->language->get('text_success');
+
+		$this->response->redirect($this->url->link(self::ROUTE, 'user_token=' . $this->session->data['user_token']));
+	}
+
+	public function import(): void {
+		$this->load->language(self::ROUTE);
+
+		if (!$this->user->hasPermission('modify', self::ROUTE)) {
+			$this->session->data['error_warning'] = $this->language->get('error_permission');
+			$this->response->redirect($this->url->link(self::ROUTE, 'user_token=' . $this->session->data['user_token']));
+		}
+
+		$this->load->model('extension/manline/module/rozetka_orders');
+		$stats = $this->model_extension_manline_module_rozetka_orders->importNewOrders();
+
+		if (!$stats['ok']) {
+			$this->session->data['error_warning'] = 'Rozetka API: ' . $stats['error'];
+		} else {
+			$msg = 'Імпорт Rozetka: створено ' . $stats['imported'] . ', пропущено (вже імпортовані) ' . $stats['skipped'] . ', помилок ' . $stats['errors'];
+			if ($stats['unmatched'] > 0) {
+				$msg .= ', позицій без прив\'язки ' . $stats['unmatched'] . ' (потребують ручної прив\'язки)';
+			}
+			$this->session->data['success'] = $msg;
+		}
 
 		$this->response->redirect($this->url->link(self::ROUTE, 'user_token=' . $this->session->data['user_token']));
 	}
