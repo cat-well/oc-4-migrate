@@ -146,6 +146,21 @@ class Exchange extends \Opencart\System\Engine\Controller {
 			$variantGuid[(int)$r['product_id'] . '-' . (int)$r['product_option_value_id']] = $r['1c_id'];
 		}
 
+		// Nova Poshta delivery details (city, warehouse address + its NP Ref = 1C's IDОтделения).
+		$np = [];
+		foreach ($this->db->query("SELECT `order_id`, `delivery_type`, `city`, `address`, `address_ref` FROM `" . DB_PREFIX . "order_novaposhta` WHERE `order_id` IN (" . $in . ")")->rows as $r) {
+			$np[(int)$r['order_id']] = $r;
+		}
+		// 1C matches the delivery method by an exact string; map our codes to what ОбменССайтом expects.
+		$shipName = static function (string $type): string {
+			switch ($type) {
+				case 'courier': return 'Курьером Новой Почты на адрес';
+				case 'branch':
+				case 'locker':
+				default:       return 'Доставка в отделение Новой Почты';
+			}
+		};
+
 		$esc = static fn($v): string => htmlspecialchars((string)$v, ENT_XML1 | ENT_QUOTES, 'UTF-8');
 		$money = static fn($v): string => number_format((float)$v, 2, '.', '');
 		$method = static function ($json): string {
@@ -192,7 +207,7 @@ class Exchange extends \Opencart\System\Engine\Controller {
 				$xml .= "\t\t\t\t\t<Контакт><Тип>Почта</Тип><Значение>" . $esc($o['email']) . "</Значение></Контакт>\n";
 			}
 			if ((string)$o['telephone'] !== '') {
-				$xml .= "\t\t\t\t\t<Контакт><Тип>Телефон</Тип><Значение>" . $esc($o['telephone']) . "</Значение></Контакт>\n";
+				$xml .= "\t\t\t\t\t<Контакт><Тип>Телефон рабочий</Тип><Значение>" . $esc($o['telephone']) . "</Значение></Контакт>\n";
 			}
 			$xml .= "\t\t\t\t</Контакты>\n";
 			if ($address !== '') {
@@ -237,16 +252,17 @@ class Exchange extends \Opencart\System\Engine\Controller {
 			$xml .= "\t\t<ЗначенияРеквизитов>\n";
 			$xml .= "\t\t\t<ЗначениеРеквизита><Наименование>Номер заказа на сайте</Наименование><Значение>{$oid}</Значение></ЗначениеРеквизита>\n";
 			$xml .= "\t\t\t<ЗначениеРеквизита><Наименование>Дата заказа на сайте</Наименование><Значение>" . $esc($o['date_added']) . "</Значение></ЗначениеРеквизита>\n";
-			if ((string)$o['telephone'] !== '') {
-				$xml .= "\t\t\t<ЗначениеРеквизита><Наименование>Ф_ТелефонПартнера</Наименование><Значение>" . $esc($o['telephone']) . "</Значение></ЗначениеРеквизита>\n";
-			}
-			if ($address !== '') {
-				$xml .= "\t\t\t<ЗначениеРеквизита><Наименование>Адрес доставки</Наименование><Значение>" . $esc($address) . "</Значение></ЗначениеРеквизита>\n";
-				$xml .= "\t\t\t<ЗначениеРеквизита><Наименование>Грузополучатель</Наименование><Значение>" . $esc($buyer) . "</Значение></ЗначениеРеквизита>\n";
-			}
-			$ship = $method($o['shipping_method']);
-			if ($ship !== '') {
-				$xml .= "\t\t\t<ЗначениеРеквизита><Наименование>Способ доставки</Наименование><Значение>" . $esc($ship) . "</Значение></ЗначениеРеквизита>\n";
+			// Delivery — the names ОбменССайтом reads: "Способ доставки" (exact match), "Адрес доставки", "address_ref" (NP warehouse Ref = IDОтделения).
+			if (isset($np[$oid])) {
+				$n = $np[$oid];
+				$xml .= "\t\t\t<ЗначениеРеквизита><Наименование>Способ доставки</Наименование><Значение>" . $esc($shipName((string)$n['delivery_type'])) . "</Значение></ЗначениеРеквизита>\n";
+				$deliveryAddress = trim($n['city'] . ', ' . $n['address'], ', ');
+				if ($deliveryAddress !== '') {
+					$xml .= "\t\t\t<ЗначениеРеквизита><Наименование>Адрес доставки</Наименование><Значение>" . $esc($deliveryAddress) . "</Значение></ЗначениеРеквизита>\n";
+				}
+				if ((string)$n['address_ref'] !== '') {
+					$xml .= "\t\t\t<ЗначениеРеквизита><Наименование>address_ref</Наименование><Значение>" . $esc($n['address_ref']) . "</Значение></ЗначениеРеквизита>\n";
+				}
 			}
 			$pay = $method($o['payment_method']);
 			if ($pay !== '') {
