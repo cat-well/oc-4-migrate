@@ -14,7 +14,7 @@ class Exchange extends \Opencart\System\Engine\Controller {
 	private const FILE_LIMIT = 52428800; // 50 MB per chunk
 	private const ORDER_STATUSES = '1,2'; // Ожидание, В обработке
 	private const ORDER_EXPORT_FROM = '2026-06-01 00:00:00';
-	private const ORDER_EXPORT_LIMIT = 3; // TEMP: small first batch; set to 0 for all after Iryna verifies matching
+	private const ORDER_EXPORT_LIMIT = 0; // 0 = all matching orders
 
 	public function index(): void {
 		$log = new \Opencart\System\Library\Log('manline_1c.log');
@@ -71,6 +71,9 @@ class Exchange extends \Opencart\System\Engine\Controller {
 				break;
 
 			case 'sale/success':
+				$this->modeSaleSuccess($log);
+				break;
+
 			case 'catalog/export':
 			case 'sale/status':
 				$log->write($mode . ' — acknowledged (skeleton)');
@@ -117,6 +120,13 @@ class Exchange extends \Opencart\System\Engine\Controller {
 		}
 
 		$in = implode(',', array_map('intval', array_column($orders, 'order_id')));
+
+		// Remember what we hand to 1C; on sale/success we flip these to "Передан в 1С".
+		$values = [];
+		foreach ($orders as $o) {
+			$values[] = '(' . (int)$o['order_id'] . ', NOW())';
+		}
+		$this->db->query("INSERT INTO `" . DB_PREFIX . "order_1c_export` (`order_id`, `date_added`) VALUES " . implode(',', $values) . " ON DUPLICATE KEY UPDATE `date_added` = NOW()");
 
 		$products = [];
 		foreach ($this->db->query("SELECT `order_product_id`, `order_id`, `product_id`, `name`, `model`, `quantity`, `price` FROM `" . DB_PREFIX . "order_product` WHERE `order_id` IN (" . $in . ")")->rows as $p) {
@@ -285,8 +295,34 @@ class Exchange extends \Opencart\System\Engine\Controller {
 
 		$xml .= '</КоммерческаяИнформация>';
 
-		$log->write('query — exported ' . count($orders) . ' orders (read-only)');
+		$log->write('query — exported ' . count($orders) . ' orders');
 		$this->response->setOutput($xml);
+	}
+
+	/**
+	 * 1C confirmed it received the orders — flip the ones we handed over (still
+	 * pending) to "Передан в 1С" (16) so they stop re-exporting, and log history.
+	 */
+	private function modeSaleSuccess(\Opencart\System\Library\Log $log): void {
+		$tracked = array_column($this->db->query("SELECT `order_id` FROM `" . DB_PREFIX . "order_1c_export`")->rows, 'order_id');
+
+		$marked = 0;
+		if ($tracked) {
+			$in = implode(',', array_map('intval', $tracked));
+			$toMark = array_column($this->db->query("SELECT `order_id` FROM `" . DB_PREFIX . "order` WHERE `order_id` IN (" . $in . ") AND `order_status_id` IN (" . self::ORDER_STATUSES . ")")->rows, 'order_id');
+
+			if ($toMark) {
+				$mi = implode(',', array_map('intval', $toMark));
+				$this->db->query("INSERT INTO `" . DB_PREFIX . "order_history` (`order_id`, `order_status_id`, `notify`, `comment`, `date_added`) SELECT `order_id`, 16, 0, 'Передан в 1С', NOW() FROM `" . DB_PREFIX . "order` WHERE `order_id` IN (" . $mi . ")");
+				$this->db->query("UPDATE `" . DB_PREFIX . "order` SET `order_status_id` = 16, `date_modified` = NOW() WHERE `order_id` IN (" . $mi . ")");
+				$marked = count($toMark);
+			}
+
+			$this->db->query("DELETE FROM `" . DB_PREFIX . "order_1c_export` WHERE `order_id` IN (" . $in . ")");
+		}
+
+		$log->write('success — marked ' . $marked . ' orders as Передан в 1С (16)');
+		$this->response->setOutput('success');
 	}
 
 	private function modeFile(string $filename, \Opencart\System\Library\Log $log): void {
