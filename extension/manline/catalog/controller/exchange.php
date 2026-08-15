@@ -14,6 +14,10 @@ class Exchange extends \Opencart\System\Engine\Controller {
 	private const FILE_LIMIT = 52428800; // 50 MB per chunk
 	private const ORDER_STATUSES = '1,2'; // Ожидание, В обработке
 	private const ORDER_EXPORT_FROM = '2026-06-01 00:00:00';
+	// Catalog import (offers → prices/stock)
+	private const WH_MAIN    = '31e9d33b-0701-11eb-917b-2c4d545a248c'; // «Основной склад» — только его остаток
+	private const PT_BASE    = '67f65848-1cf1-11eb-97b9-2c4d545a24e4'; // «Интернет соглашения» → базовая цена
+	private const PT_SPECIAL = 'cfd5bb8a-1af7-11ec-bf74-bc5ff47122f4'; // «Акция (для сайта)» → спец-цена
 	private const ORDER_EXPORT_LIMIT = 0; // 0 = all matching orders
 
 	public function index(): void {
@@ -50,6 +54,10 @@ class Exchange extends \Opencart\System\Engine\Controller {
 
 		switch ($type . '/' . $mode) {
 			case 'catalog/init':
+				$this->clearStorage(); // fresh session — старые файлы не дописываем
+				$this->modeInit();
+				break;
+
 			case 'sale/init':
 				$this->modeInit();
 				break;
@@ -60,9 +68,11 @@ class Exchange extends \Opencart\System\Engine\Controller {
 				break;
 
 			case 'catalog/import':
+				$this->modeCatalogImport($filename, $log);
+				break;
+
 			case 'sale/import':
-				// Skeleton: capture only, real processing lands in a later phase.
-				$log->write('import received (' . $filename . ') — not processed yet (skeleton)');
+				$log->write('import received (' . $filename . ') — not processed (sale skeleton)');
 				$this->response->setOutput('success');
 				break;
 
@@ -322,6 +332,170 @@ class Exchange extends \Opencart\System\Engine\Controller {
 
 		$log->write('file saved: ' . $filename . ' (+' . strlen((string)$body) . ' bytes)');
 		$this->response->setOutput('success');
+	}
+
+	/** Wipe last session's catalog files so a fresh upload isn't appended to stale data. */
+	private function clearStorage(): void {
+		$dir = DIR_STORAGE . 'manline1c/';
+		if (is_dir($dir)) {
+			foreach (glob($dir . '*.xml') as $f) {
+				@unlink($f);
+			}
+		}
+	}
+
+	/** Catalog import: offers*.xml carry prices+stock and we apply them; import*.xml (full catalog) is not enabled yet. */
+	private function modeCatalogImport(string $filename, \Opencart\System\Library\Log $log): void {
+		if (stripos($filename, 'offers') === 0) {
+			$this->importOffers($filename, $log);
+		} else {
+			$log->write('import ' . $filename . ' — acknowledged (catalog sync not enabled)');
+			$this->response->setOutput('success');
+		}
+	}
+
+	/**
+	 * Parse one offers file and update OC4 prices + stock. String+regex so it
+	 * tolerates concatenated docs; last value per offer Ид wins (most recent).
+	 */
+	private function importOffers(string $filename, \Opencart\System\Library\Log $log): void {
+		@set_time_limit(0);
+
+		$path = DIR_STORAGE . 'manline1c/' . basename($filename);
+		if (!is_file($path)) {
+			$log->write('offers file missing: ' . $filename);
+			$this->response->setOutput('success');
+			return;
+		}
+		$s = (string)file_get_contents($path);
+
+		$variant = [];
+		foreach ($this->db->query("SELECT `product_id`, `product_option_value_id`, `1c_id` FROM `" . DB_PREFIX . "product_option_to_1c`")->rows as $x) {
+			$variant[$x['1c_id']] = [(int)$x['product_id'], (int)$x['product_option_value_id']];
+		}
+		$product = [];
+		foreach ($this->db->query("SELECT `product_id`, `1c_id` FROM `" . DB_PREFIX . "product_to_1c`")->rows as $x) {
+			$product[$x['1c_id']] = (int)$x['product_id'];
+		}
+
+		$povQty = []; $povProd = []; $simpleQty = []; $base = []; $special = [];
+		$offers = 0; $mapped = 0; $unmapped = 0;
+
+		if (preg_match_all('~<Предложение>(.*?)</Предложение>~us', $s, $blocks)) {
+			foreach ($blocks[1] as $node) {
+				$offers++;
+				if (!preg_match('~<Ид>([^<]+)</Ид>~u', $node, $mm)) {
+					continue;
+				}
+				$id = $mm[1];
+
+				$qty = 0;
+				if (preg_match('~<Склад\s+ИдСклада="' . preg_quote(self::WH_MAIN, '~') . '"\s+КоличествоНаСкладе="([^"]*)"~u', $node, $q)) {
+					$qty = (int)$q[1];
+				}
+
+				$pb = null; $ps = null;
+				if (preg_match_all('~<ИдТипаЦены>([^<]+)</ИдТипаЦены>\s*<ЦенаЗаЕдиницу>([^<]+)</ЦенаЗаЕдиницу>~u', $node, $pm, PREG_SET_ORDER)) {
+					foreach ($pm as $p) {
+						if ($p[1] === self::PT_BASE)    { $pb = (float)$p[2]; }
+						if ($p[1] === self::PT_SPECIAL) { $ps = (float)$p[2]; }
+					}
+				}
+
+				if (isset($variant[$id])) {
+					[$pid, $pov] = $variant[$id];
+					$povQty[$pov] = $qty;
+					$povProd[$pov] = $pid;
+					$mapped++;
+				} elseif (isset($product[$id])) {
+					$pid = $product[$id];
+					$simpleQty[$pid] = $qty;
+					$mapped++;
+				} else {
+					$unmapped++;
+					continue;
+				}
+				if ($pb !== null) { $base[$pid] = $pb; }
+				if ($ps !== null) { $special[$pid] = $ps; }
+			}
+		}
+
+		$this->applyQtyCase(DB_PREFIX . 'product_option_value', 'product_option_value_id', $povQty);
+		$this->applyQtyCase(DB_PREFIX . 'product', 'product_id', $simpleQty, true);
+		$this->applyPriceCase($base);
+		$this->applySpecial($special);
+		$this->recomputeProductQty(array_values(array_unique($povProd)));
+
+		$log->write('import ' . $filename . ' — offers=' . $offers . ' mapped=' . $mapped . ' unmapped=' . $unmapped . ' (variants=' . count($povQty) . ', prices=' . count($base) . ')');
+		$this->response->setOutput('success');
+	}
+
+	/** Batched CASE update of an int quantity column keyed by an id column. */
+	private function applyQtyCase(string $table, string $idCol, array $map, bool $touch = false): void {
+		foreach (array_chunk($map, 500, true) as $chunk) {
+			$ids = array_map('intval', array_keys($chunk));
+			$case = '';
+			foreach ($chunk as $id => $q) {
+				$case .= ' WHEN ' . (int)$id . ' THEN ' . (int)$q;
+			}
+			$set = '`quantity` = CASE `' . $idCol . '`' . $case . ' END' . ($touch ? ', `date_modified` = NOW()' : '');
+			$this->db->query("UPDATE `" . $table . "` SET " . $set . " WHERE `" . $idCol . "` IN (" . implode(',', $ids) . ")");
+		}
+	}
+
+	/** Batched CASE update of product base price. */
+	private function applyPriceCase(array $base): void {
+		foreach (array_chunk($base, 500, true) as $chunk) {
+			$ids = array_map('intval', array_keys($chunk));
+			$case = '';
+			foreach ($chunk as $pid => $p) {
+				$case .= ' WHEN ' . (int)$pid . ' THEN ' . (float)$p;
+			}
+			$this->db->query("UPDATE `" . DB_PREFIX . "product` SET `price` = CASE `product_id`" . $case . " END, `date_modified` = NOW() WHERE `product_id` IN (" . implode(',', $ids) . ")");
+		}
+	}
+
+	/** Update existing special prices (customer_group 1) and insert missing ones. */
+	private function applySpecial(array $special): void {
+		if (!$special) {
+			return;
+		}
+		$ids = array_map('intval', array_keys($special));
+
+		$existing = [];
+		foreach (array_chunk($ids, 1000) as $chunk) {
+			foreach ($this->db->query("SELECT `product_id` FROM `" . DB_PREFIX . "product_special` WHERE `customer_group_id` = 1 AND `product_id` IN (" . implode(',', $chunk) . ")")->rows as $r) {
+				$existing[(int)$r['product_id']] = true;
+			}
+		}
+
+		$update = array_intersect_key($special, $existing);
+		foreach (array_chunk($update, 500, true) as $chunk) {
+			$cids = array_map('intval', array_keys($chunk));
+			$case = '';
+			foreach ($chunk as $pid => $p) {
+				$case .= ' WHEN ' . (int)$pid . ' THEN ' . (float)$p;
+			}
+			$this->db->query("UPDATE `" . DB_PREFIX . "product_special` SET `price` = CASE `product_id`" . $case . " END WHERE `customer_group_id` = 1 AND `product_id` IN (" . implode(',', $cids) . ")");
+		}
+
+		$insert = array_diff_key($special, $existing);
+		$values = [];
+		foreach ($insert as $pid => $p) {
+			$values[] = '(' . (int)$pid . ", 1, 0, " . (float)$p . ", '0000-00-00', '0000-00-00')";
+		}
+		foreach (array_chunk($values, 500) as $chunk) {
+			$this->db->query("INSERT INTO `" . DB_PREFIX . "product_special` (`product_id`, `customer_group_id`, `priority`, `price`, `date_start`, `date_end`) VALUES " . implode(',', $chunk));
+		}
+	}
+
+	/** Product-level quantity for variant products = sum of their option quantities. */
+	private function recomputeProductQty(array $pids): void {
+		$pids = array_values(array_filter(array_map('intval', $pids)));
+		foreach (array_chunk($pids, 500) as $chunk) {
+			$in = implode(',', $chunk);
+			$this->db->query("UPDATE `" . DB_PREFIX . "product` p SET p.`quantity` = (SELECT COALESCE(SUM(pov.`quantity`), 0) FROM `" . DB_PREFIX . "product_option_value` pov WHERE pov.`product_id` = p.`product_id`), p.`date_modified` = NOW() WHERE p.`product_id` IN (" . $in . ")");
+		}
 	}
 
 	/**
