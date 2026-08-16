@@ -12,14 +12,30 @@ class RozetkaOrders extends \Opencart\System\Engine\Model {
 	private const BASE = 'https://api-seller.rozetka.com.ua';
 
 	private function token(): string {
-		$this->load->model('setting/setting');
-		$setting = $this->model_setting_setting->getSetting('module_manline_rozetka');
-
-		return trim((string)($setting['module_manline_rozetka_token'] ?? ''));
+		return $this->setting('module_manline_rozetka_token');
 	}
 
 	public function hasToken(): bool {
 		return $this->token() !== '';
+	}
+
+	/** Read a module setting straight from the table (works from any bootstrap, incl. the cron endpoint). */
+	private function setting(string $key): string {
+		$q = $this->db->query("SELECT `value` FROM `" . DB_PREFIX . "setting` WHERE `code` = 'module_manline_rozetka' AND `key` = '" . $this->db->escape($key) . "' LIMIT 1");
+
+		return $q->num_rows ? trim((string)$q->row['value']) : '';
+	}
+
+	/** Secret key for the cron endpoint — generated once and stored, so the URL can't be guessed. */
+	public function cronKey(): string {
+		$key = $this->setting('module_manline_rozetka_cron_key');
+
+		if ($key === '') {
+			$key = substr(bin2hex(random_bytes(16)), 0, 24);
+			$this->db->query("INSERT INTO `" . DB_PREFIX . "setting` SET `store_id` = 0, `code` = 'module_manline_rozetka', `key` = 'module_manline_rozetka_cron_key', `value` = '" . $this->db->escape($key) . "', `serialized` = 0");
+		}
+
+		return $key;
 	}
 
 	/**

@@ -49,6 +49,8 @@ class RozetkaOrders extends \Opencart\System\Engine\Controller {
 		$data['api_error'] = '';
 		$data['meta'] = [];
 
+		$data['cron_url'] = (defined('HTTP_CATALOG') ? HTTP_CATALOG : (string)$this->config->get('config_url')) . 'export/cart_rozetka_sync.php?key=' . $this->model_extension_manline_module_rozetka_orders->cronKey();
+
 		$data['imported'] = [];
 		foreach ($this->model_extension_manline_module_rozetka_orders->getImportedOrders() as $row) {
 			$data['imported'][] = [

@@ -47,6 +47,20 @@
       </div>
     </div>
 
+    {% if token_set %}
+      <div class="card mb-3">
+        <div class="card-header"><i class="fa-solid fa-clock-rotate-left"></i> Автосинхронізація (cron)</div>
+        <div class="card-body">
+          <p class="mb-2 text-muted">Щоб нові замовлення Rozetka імпортувались самі — додайте цей URL у планувальник завдань хостингу (напр. кожні 15–30 хв):</p>
+          <div class="input-group">
+            <input type="text" class="form-control" readonly value="{{ cron_url }}" onclick="this.select();"/>
+            <button class="btn btn-outline-secondary" type="button" onclick="navigator.clipboard.writeText('{{ cron_url }}');this.textContent='✓';"><i class="fa-solid fa-copy"></i> Копіювати</button>
+          </div>
+          <small class="text-muted d-block mt-2">Команда для cron: <code>curl -s "{{ cron_url }}"</code> — ключ секретний, не діліться посиланням. Дедуплікація діє: вже імпортовані пропускаються.</small>
+        </div>
+      </div>
+    {% endif %}
+
     {% if imported %}
       <div class="card mb-3">
         <div class="card-header"><i class="fa-solid fa-download"></i> Імпортовані в OC4
