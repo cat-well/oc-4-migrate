@@ -49,6 +49,19 @@ class RozetkaOrders extends \Opencart\System\Engine\Controller {
 		$data['api_error'] = '';
 		$data['meta'] = [];
 
+		$data['imported'] = [];
+		foreach ($this->model_extension_manline_module_rozetka_orders->getImportedOrders() as $row) {
+			$data['imported'][] = [
+				'rozetka_order_id' => (int)$row['rozetka_order_id'],
+				'order_id'         => (int)$row['order_id'],
+				'customer'         => trim((string)$row['firstname'] . ' ' . (string)$row['lastname']),
+				'total'            => (string)$row['total'] . ' ' . (string)$row['currency_code'],
+				'status'           => (string)($row['status_name'] ?? ''),
+				'imported_at'      => (string)$row['imported_at'],
+				'order_url'        => $this->url->link('sale/order.info', 'user_token=' . $this->session->data['user_token'] . '&order_id=' . (int)$row['order_id']),
+			];
+		}
+
 		if ($data['token_set']) {
 			$result = $this->model_extension_manline_module_rozetka_orders->getOrders();
 

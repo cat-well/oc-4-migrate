@@ -47,6 +47,42 @@
       </div>
     </div>
 
+    {% if imported %}
+      <div class="card mb-3">
+        <div class="card-header"><i class="fa-solid fa-download"></i> Імпортовані в OC4
+          <span class="badge bg-success float-end">{{ imported|length }}</span>
+        </div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table table-bordered table-sm align-middle mb-0">
+              <thead>
+                <tr>
+                  <td>Rozetka №</td>
+                  <td>Замовлення OC4</td>
+                  <td>Покупець</td>
+                  <td class="text-end">Сума</td>
+                  <td>Статус</td>
+                  <td>Імпортовано</td>
+                </tr>
+              </thead>
+              <tbody>
+                {% for row in imported %}
+                  <tr>
+                    <td>{{ row.rozetka_order_id }}</td>
+                    <td><a href="{{ row.order_url }}" target="_blank">#{{ row.order_id }} <i class="fa-solid fa-up-right-from-square fa-xs"></i></a></td>
+                    <td>{{ row.customer }}</td>
+                    <td class="text-end">{{ row.total }}</td>
+                    <td><span class="badge bg-secondary">{{ row.status }}</span></td>
+                    <td><small class="text-muted">{{ row.imported_at }}</small></td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    {% endif %}
+
     {% if not token_set %}
       <div class="alert alert-info"><i class="fa-solid fa-circle-info"></i> {{ text_need_token }}</div>
     {% elseif api_error %}

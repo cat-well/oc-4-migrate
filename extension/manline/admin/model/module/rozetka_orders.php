@@ -224,6 +224,26 @@ class RozetkaOrders extends \Opencart\System\Engine\Model {
 		return $stats;
 	}
 
+	/**
+	 * Imported Rozetka orders (dedup table joined to the created OC4 orders).
+	 *
+	 * @return list<array<string,mixed>>
+	 */
+	public function getImportedOrders(int $limit = 200): array {
+		$lang = (int)$this->config->get('config_language_id');
+
+		return $this->db->query(
+			"SELECT ro.`rozetka_order_id`, ro.`order_id`, ro.`date_added` AS imported_at,
+					o.`firstname`, o.`lastname`, o.`total`, o.`currency_code`, o.`order_status_id`,
+					os.`name` AS status_name
+			FROM `" . DB_PREFIX . "rozetka_order` ro
+			JOIN `" . DB_PREFIX . "order` o ON o.`order_id` = ro.`order_id`
+			LEFT JOIN `" . DB_PREFIX . "order_status` os ON os.`order_status_id` = o.`order_status_id` AND os.`language_id` = '" . $lang . "'
+			ORDER BY ro.`date_added` DESC
+			LIMIT " . (int)$limit
+		)->rows;
+	}
+
 	private function alreadyImported(int $rid): bool {
 		return (int)$this->db->query("SELECT COUNT(*) AS c FROM `" . DB_PREFIX . "rozetka_order` WHERE `rozetka_order_id` = '" . $rid . "'")->row['c'] > 0;
 	}
