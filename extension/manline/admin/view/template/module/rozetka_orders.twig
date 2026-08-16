@@ -141,6 +141,9 @@
                             {% if item.match.confidence == 'exact' %}
                               <span class="badge bg-success">{{ text_m_exact }}</span>
                               <a href="{{ item.edit_url }}" target="_blank">#{{ item.match.product_id }} {{ item.match.name }}</a>
+                            {% elseif item.match.confidence == 'article' %}
+                              <span class="badge bg-success">Точний (артикул)</span>
+                              <a href="{{ item.edit_url }}" target="_blank">#{{ item.match.product_id }} {{ item.match.name }}</a>
                             {% elseif item.match.confidence == 'name' %}
                               <span class="badge bg-info text-dark">{{ text_m_name }}</span>
                               <a href="{{ item.edit_url }}" target="_blank">#{{ item.match.product_id }} {{ item.match.name }}</a>

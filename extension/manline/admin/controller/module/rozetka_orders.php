@@ -84,7 +84,7 @@ class RozetkaOrders extends \Opencart\System\Engine\Controller {
 						$match = $this->model_extension_manline_module_rozetka_orders->matchProduct($offer, $name, $article);
 
 						$data['summary']['items']++;
-						if ($match['confidence'] === 'exact') { $data['summary']['exact']++; $data['summary']['matched']++; }
+						if ($match['confidence'] === 'exact' || $match['confidence'] === 'article') { $data['summary']['exact']++; $data['summary']['matched']++; }
 						elseif ($match['confidence'] === 'name') { $data['summary']['matched']++; }
 						elseif ($match['confidence'] === 'ambiguous') { $data['summary']['ambiguous']++; }
 						else { $data['summary']['unmatched']++; }
