@@ -187,7 +187,8 @@ class Exchange extends \Opencart\System\Engine\Controller {
 			$oid = (int)$o['order_id'];
 			$date = substr((string)$o['date_added'], 0, 10);
 			$time = substr((string)$o['date_added'], 11, 8);
-			$buyer = trim($o['firstname'] . ' ' . $o['lastname']);
+			// Surname first — 1C parses Наименование as "Фамилия Имя", so lastname must lead.
+			$buyer = trim($o['lastname'] . ' ' . $o['firstname']);
 			if ($buyer === '') {
 				$buyer = 'Покупатель ' . $oid;
 			}

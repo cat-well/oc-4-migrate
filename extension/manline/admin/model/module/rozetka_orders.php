@@ -278,13 +278,16 @@ class RozetkaOrders extends \Opencart\System\Engine\Model {
 		$city = (string)($delivery['city']['name_ua'] ?? $delivery['city']['name'] ?? '');
 		$zone = (string)($delivery['city']['region_title'] ?? '');
 		$ref  = (string)($delivery['ref_id'] ?? '');
-		$addr = trim(implode(', ', array_filter([(string)($delivery['place_street'] ?? ''), (string)($delivery['place_number'] ?? ''), (string)($delivery['place_house'] ?? '')])));
+		// 1C binds the NP warehouse by parsing "Відділення №N" out of the address, so build it that way.
+		$branch = (string)($delivery['place_number'] ?? '');
+		$street = trim(implode(', ', array_filter([(string)($delivery['place_street'] ?? ''), (string)($delivery['place_house'] ?? '')])));
+		$addr = $branch !== '' ? ('Відділення №' . $branch . ($street !== '' ? ': ' . $street : '')) : $street;
 		if ($addr === '') {
 			$addr = $city;
 		}
 
-		$ship = json_encode(['code' => 'novaposhta.branch', 'name' => 'Нова Пошта (Rozetka)'], JSON_UNESCAPED_UNICODE);
-		$pay  = json_encode(['code' => 'cod.cod', 'name' => 'Оплата через Rozetka'], JSON_UNESCAPED_UNICODE);
+		$ship = json_encode(['code' => 'novaposhta.branch', 'name' => 'Нова Пошта'], JSON_UNESCAPED_UNICODE);
+		$pay  = json_encode(['code' => 'cod.cod', 'name' => 'Оплата при доставці'], JSON_UNESCAPED_UNICODE);
 
 		$total = (float)($order['amount_with_discount'] ?? $order['amount'] ?? $order['cost'] ?? 0);
 		$created = (string)($order['created'] ?? '');
