@@ -1167,8 +1167,8 @@ class Order extends \Opencart\System\Engine\Controller {
 		if (!empty($order_info['shipping_method'])) {
 			$data['shipping_method_name'] = $order_info['shipping_method']['name'];
 			$data['shipping_method_code'] = $order_info['shipping_method']['code'];
-			$data['shipping_method_cost'] = $order_info['shipping_method']['cost'];
-			$data['shipping_method_tax_class_id'] = $order_info['shipping_method']['tax_class_id'];
+			$data['shipping_method_cost'] = $order_info['shipping_method']['cost'] ?? '';
+			$data['shipping_method_tax_class_id'] = $order_info['shipping_method']['tax_class_id'] ?? 0;
 		} else {
 			$data['shipping_method_name'] = '';
 			$data['shipping_method_code'] = '';
