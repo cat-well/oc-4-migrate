@@ -155,9 +155,19 @@ class RozetkaOrders extends \Opencart\System\Engine\Model {
 	 * @return list<string>
 	 */
 	private function modelTokens(string $name): array {
-		preg_match_all('/\b[A-Za-z]{0,4}\d{3,}\b/u', $name, $m);
+		// manline models are compound (e.g. "20309-20"), so capture the "-NN"
+		// suffix; keep the bare base ("20309") as a lower-priority fallback.
+		preg_match_all('/\b[A-Za-z]{0,4}\d{3,}(?:-\d+)?/u', $name, $m);
 
-		return array_values(array_unique($m[0]));
+		$tokens = [];
+		foreach ($m[0] as $t) {
+			$tokens[] = $t;
+			if (strpos($t, '-') !== false) {
+				$tokens[] = substr($t, 0, strpos($t, '-'));
+			}
+		}
+
+		return array_values(array_unique($tokens));
 	}
 
 	private function productById(int $product_id): array {
@@ -325,11 +335,13 @@ class RozetkaOrders extends \Opencart\System\Engine\Model {
 			$opid = (int)$this->db->getLastId();
 
 			$ov = preg_match('/^\d{1,6}-(\d{1,7})$/', $offer, $mm) ? (int)$mm[1] : 0;
-			if ($pid && $ov) {
-				$opt = $this->resolveOption($pid, $ov);
-				if ($opt) {
-					$this->db->query("INSERT INTO `" . DB_PREFIX . "order_option` SET `order_id` = " . $oid . ", `order_product_id` = " . $opid . ", `product_option_id` = " . (int)$opt['product_option_id'] . ", `product_option_value_id` = " . (int)$opt['product_option_value_id'] . ", `name` = '" . $e($opt['opt_name']) . "', `value` = '" . $e($opt['val_name']) . "', `type` = 'radio'");
-				}
+			$opt = ($pid && $ov) ? $this->resolveOption($pid, $ov) : [];
+			if ($pid && !$opt) {
+				// plain offer id (no "-optionValueId"): resolve size by its name in the item title
+				$opt = $this->resolveOptionByName($pid, $name);
+			}
+			if ($opt) {
+				$this->db->query("INSERT INTO `" . DB_PREFIX . "order_option` SET `order_id` = " . $oid . ", `order_product_id` = " . $opid . ", `product_option_id` = " . (int)$opt['product_option_id'] . ", `product_option_value_id` = " . (int)$opt['product_option_value_id'] . ", `name` = '" . $e($opt['opt_name']) . "', `value` = '" . $e($opt['val_name']) . "', `type` = 'radio'");
 			}
 		}
 
@@ -362,6 +374,46 @@ class RozetkaOrders extends \Opencart\System\Engine\Model {
 			'product_option_value_id' => (int)$row['product_option_value_id'],
 			'opt_name'                => (string)($on['name'] ?? 'Розмір'),
 			'val_name'                => (string)($vn['name'] ?? ''),
+		];
+	}
+
+	/**
+	 * Fallback for plain Rozetka offers (no "-optionValueId"): match a product
+	 * option value whose name appears as a standalone token in the item title
+	 * (e.g. "... 3XL"). Longest match wins so "3XL" beats "XL".
+	 *
+	 * @return array{product_option_id:int,product_option_value_id:int,opt_name:string,val_name:string}|array{}
+	 */
+	private function resolveOptionByName(int $product_id, string $item_name): array {
+		$lang = (int)$this->config->get('config_language_id');
+		$rows = $this->db->query("SELECT pov.`product_option_id`, pov.`product_option_value_id`, od.`name` AS opt_name, ovd.`name` AS val_name
+			FROM `" . DB_PREFIX . "product_option_value` pov
+			JOIN `" . DB_PREFIX . "product_option` po ON po.`product_option_id` = pov.`product_option_id`
+			JOIN `" . DB_PREFIX . "option_value_description` ovd ON ovd.`option_value_id` = pov.`option_value_id` AND ovd.`language_id` = " . $lang . "
+			LEFT JOIN `" . DB_PREFIX . "option_description` od ON od.`option_id` = po.`option_id` AND od.`language_id` = " . $lang . "
+			WHERE pov.`product_id` = " . $product_id)->rows;
+
+		$best = [];
+		foreach ($rows as $r) {
+			$val = trim((string)$r['val_name']);
+			if ($val === '') {
+				continue;
+			}
+			if (preg_match('/(?<![\p{L}\p{N}])' . preg_quote($val, '/') . '(?![\p{L}\p{N}])/u', $item_name)
+				&& (!$best || mb_strlen($val) > mb_strlen((string)$best['val_name']))) {
+				$best = $r;
+			}
+		}
+
+		if (!$best) {
+			return [];
+		}
+
+		return [
+			'product_option_id'       => (int)$best['product_option_id'],
+			'product_option_value_id' => (int)$best['product_option_value_id'],
+			'opt_name'                => (string)($best['opt_name'] ?? 'Розмір'),
+			'val_name'                => (string)$best['val_name'],
 		];
 	}
 }
