@@ -40,6 +40,24 @@ class SeoUrl extends \Opencart\System\Engine\Controller {
 					$route_string = ltrim($route_string, '/');
 				}
 
+				// 301 for a few removed OC2 product URLs -> relevant category
+				$seo_301 = [
+					'letnie-shorti-odnotonni-11086'           => 'plyazhnaya-odezhda',
+					'shorti-letnie-chernie-11086-1-1'         => 'plyazhnaya-odezhda',
+					'shorty-muzskie-sinie-4101-1'             => 'plyazhnaya-odezhda',
+					'plavki-v-polosku-11013-1'                => 'plyazhnaya-odezhda',
+					'muzskaia-futbolka-kifa-fmx-017-belaia'   => 'majki',
+					'muzskaia-futbolka-kifa-fmx-017-chernaya' => 'majki',
+					'muzskie-boxeri-key-mxh232-golubie'       => 'muzhskie-trusy',
+					'muzskie-boxeri-key-mxh251-svetlo-serie'  => 'muzhskie-trusy',
+					'muzskie-boxeri-key-mxm234-serie'         => 'muzhskie-trusy',
+					'muzskie-trusi-slipi-kifa-tme-94-chernie' => 'muzhskie-trusy',
+				];
+				if (isset($seo_301[$route_string])) {
+					$prefix = (($this->request->get['language'] ?? '') === 'ru-ru') ? 'ru/' : 'ua/';
+					$this->response->redirect(rtrim($this->config->get('config_url'), '/') . '/' . $prefix . $seo_301[$route_string], 301);
+				}
+
 				// Legacy FilterPro selection URLs look like: /category-slug/f/stil_plavki-boksery
 				// Split /f/... suffix and parse it after normal SEO decode.
 				$filterpro_parts = [];
