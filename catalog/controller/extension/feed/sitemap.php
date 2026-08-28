@@ -253,7 +253,8 @@ class Sitemap extends \Opencart\System\Engine\Controller {
 	}
 
 	private function xmlEscape(string $value): string {
-		return htmlspecialchars($value, ENT_XML1 | ENT_COMPAT, 'UTF-8');
+		// url->link() already returns "&amp;"; decode first to avoid double-encoding to "&amp;amp;".
+		return htmlspecialchars(html_entity_decode($value, ENT_QUOTES, 'UTF-8'), ENT_XML1 | ENT_COMPAT, 'UTF-8');
 	}
 
 	private function joinQuery(string ...$parts): string {
