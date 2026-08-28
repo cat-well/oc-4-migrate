@@ -659,7 +659,12 @@ class Category extends \Opencart\System\Engine\Controller {
 			$data['results'] = sprintf($this->language->get('text_pagination'), ($product_total) ? (($page - 1) * $limit) + 1 : 0, ((($page - 1) * $limit) > ($product_total - $limit)) ? $product_total : ((($page - 1) * $limit) + $limit), $product_total, ceil($product_total / $limit));
 
 			// https://developers.google.com/search/blog/2011/09/pagination-with-relnext-and-relprev
-			if ($page == 1) {
+			if (is_object($filterpro_seo) && !empty($filterpro_seo->title)) {
+				// Curated landing (brand/filter) has unique meta -> self-canonical so it indexes on its own.
+				$lang_prefix = in_array((string)$this->config->get('config_language'), ['ru-ru', 'ru'], true) ? 'ru' : 'ua';
+				$land_path = preg_replace('#^(ua|ru)(/|$)#', '', ltrim(strtok((string)($this->request->server['REQUEST_URI'] ?? ''), '?'), '/'));
+				$this->document->addLink(rtrim($this->config->get('config_url'), '/') . '/' . $lang_prefix . ($land_path !== '' ? '/' . $land_path : ''), 'canonical');
+			} elseif ($page == 1) {
 				$this->document->addLink($this->url->link('product/category', 'language=' . $this->config->get('config_language') . '&path=' . $this->request->get['path']), 'canonical');
 			} else {
 				$this->document->addLink($this->url->link('product/category', 'language=' . $this->config->get('config_language') . '&path=' . $this->request->get['path'] . '&page=' . $page), 'canonical');
