@@ -474,6 +474,38 @@ class Product extends \Opencart\System\Engine\Controller {
 				$data['tax'] = false;
 			}
 
+			// Product JSON-LD (schema.org) — restores structured data lost in the OC2->OC4 migration.
+			$jsonld = [
+				'@context' => 'https://schema.org',
+				'@type'    => 'Product',
+				'name'     => (string)$product_info['name'],
+				'url'      => (string)$data['current_url'],
+			];
+			if (!empty($product_info['model'])) {
+				$jsonld['sku'] = (string)$product_info['model'];
+			}
+			if (!empty($data['popup'])) {
+				$jsonld['image'] = [(string)$data['popup']];
+			}
+			$jsonld_desc = trim(strip_tags(html_entity_decode((string)($product_info['meta_description'] ?: $product_info['description']), ENT_QUOTES, 'UTF-8')));
+			if ($jsonld_desc !== '') {
+				$jsonld['description'] = function_exists('mb_substr') ? mb_substr($jsonld_desc, 0, 500) : substr($jsonld_desc, 0, 500);
+			}
+			if (!empty($data['manufacturer'])) {
+				$jsonld['brand'] = ['@type' => 'Brand', 'name' => (string)$data['manufacturer']];
+			}
+			$jsonld_price = $this->tax->calculate((float)$product_info['special'] ?: (float)$product_info['price'], $product_info['tax_class_id'], $this->config->get('config_tax'));
+			$jsonld['offers'] = [
+				'@type'         => 'Offer',
+				'url'           => (string)$data['current_url'],
+				'priceCurrency' => 'UAH',
+				'price'         => number_format((float)$jsonld_price, 2, '.', ''),
+				'priceValidUntil' => date('Y-m-d', strtotime('+1 year')),
+				'availability'  => ((int)$product_info['quantity'] > 0) ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+				'itemCondition' => 'https://schema.org/NewCondition',
+			];
+			$data['product_jsonld'] = '<script type="application/ld+json">' . json_encode($jsonld, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . '</script>';
+
 			$discounts = $this->model_catalog_product->getDiscounts($product_id);
 
 			$data['discounts'] = [];
