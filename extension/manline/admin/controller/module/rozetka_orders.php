@@ -143,15 +143,15 @@ class RozetkaOrders extends \Opencart\System\Engine\Controller {
 
 		$this->load->model('setting/setting');
 
+		// Preserve other module settings (esp. the cron key) — editSetting wipes the whole code group.
+		$settings = $this->model_setting_setting->getSetting('module_manline_rozetka');
+
 		// Keep the stored token if the field is left blank (so it isn't wiped on a re-save).
-		if ($token === '') {
-			$existing = $this->model_setting_setting->getSetting('module_manline_rozetka');
-			$token = (string)($existing['module_manline_rozetka_token'] ?? '');
+		if ($token !== '') {
+			$settings['module_manline_rozetka_token'] = $token;
 		}
 
-		$this->model_setting_setting->editSetting('module_manline_rozetka', [
-			'module_manline_rozetka_token' => $token,
-		]);
+		$this->model_setting_setting->editSetting('module_manline_rozetka', $settings);
 
 		$this->session->data['success'] = $this->language->get('text_success');
 
