@@ -23,6 +23,8 @@ class Home extends \Opencart\System\Engine\Controller {
 			$this->document->setKeywords($description[$language_id]['meta_keyword']);
 		}
 
+		$this->document->addLink($this->url->link('common/home', 'language=' . $this->config->get('config_language')), 'canonical');
+
 		// Manline: homepage content (OC2-like)
 		$data['lang'] = (string)$this->config->get('config_language');
 

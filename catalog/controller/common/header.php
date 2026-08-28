@@ -47,6 +47,33 @@ class Header extends \Opencart\System\Engine\Controller {
 		$data['jquery'] = 'catalog/view/javascript/jquery/jquery-3.7.1.min.js';
 
 		$data['links'] = $this->document->getLinks();
+
+		// hreflang alternates (uk<->ru) so both language versions index cleanly
+		$this->load->model('localisation/language');
+		$url_data = $this->request->get;
+		$route = $url_data['route'] ?? $this->config->get('action_default');
+		unset($url_data['route'], $url_data['_route_'], $url_data['language']);
+		$args = $url_data ? '&' . urldecode(http_build_query($url_data, '', '&')) : '';
+
+		$data['hreflangs'] = [];
+		$x_default = '';
+		foreach ($this->model_localisation_language->getLanguages() as $lng) {
+			if (empty($lng['status'])) {
+				continue;
+			}
+			$href = $this->url->link($route, 'language=' . $lng['code'] . $args);
+			$data['hreflangs'][] = ['hreflang' => explode('-', (string)$lng['code'])[0], 'href' => $href];
+			if ($lng['code'] === 'uk-ua') {
+				$x_default = $href;
+			}
+		}
+		if ($x_default === '' && $data['hreflangs']) {
+			$x_default = $data['hreflangs'][0]['href'];
+		}
+		if ($x_default !== '') {
+			$data['hreflangs'][] = ['hreflang' => 'x-default', 'href' => $x_default];
+		}
+
 		$data['styles'] = $this->document->getStyles();
 		$data['scripts'] = $this->document->getScripts('header');
 

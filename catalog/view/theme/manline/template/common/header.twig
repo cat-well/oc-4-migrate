@@ -59,6 +59,9 @@
   {% for link in links %}
     <link href="{{ link.href }}" rel="{{ link.rel }}"/>
   {% endfor %}
+  {% for alt in hreflangs %}
+    <link rel="alternate" hreflang="{{ alt.hreflang }}" href="{{ alt.href }}"/>
+  {% endfor %}
 
   {# Legacy Manline JS (1:1) #}
   <script>
