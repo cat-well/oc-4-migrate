@@ -40,7 +40,7 @@
   })();
 </script>
 
-{# OC2-like footer (subscribe + footer columns + popup + jivosite) #}
+{# OC2-like footer (subscribe + footer columns + popup + tawk.to chat) #}
 
 <div class="subscribe mt-70">
   <div class="container">
@@ -168,48 +168,19 @@
 
 <a href="#" class="scrollup"></a>
 
-<!-- BEGIN JIVOSITE CODE -->
-{# JivoSite widget UI language. Three signals attempted (we lay them all
-   down because Jivo's frontside is poorly documented and the underlying
-   widget code has changed several times):
-
-   1. window.jivo_config.language — picked up by older widget builds.
-   2. ?lang=… query string on the widget script URL — picked up by some
-      builds.
-   3. <html lang="…"> — set elsewhere by header.twig; recent widgets
-      sniff it on load.
-
-   If none of the three flips the UI, the JivoSite admin panel locale
-   setting is overriding everything — go to Settings → Display & Widget
-   → Language and set it to Auto (or add a separate Ukrainian widget
-   channel with its own widget_id). #}
+<!-- Tawk.to Live Chat (replaced JivoSite) -->
 <script type="text/javascript">
-  window.jivo_config = window.jivo_config || {};
-  window.jivo_config.language = '{% if lang == 'uk-ua' %}uk{% else %}ru{% endif %}';
-  (function(){
-    var widget_id = '1ipB7TUTsI';
-    var widget_lang = '{% if lang == 'uk-ua' %}uk{% else %}ru{% endif %}';
-    var d=document; var w=window;
-    function l(){
-      var s = document.createElement('script');
-      s.type = 'text/javascript';
-      s.async = true;
-      s.src = '//code.jivosite.com/script/widget/' + widget_id + '?lang=' + widget_lang;
-      var ss = document.getElementsByTagName('script')[0];
-      ss.parentNode.insertBefore(s, ss);
-    }
-    if (d.readyState === 'complete') { l(); }
-    else if (w.attachEvent) { w.attachEvent('onload', l); }
-    else { w.addEventListener('load', l, false); }
-  })();
+var Tawk_API=Tawk_API||{}, Tawk_LoadStart=new Date();
+(function(){
+var s1=document.createElement("script"),s0=document.getElementsByTagName("script")[0];
+s1.async=true;
+s1.src='https://embed.tawk.to/6a936d346f897f344c57cd2d/1k17u55pi';
+s1.charset='UTF-8';
+s1.setAttribute('crossorigin','*');
+s0.parentNode.insertBefore(s1,s0);
+})();
 </script>
-<script>
-  jQuery(document).ready(function($){
-    // OC2 leftover: tried to pull icons from /simplecheckout. On OC4 it 404s.
-    // Keep cart popup block as-is (it is rendered server-side in header).
-  });
-</script>
-<!-- END JIVOSITE CODE -->
+<!-- End Tawk.to -->
 
 {{ cookie }}
 {% for script in scripts %}
