@@ -1,0 +1,33 @@
+<?php
+// Text
+$_['text_subject']               = '%s - Підписка %s';
+$_['text_greeting']              = 'Дякуємо за інтерес до продукції %s. Ваш запит на підписку прийнято і буде оброблено після підтвердження оплати.';
+$_['text_link']                  = 'Переглянути підписку можна за посиланням нижче:';
+$_['text_promotion']             = 'Успішно: разом із цією підпискою було додано промо-функцію!';
+$_['text_subscription_duration'] = '%s кожні %d %s за %d платіж(ів)';
+$_['text_subscription_cancel']   = '%s кожні %d %s до скасування';
+$_['text_subscription_detail']   = 'Деталі підписки';
+$_['text_instruction']           = 'Інструкції';
+$_['text_orders_id']             = 'Номер замовлення:';
+$_['text_date_added']            = 'Дата:';
+$_['text_order_status']          = 'Статус замовлення:';
+$_['text_payment_method']        = 'Спосіб оплати:';
+$_['text_payment_address']       = 'Адреса платника';
+$_['text_email']                 = 'E-mail:';
+$_['text_telephone']             = 'Телефон:';
+$_['text_ip']                    = 'IP-адреса:';
+$_['text_products']              = 'Товари';
+$_['text_product']               = 'Товар';
+$_['text_model']                 = 'Модель';
+$_['text_quantity']              = 'Кількість';
+$_['text_price']                 = 'Ціна';
+$_['text_order_total']           = 'Підсумок';
+$_['text_total']                 = 'Разом';
+$_['text_comment']               = 'Коментар до підписки:';
+$_['text_description']           = 'Опис';
+$_['text_day']                   = 'день';
+$_['text_week']                  = 'тиждень';
+$_['text_semi_month']            = 'півмісяця';
+$_['text_month']                 = 'місяць';
+$_['text_year']                  = 'рік';
+$_['text_footer']                = 'Якщо у вас виникли питання — просто дайте відповідь на цей лист.';
