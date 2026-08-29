@@ -5,6 +5,11 @@
 <br/>
 {{ order_status }}<br/>
 <br/>
+{% if ttn %}
+{{ ttn_label }}: <strong>{{ ttn }}</strong><br/>
+{{ ttn_track_label }}: <a href="{{ ttn_track_url }}">{{ ttn_track_url }}</a><br/>
+<br/>
+{% endif %}
 {% if link %}
 {{ text_link }}<br/>
 <br/>

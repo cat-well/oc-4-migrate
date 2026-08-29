@@ -434,6 +434,16 @@ class Order extends \Opencart\System\Engine\Controller {
 
 		$data['comment'] = strip_tags($comment);
 
+		// Manline: Nova Poshta TTN in the status email (auto for orders that carry one, e.g. Rozetka).
+		$np = $this->db->query("SELECT `ttn_number` FROM `" . DB_PREFIX . "order_novaposhta` WHERE `order_id` = '" . (int)$order_info['order_id'] . "' LIMIT 1");
+		$data['ttn'] = ($np->num_rows && !empty($np->row['ttn_number'])) ? trim((string)$np->row['ttn_number']) : '';
+		if ($data['ttn'] !== '') {
+			$is_uk = strpos((string)$language_code, 'uk') === 0;
+			$data['ttn_label'] = $is_uk ? 'Номер відправлення (ТТН)' : 'Номер отправления (ТТН)';
+			$data['ttn_track_label'] = $is_uk ? 'Відстежити посилку' : 'Отследить посылку';
+			$data['ttn_track_url'] = 'https://novaposhta.ua/tracking/?cargo_number=' . rawurlencode($data['ttn']);
+		}
+
 		// Store
 		$data['store'] = $store_name;
 		$data['store_url'] = $store_url;
