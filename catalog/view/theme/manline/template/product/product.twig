@@ -346,20 +346,7 @@
         <li class="active_menu"><a href="#otzivi">{% if lang == 'uk-ua' %}Відгуки{% else %}Отзывы{% endif %}</a></li>
       </ul>
       <div class="description_w">
-        <div id="hypercomments_widget"></div>
-        <script type="text/javascript">
-          window._hcwp = window._hcwp || [];
-          window._hcwp.push({widget:"Stream", widget_id: 79564});
-          (function() {
-            if("HC_LOAD_INIT" in window) return;
-            window.HC_LOAD_INIT = true;
-            var lang = (navigator.language || navigator.systemLanguage || navigator.userLanguage || "en").substr(0, 2).toLowerCase();
-            var hcc = document.createElement("script"); hcc.type = "text/javascript"; hcc.async = true;
-            hcc.src = (("https:" == document.location.protocol ? "https" : "http") + "://w.hypercomments.com/widget/hc/79564/" + lang + "/widget.js");
-            var s = document.getElementsByTagName("script")[0];
-            s.parentNode.insertBefore(hcc, s.nextSibling);
-          })();
-        </script>
+        {% if review_status %}{{ review }}{% endif %}
       </div>
     </div>
   </div>
