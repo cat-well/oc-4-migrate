@@ -346,6 +346,20 @@
         <li class="active_menu"><a href="#otzivi">{% if lang == 'uk-ua' %}Відгуки{% else %}Отзывы{% endif %}</a></li>
       </ul>
       <div class="description_w">
+        <style>
+          #otzivi #form-review { max-width: 640px; text-align: left; }
+          #otzivi #form-review h2 { font-size: 20px; margin: 18px 0 14px; }
+          #otzivi #form-review .mb-3 { margin-bottom: 16px; }
+          #otzivi #form-review .form-label { display: block; font-weight: 600; margin-bottom: 6px; }
+          #otzivi #form-review .form-control { display: block; width: 100%; max-width: 480px; padding: 9px 12px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; line-height: 1.4; background: #fff; box-sizing: border-box; }
+          #otzivi #form-review textarea.form-control { min-height: 120px; resize: vertical; }
+          #otzivi #form-review .row { display: block; margin: 0; }
+          #otzivi #form-review #input-rating { display: inline-flex; align-items: center; gap: 6px; margin-top: 4px; }
+          #otzivi #form-review #input-rating input[type=radio] { width: 16px; height: 16px; margin: 0 2px; vertical-align: middle; }
+          #otzivi #form-review .text-end { text-align: left; margin-top: 16px; }
+          #otzivi #form-review .invalid-feedback { color: #c0392b; font-size: 13px; }
+          #otzivi #review { margin-bottom: 22px; }
+        </style>
         {% if review_status %}{{ review }}{% endif %}
       </div>
     </div>
