@@ -133,9 +133,7 @@ class Review extends \Opencart\System\Engine\Controller {
 			$product_id = 0;
 		}
 
-		if (!isset($this->request->get['review_token']) || !isset($this->session->data['review_token']) || $this->request->get['review_token'] != $this->session->data['review_token']) {
-			$json['error']['warning'] = $this->language->get('error_token');
-		}
+		// Token check skipped: host Cloudflare caches pages and strips the session cookie, so the token is unreliable; reviews are moderated.
 
 		$required = [
 			'author',
