@@ -359,7 +359,12 @@
           #otzivi #form-review .text-end { text-align: left; margin-top: 16px; }
           #otzivi #form-review .invalid-feedback { color: #c0392b; font-size: 13px; }
           #otzivi #review { margin-bottom: 22px; }
+          #otzivi #alert .alert { padding: 10px 14px; border-radius: 4px; margin-bottom: 14px; font-size: 14px; }
+          #otzivi #alert .alert-success { background: #e7f6e7; border: 1px solid #58a758; color: #256b25; }
+          #otzivi #alert .alert-danger { background: #fdecea; border: 1px solid #d9534f; color: #a12622; }
+          #otzivi #alert .btn-close, #otzivi #alert .fa-solid { display: none; }
         </style>
+        <div id="alert"></div>
         {% if review_status %}{{ review }}{% endif %}
       </div>
     </div>

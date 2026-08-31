@@ -58,10 +58,10 @@ $('#form-review').on('submit', function(e) {
         contentType: 'application/x-www-form-urlencoded',
         processData: false,
         beforeSend: function() {
-            $('#button-review').button('loading');
+            $('#button-review').prop('disabled', true);
         },
         complete: function() {
-            $('#button-review').button('reset');
+            $('#button-review').prop('disabled', false);
         },
         success: function(json) {
             $('.alert-dismissible').remove();
