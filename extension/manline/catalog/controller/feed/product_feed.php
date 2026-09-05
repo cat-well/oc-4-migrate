@@ -66,7 +66,8 @@ class ProductFeed extends \Opencart\System\Engine\Controller {
 			$shop_url,
 			$image_width,
 			$image_height,
-			$size_option_id
+			$size_option_id,
+			$format
 		);
 
 		$xml = $format === 'prom'
@@ -180,7 +181,8 @@ class ProductFeed extends \Opencart\System\Engine\Controller {
 		string $shop_url,
 		int $image_width,
 		int $image_height,
-		int $size_option_id
+		int $size_option_id,
+		string $format
 	): array {
 		if (!$category_ids) return [];
 
@@ -279,12 +281,22 @@ class ProductFeed extends \Opencart\System\Engine\Controller {
 				continue;
 			}
 
-			// Size-aware feeds (Prom) list one offer per in-stock size, tied
-			// back to the product via group_id. A product with no size in
-			// stock is not sellable there, so it drops out of the feed.
-			foreach ($sizes_by_pid[$pid] ?? [] as $size) {
+			$sizes = $sizes_by_pid[$pid] ?? [];
+
+			// No in-stock size: Rozetka (yml) keeps a flat product offer; Prom drops it.
+			if (!$sizes) {
+				if ($format === 'yml') {
+					$offers[] = $offer;
+				}
+				continue;
+			}
+
+			// One offer per in-stock size, tied back via group_id. Rozetka's order
+			// matcher keys on option_value_id; Prom keeps product_option_value_id.
+			foreach ($sizes as $size) {
+				$size_id = $format === 'yml' ? $size['option_value_id'] : $size['id'];
 				$offers[] = [
-					'id' => $pid . '-' . $size['id'],
+					'id' => $pid . '-' . $size_id,
 					'group_id' => $pid,
 					'price' => number_format($base_price + $size['price_delta'], 2, '.', ''),
 					'quantity' => $size['quantity'],
@@ -307,7 +319,7 @@ class ProductFeed extends \Opencart\System\Engine\Controller {
 		$placeholders = implode(',', $product_ids);
 
 		$rows = $this->db->query(
-			"SELECT po.product_id, pov.product_option_value_id, pov.quantity, pov.price, pov.price_prefix, ovd.name
+			"SELECT po.product_id, pov.product_option_value_id, pov.option_value_id, pov.quantity, pov.price, pov.price_prefix, ovd.name
 			FROM `" . DB_PREFIX . "product_option` po
 			INNER JOIN `" . DB_PREFIX . "product_option_value` pov
 			  ON pov.product_option_id = po.product_option_id
@@ -324,6 +336,7 @@ class ProductFeed extends \Opencart\System\Engine\Controller {
 			$delta = (float)$r['price'];
 			$out[(int)$r['product_id']][] = [
 				'id' => (int)$r['product_option_value_id'],
+				'option_value_id' => (int)$r['option_value_id'],
 				'name' => trim((string)$r['name']),
 				'quantity' => (int)$r['quantity'],
 				'price_delta' => $r['price_prefix'] === '-' ? -$delta : $delta,
@@ -454,7 +467,8 @@ class ProductFeed extends \Opencart\System\Engine\Controller {
 
 		$xml .= '    <offers>' . "\n";
 		foreach ($offers as $o) {
-			$xml .= '      <offer available="true" id="' . (int)$o['id'] . '">' . "\n";
+			$group_attr = $o['group_id'] ? ' group_id="' . (int)$o['group_id'] . '"' : '';
+			$xml .= '      <offer available="true" id="' . $esc((string)$o['id']) . '"' . $group_attr . '>' . "\n";
 			$xml .= '        <url>' . $esc((string)$o['url']) . '</url>' . "\n";
 			$xml .= '        <price>' . (string)$o['price'] . '</price>' . "\n";
 			if (!empty($o['oldprice'])) {
@@ -472,6 +486,9 @@ class ProductFeed extends \Opencart\System\Engine\Controller {
 			$xml .= '        <store>false</store>' . "\n";
 			foreach ($o['image'] as $image_url) {
 				$xml .= '        <picture>' . $esc((string)$image_url) . '</picture>' . "\n";
+			}
+			if (!empty($o['size'])) {
+				$xml .= '        <param name="Розмір">' . $esc((string)$o['size']) . '</param>' . "\n";
 			}
 			foreach ($o['attributes'] as $attr) {
 				$xml .= '        <param name="' . $esc((string)$attr['name']) . '">' . $esc((string)$attr['value']) . '</param>' . "\n";
