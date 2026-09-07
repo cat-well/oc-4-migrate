@@ -18,7 +18,7 @@
       <div class="alert alert-warning"><i class="fa-solid fa-circle-exclamation"></i> {{ text_variant }}</div>
     {% endif %}
     <div class="card">
-      <div class="card-header"><i class="fa-solid fa-pencil"></i> {{ text_form }}</div>
+      <div class="card-header"><i class="fa-solid fa-pencil"></i> {{ text_form }}{% if product_id %} <span class="float-end text-muted">ID: <strong>{{ product_id }}</strong></span>{% endif %}</div>
       <div class="card-body">
         <form id="form-product" action="{{ save }}" method="post" data-oc-toggle="ajax">
           <ul class="nav nav-tabs">
