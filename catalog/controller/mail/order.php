@@ -603,6 +603,13 @@ class Order extends \Opencart\System\Engine\Controller {
 
 			$data['comment'] = nl2br($order_info['comment']);
 
+			$data['customer'] = trim($order_info['firstname'] . ' ' . $order_info['lastname']);
+			$data['email'] = $order_info['email'];
+			$data['telephone'] = $order_info['telephone'];
+			$data['payment_method'] = $order_info['payment_method']['name'] ?? '';
+			$data['shipping_method'] = $order_info['shipping_method']['name'] ?? '';
+			$data['shipping_address'] = implode(', ', array_filter([$order_info['shipping_city'], $order_info['shipping_address_1'], $order_info['shipping_address_2']]));
+
 			$data['store'] = html_entity_decode($order_info['store_name'], ENT_QUOTES, 'UTF-8');
 			$data['store_url'] = $order_info['store_url'];
 
