@@ -2263,7 +2263,8 @@ class Order extends \Opencart\System\Engine\Controller {
 				$json['ttn_date_created'] = (string)($result['ttn_date_created'] ?? '');
 				$json['print_url'] = (string)($result['print_url'] ?? $this->model_extension_manline_shipping_novaposhta->getPrintUrlByOrderId($order_id));
 
-				$this->addOrderHistoryLog($order_id, sprintf($this->language->get('text_np_history_created'), $json['ttn_number']));
+				$notified = $this->sendTtnMail($order_id, $json['ttn_number']);
+				$this->addOrderHistoryLog($order_id, sprintf($this->language->get('text_np_history_created'), $json['ttn_number']), $notified);
 			}
 		}
 
@@ -2306,7 +2307,8 @@ class Order extends \Opencart\System\Engine\Controller {
 					$history_ttn .= ' (old: ' . $old_ttn . ')';
 				}
 
-				$this->addOrderHistoryLog($order_id, sprintf($this->language->get('text_np_history_recreated'), $history_ttn));
+				$notified = $this->sendTtnMail($order_id, $json['ttn_number']);
+				$this->addOrderHistoryLog($order_id, sprintf($this->language->get('text_np_history_recreated'), $history_ttn), $notified);
 			}
 		}
 
@@ -4161,7 +4163,7 @@ class Order extends \Opencart\System\Engine\Controller {
 		return vsprintf('%s%s-%s-%s-%s-%s%s%s', str_split(bin2hex($data), 4));
 	}
 
-	private function addOrderHistoryLog(int $order_id, string $comment): void {
+	private function addOrderHistoryLog(int $order_id, string $comment, bool $notify = false): void {
 		$comment = trim($comment);
 
 		if ($order_id <= 0 || $comment === '') {
@@ -4180,10 +4182,59 @@ class Order extends \Opencart\System\Engine\Controller {
 			"INSERT INTO `" . DB_PREFIX . "order_history`
 			SET order_id = '" . (int)$order_id . "',
 				order_status_id = '" . (int)$order_status_id . "',
-				notify = '0',
+				notify = '" . (int)$notify . "',
 				comment = '" . $this->db->escape($comment) . "',
 				date_added = NOW()"
 		);
+	}
+
+	private function sendTtnMail(int $order_id, string $ttn): bool {
+		$this->load->model('sale/order');
+
+		$order_info = $this->model_sale_order->getOrder($order_id);
+
+		if ($ttn === '' || !$order_info || !filter_var($order_info['email'], FILTER_VALIDATE_EMAIL) || !$this->config->get('config_mail_engine')) {
+			return false;
+		}
+
+		$is_uk = strpos((string)$order_info['language_code'], 'uk') === 0;
+		$store_name = html_entity_decode($this->config->get('config_name'), ENT_QUOTES, 'UTF-8');
+
+		$data = [
+			'is_uk'       => $is_uk,
+			'firstname'   => $order_info['firstname'],
+			'order_id'    => $order_id,
+			'ttn'         => $ttn,
+			'track_url'   => 'https://novaposhta.ua/tracking/?cargo_number=' . rawurlencode($ttn),
+			'store'       => $store_name,
+			'store_url'   => $order_info['store_url']
+		];
+
+		$mail_option = [
+			'parameter'     => $this->config->get('config_mail_parameter'),
+			'smtp_hostname' => $this->config->get('config_mail_smtp_hostname'),
+			'smtp_username' => $this->config->get('config_mail_smtp_username'),
+			'smtp_password' => html_entity_decode($this->config->get('config_mail_smtp_password'), ENT_QUOTES, 'UTF-8'),
+			'smtp_port'     => $this->config->get('config_mail_smtp_port'),
+			'smtp_timeout'  => $this->config->get('config_mail_smtp_timeout')
+		];
+
+		$mail = new \Opencart\System\Library\Mail($this->config->get('config_mail_engine'), $mail_option);
+		$mail->setTo($order_info['email']);
+		$mail->setFrom($this->config->get('config_email'));
+		$mail->setSender($store_name);
+		$mail->setSubject(sprintf($is_uk ? '%s - Замовлення %s відправлено' : '%s - Заказ %s отправлен', $store_name, $order_id));
+		$mail->setHtml($this->load->view('mail/order_ttn', $data));
+
+		try {
+			$mail->send();
+		} catch (\Exception $e) {
+			$this->log->write('TTN mail for order ' . $order_id . ' failed: ' . $e->getMessage());
+
+			return false;
+		}
+
+		return true;
 	}
 
 	private function syncOrderStatusFromNovaposhta(int $order_id, string $np_status_code, string $np_status_text, string $np_status_date): array {

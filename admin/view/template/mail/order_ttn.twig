@@ -1,0 +1,23 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/1999/REC-html401-19991224/strict.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body style="font-family: Arial, Helvetica, sans-serif; font-size: 13px; color: #000000;">
+<div style="width: 600px;">
+  {% if is_uk %}
+    <p style="margin-top: 0px; margin-bottom: 15px;">Вітаємо{% if firstname %}, {{ firstname }}{% endif %}!</p>
+    <p style="margin-top: 0px; margin-bottom: 15px;">Ваше замовлення №{{ order_id }} передано на доставку Новою Поштою.</p>
+    <p style="margin-top: 0px; margin-bottom: 15px;">Номер відправлення (ТТН): <b>{{ ttn }}</b></p>
+    <p style="margin-top: 0px; margin-bottom: 20px;"><a href="{{ track_url }}">Відстежити посилку</a></p>
+    <p style="margin-top: 0px; margin-bottom: 0px;">Дякуємо, що обрали <a href="{{ store_url }}">{{ store }}</a>!</p>
+  {% else %}
+    <p style="margin-top: 0px; margin-bottom: 15px;">Здравствуйте{% if firstname %}, {{ firstname }}{% endif %}!</p>
+    <p style="margin-top: 0px; margin-bottom: 15px;">Ваш заказ №{{ order_id }} передан на доставку Новой Почтой.</p>
+    <p style="margin-top: 0px; margin-bottom: 15px;">Номер отправления (ТТН): <b>{{ ttn }}</b></p>
+    <p style="margin-top: 0px; margin-bottom: 20px;"><a href="{{ track_url }}">Отследить посылку</a></p>
+    <p style="margin-top: 0px; margin-bottom: 0px;">Спасибо, что выбрали <a href="{{ store_url }}">{{ store }}</a>!</p>
+  {% endif %}
+</div>
+</body>
+</html>
