@@ -51,6 +51,11 @@ $stats = $model->importNewOrders();
 $log = new \Opencart\System\Library\Log('manline_rozetka_cron.log');
 $log->write('cron: imported=' . $stats['imported'] . ' skipped=' . $stats['skipped'] . ' errors=' . $stats['errors'] . ' unmatched=' . $stats['unmatched'] . ($stats['ok'] ? '' : ' API_ERROR=' . $stats['error']));
 
+// Silent by default: cron mails any output to the hosting account
+if (empty($registry->get('request')->get['verbose'])) {
+	return;
+}
+
 echo json_encode([
 	'ok'        => $stats['ok'],
 	'imported'  => $stats['imported'],
