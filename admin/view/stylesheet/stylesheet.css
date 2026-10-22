@@ -897,6 +897,12 @@ div.required .col-form-label:not(span):before, div.required .form-label:before, 
     white-space: nowrap;
 }
 
+.admin-order-table td.order-store {
+    white-space: normal;
+    min-width: 90px;
+    max-width: 170px;
+}
+
 .admin-order-table th:last-child,
 .admin-order-table td:last-child {
     width: 1%;
