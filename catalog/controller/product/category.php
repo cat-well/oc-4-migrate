@@ -446,7 +446,13 @@ class Category extends \Opencart\System\Engine\Controller {
 				'limit'                 => $limit
 			];
 
-			$results = $this->model_catalog_product->getProducts($filter_data);
+			// Manline: every in-stock product plus out-of-stock filler up to 20 per category
+			$product_total = $this->model_catalog_product->getTotalProducts($filter_data);
+			$in_stock_total = $filter_data['filter_stock'] ? $product_total : $this->model_catalog_product->getTotalProducts(['filter_stock' => 1] + $filter_data);
+			$product_total = min($product_total, max($in_stock_total, 20));
+			$filter_data['limit'] = max(0, min($limit, $product_total - $filter_data['start']));
+
+			$results = $filter_data['limit'] ? $this->model_catalog_product->getProducts($filter_data) : [];
 
 			foreach ($results as $result) {
 				$description = trim(strip_tags(html_entity_decode($result['description'], ENT_QUOTES, 'UTF-8')));
@@ -645,8 +651,6 @@ class Category extends \Opencart\System\Engine\Controller {
 			if (isset($this->request->get['limit'])) {
 				$url .= '&limit=' . $this->request->get['limit'];
 			}
-
-			$product_total = $this->model_catalog_product->getTotalProducts($filter_data);
 
 			$pagination_base = $this->url->link('product/category', 'language=' . $this->config->get('config_language') . $url . '&page={page}');
 			$data['pagination'] = $this->load->controller('common/pagination', [
